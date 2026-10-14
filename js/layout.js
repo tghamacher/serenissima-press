@@ -129,7 +129,8 @@
       prepareText(p, style);
       const f = INITIAL_FONTS[style];
       if (f && f.letters && !f.letters.includes(p.initialLetter)) {
-        warnings.push(`${f.name} initials have no ${p.initialLetter}, so the ${p.label} has its ${p.initialLetter} on a dotted ground.`);
+        const w = `${f.name} initials have no ${p.initialLetter}; it is set on a dotted ground instead.`;
+        if (!warnings.includes(w)) warnings.push(w);
         style = 'letter';
       }
       p.init = { style, lines: spec.lines, red: I.red && spec === I.other && lead !== null };

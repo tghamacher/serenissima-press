@@ -67,7 +67,8 @@
       return { index: i, name, label: partLabel(name), keyboard };
     });
     // note values: x/2 or x/1 time (or breves) usually means original values; x/4 usually halved
-    const beatType = +text(root.querySelector('time > beat-type')) || 4;
+    const firstPart = kids(root, 'part')[0], music = kids(firstPart, 'measure').filter((m, i) => !(i === 0 && isPrefatory(m)));
+    const beatType = +text(music.map(m => m.querySelector('time > beat-type')).find(Boolean)) || 4;
     const hasBreves = [...root.querySelectorAll('note > type')].some(t => t.textContent === 'breve');
     const reduction = beatType <= 2 || hasBreves ? 4 : beatType >= 8 ? 1 : 2;
     return { title, composer, parts, reduction };
@@ -118,13 +119,20 @@
     warn(`Time ${beats}/${type} has no obvious mensuration sign; used C.`); return 'T1';
   }
 
+  // A prefatory staff (incipit): editions often open with a measure showing the original clef and
+  // mensuration over an invisible rest, before the music proper in modern clefs.
+  const isPrefatory = m => { const ns = kids(m, 'note'); return ns.length > 0 && ns.every(n => n.getAttribute('print-object') === 'no'); };
+
   // ---------------------------------------------------------------- read one part into events
   function readPart(partEl, name, o, tr, warn) {
     const events = [];
-    let divisions = 1, clefInfo = null, fifths = 0, shown = Math.min(tr.fifths, 0), voice = null, tie = null, perfect = false;
+    let divisions = 1, clefInfo = null, fifths = 0, shown = Math.min(tr.fifths, 0), voice = null, tie = null, perfect = false, origSign = null;
     for (const measure of kids(partEl, 'measure')) {
       const mno = measure.getAttribute('number'), edMem = {};
+      const incipit = !events.some(e => e.kind === 'note' || e.kind === 'rest') && isPrefatory(measure);
+      if (incipit) warn('The score opens with a prefatory staff (original clefs and signs): its clefs and signs are used, its measure is not printed.');
       for (const node of measure.children) {
+        if (incipit && node.localName !== 'attributes') continue;
         switch (node.localName) {
           case 'attributes': {
             const d = kid(node, 'divisions'); if (d) divisions = +text(d);
@@ -135,13 +143,15 @@
               if (shown > 0) { warn(`${name}: the key needs ${shown} sharp(s); mensural notation has no sharp signatures, so each sharp is printed on its note. Consider transposing.`); shown = 0; }
             }
             const c = kids(node, 'clef').find(c => !c.getAttribute('number') || c.getAttribute('number') === '1');
-            if (c) {
+            if (c && !(clefInfo && c.getAttribute('print-object') === 'no')) {   // a hidden clef is the edition's, not the source's
               const ci = { sign: text(kid(c, 'sign')), line: +text(kid(c, 'line')) || 0, octave: +text(kid(c, 'clef-octave-change')) || 0 };
               if (!clefInfo) clefInfo = ci; else if (ci.sign !== clefInfo.sign || ci.line !== clefInfo.line) warn(`${name} m.${mno}: clef change ignored (kept the first clef).`);
             }
             const t = kid(node, 'time');
             if (t && kid(t, 'beats')) {
-              const sign = (o.mensuration && !events.length) ? o.mensuration : mensSign(t, o.reduction, warn);
+              if (incipit) { origSign = mensSign(t, o.reduction, () => { }); break; }
+              const opening = !events.length;
+              const sign = (opening && o.mensuration) || (opening && origSign) || mensSign(t, o.reduction, warn);
               const beats = +(text(kid(t, 'beats')).split('+')[0]), type = +text(kid(t, 'beat-type'));
               perfect = sign === 'T3' || sign === 'T4' || (beats === 3 && near(beats * 4 / type / o.reduction, 3));
               events.push({ kind: 'mens', code: sign });
@@ -208,7 +218,7 @@
           }
         }
       }
-      if (o.barlines) events.push({ kind: 'bar' });
+      if (o.barlines && !incipit) events.push({ kind: 'bar' });
     }
     if (o.barlines && events.length && events[events.length - 1].kind === 'bar') events.pop();
     return { events, clefInfo, fifths: shown };
