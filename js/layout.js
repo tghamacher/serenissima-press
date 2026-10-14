@@ -197,7 +197,7 @@
     const pickF = fits => { if (o.staffSize > 0) return o.staffSize; for (let F = FMAX; F > FMIN; F -= 0.5) if (fits(F)) return F; return FMIN; };
     const fitsAt = (parts, F, W, cap) => parts.every(p => breakLines(p, F, widthFn(p, W, F)).length <= cap(F));
 
-    let size;
+    let size, staff;
     if (o.format === 'choirbook') {
       const [Win, Hin] = o.choirbookPage, M = 0.6 * IN, W = Win * IN - 2 * M;
       const verso = o.verso.map(i => D.parts[i]).filter(Boolean), recto = o.recto.map(i => D.parts[i]).filter(Boolean);
@@ -205,7 +205,7 @@
       const regionH = (Hin * IN - 2 * M - 34 - 10 - 16) / k, inner = regionH - 24 - 10;
       const cap = F => Math.max(1, Math.floor(inner / (F * SYS)));
       const all = verso.concat(recto);
-      const F = pickF(F => fitsAt(all, F, W, cap));
+      const F = pickF(F => fitsAt(all, F, W, cap)); staff = F;
       const lines = new Map(all.map(p => [p, breakLines(p, F, widthFn(p, W, F))]));
       const openings = Math.max(1, ...all.map(p => Math.ceil(lines.get(p).length / cap(F))));
       for (let op = 0; op < openings; op++) {
@@ -229,7 +229,7 @@
       const [Win, Hin] = o.partbookPage, M = 0.6 * IN, W = Win * IN - 2 * M;
       const avail = first => Hin * IN - 2 * M - 34 - 16 - (first ? 44 : 0);
       const cap = (F, first) => Math.max(1, Math.floor(avail(first) / (F * SYS)));
-      const F = pickF(F => fitsAt(D.parts, F, W, F => cap(F, true)));
+      const F = pickF(F => fitsAt(D.parts, F, W, F => cap(F, true))); staff = F;
       for (const p of D.parts) {
         const lines = breakLines(p, F, widthFn(p, W, F));
         let from = 0, first = true;
@@ -262,7 +262,7 @@
       }
     }
     meas.remove();
-    return { pageSize: size, warnings };
+    return { pageSize: size, staffSize: staff, warnings };
   }
 
   global.SPLayout = { render, CREDIT };

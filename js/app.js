@@ -11,6 +11,13 @@
   for (const [k, [name]] of Object.entries(PAGES)) $('page').append(new Option(name, k));
   $('staffSize').append(new Option('Fit to page', '0'));
   for (const s of [32, 40, 48, 56, 64, 72, 80]) $('staffSize').append(new Option(`${s} px`, s));
+  $('staffSize').append(new Option('Custom…', 'custom'));
+  // a custom size, in px, between the box's limits; 0 (fit to page) if empty
+  function staffSize() {
+    if ($('staffSize').value !== 'custom') return +$('staffSize').value;
+    const n = +$('staffCustom').value, box = $('staffCustom');
+    return n > 0 ? Math.min(+box.max, Math.max(+box.min, n)) : 0;
+  }
   $('mens').append(new Option('From time signature', ''));
   for (const [k, v] of Object.entries(C.MENS)) $('mens').append(new Option(v, k));
   const iv = { 0: 'none', 1: 'up a semitone', 2: 'up a tone', 3: 'up a minor 3rd', 4: 'up a major 3rd', 5: 'up a 4th', 7: 'up a 5th', '-1': 'down a semitone', '-2': 'down a tone', '-3': 'down a minor 3rd', '-4': 'down a major 3rd', '-5': 'down a 4th', '-7': 'down a 5th' };
@@ -97,7 +104,7 @@
     try {
       res = C.convert(state.doc, {
         reduction: +$('reduction').value, transpose: +$('transpose').value, mensuration: $('mens').value,
-        ficta: $('ficta').checked, barlines: $('barlines').checked, brackets: false,
+        ficta: $('ficta').checked, barlines: $('barlines').checked, ij: $('ij').checked, brackets: false,
         parts: sel.map(p => ({ index: p.index, clef: p.clef, label: p.label }))
       });
     } catch (e) { status(e.message); return; }
@@ -107,7 +114,7 @@
     const scale = $('scale'); scale.style.transform = 'none'; scale.style.height = ''; scale.style.width = '';
     $('book').classList.add('sp-busy');
     const out = await L.render($('book'), { title: $('title').value, composer: $('composer').value, parts: res.parts }, {
-      format: state.format, staffSize: +$('staffSize').value,
+      format: state.format, staffSize: staffSize(),
       initials: {
         first: { style: $('initial').value, lines: +$('initialLines').value },
         other: { style: $('initial2').value, lines: +$('initialLines2').value },
@@ -117,6 +124,7 @@
     });
     $('book').classList.remove('sp-busy');
     setPageRule(out.pageSize);
+    state.staffUsed = out.staffSize;
     fitPreview();
     status(null, res.warnings.concat(out.warnings));
     document.title = `${$('title').value || 'Serenissima Press'} – ${state.format}`;
@@ -156,7 +164,15 @@
   $('page').value = state.page.partbook;
   $('page').onchange = () => { state.page[state.format] = $('page').value; typeset(); };
   for (const id of ['title', 'composer']) $(id).oninput = typeset;
-  for (const id of ['staffSize', 'reduction', 'mens', 'transpose', 'ficta', 'barlines', 'initialLines', 'initial2', 'initialLines2', 'rubric']) $(id).onchange = typeset;
+  // "Custom…" opens a box starting at the size last used, so it is easy to nudge
+  $('staffSize').onchange = () => {
+    const box = $('staffCustom'), on = $('staffSize').value === 'custom';
+    box.hidden = !on;
+    if (on) { if (!box.value) box.value = Math.round(state.staffUsed || 48); box.focus(); box.select(); }
+    typeset();
+  };
+  $('staffCustom').oninput = typeset;
+  for (const id of ['reduction', 'mens', 'transpose', 'ficta', 'barlines', 'ij', 'initialLines', 'initial2', 'initialLines2', 'rubric']) $(id).onchange = typeset;
   $('initial').onchange = () => { if ($('initial').value === 'image' && !state.initialSrc) $('initialFile').click(); typeset(); };
   $('initialFile').onchange = e => {
     const f = e.target.files[0]; if (!f) return;

@@ -279,8 +279,38 @@
     return { clef: glyph, sig, tokens: out };
   }
 
+  // ---------------------------------------------------------------- "ij" repeat signs
+  // As in the sources: a phrase sung again straight away is not written out; "ij" stands under its
+  // first note and the rest of the repeat carries no text. The longest repeated phrase wins.
+  const IJ_MAX = 8;   // words
+  function markRepeats(toks) {
+    const words = [];
+    for (const t of toks) {
+      if (!t.s) continue;
+      if (!words.length || t.y === 'single' || t.y === 'begin' || words[words.length - 1].done) words.push({ syl: [], done: false });
+      const w = words[words.length - 1]; w.syl.push(t);
+      if (t.y === 'single' || t.y === 'end') w.done = true;
+    }
+    const norm = w => w.syl.map(t => t.s).join('').toLowerCase().replace(/[^\p{L}]/gu, '').replace(/j/g, 'i').replace(/v/g, 'u');
+    const key = words.map(norm);
+    const same = (a, b, n) => { for (let k = 0; k < n; k++) if (!key[a + k] || key[a + k] !== key[b + k]) return false; return true; };
+    // a repeat starts a phrase: after punctuation, when the text has any (so "eleison, Christe" is not one)
+    const ends = words.map(w => /[,.;:!?]\s*$/.test(w.syl[w.syl.length - 1].s));
+    const phraseStart = ends.some(Boolean) ? i => ends[i - 1] : () => true;
+    let count = 0;
+    for (let i = 1; i < words.length;) {
+      if (!phraseStart(i)) { i++; continue; }
+      let n = Math.min(IJ_MAX, i, words.length - i);
+      while (n > 0 && !(same(i - n, i, n) && (i === n || phraseStart(i - n)))) n--;
+      if (!n) { i++; continue; }
+      words.slice(i, i + n).forEach((w, k) => w.syl.forEach((t, j) => { if (k || j) { delete t.s; delete t.y; } else { t.s = 'ij'; t.y = 'single'; } }));
+      i += n; count++;
+    }
+    return count;
+  }
+
   // ---------------------------------------------------------------- main
-  // o: { reduction, transpose, mensuration, ficta, barlines, brackets, parts: [{index, clef, label}] }
+  // o: { reduction, transpose, mensuration, ficta, barlines, brackets, ij, parts: [{index, clef, label}] }
   function convert(doc, o) {
     const warnings = [], warn = m => { if (!warnings.includes(m)) warnings.push(m); };
     const tr = transposition(o.transpose || 0);
@@ -293,6 +323,7 @@
       const dias = parsed.events.filter(e => e.kind === 'note').map(e => e.dia);
       const clefName = chooseClef(parsed.clefInfo, dias, sel.clef, name, warn);
       const built = tokens(parsed, clefName, o, warn);
+      if (o.ij) markRepeats(built.tokens);
       parts.push({ name, label: sel.label || partLabel(name), clefName, ...built });
     }
     return { parts, warnings };

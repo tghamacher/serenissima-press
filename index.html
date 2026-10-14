@@ -38,7 +38,9 @@
       <label class="sp-field"><span>Composer</span><input type="text" id="composer"></label>
       <div class="sp-row">
         <label class="sp-field"><span>Page size</span><select id="page"></select></label>
-        <label class="sp-field"><span>Staff size</span><select id="staffSize"></select></label>
+        <div class="sp-field"><label for="staffSize">Staff size</label>
+          <div class="sp-combo"><select id="staffSize"></select><input type="number" id="staffCustom" min="16" max="160" step="1" aria-label="Staff size in pixels" hidden></div>
+        </div>
       </div>
 
       <h2>3 · Voices</h2>
@@ -62,6 +64,7 @@
       </div>
       <label class="sp-check"><input type="checkbox" id="ficta"> Print editorial accidentals (ficta)</label>
       <label class="sp-check"><input type="checkbox" id="barlines"> Barlines at every bar</label>
+      <label class="sp-check"><input type="checkbox" id="ij"> Write repeated text as “ij”</label>
 
       <h2>5 · Initials</h2>
       <div class="sp-row">
