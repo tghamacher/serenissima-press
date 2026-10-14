@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en"><!-- not "la": EB Garamond would then turn every u into v -->
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=IM+Fell+French+Canon&display=block" rel="stylesheet">
+<style>
+  /* Layout template for ConvertTo-Ems.ps1: the script inserts the piece as DATA below. */
+  @font-face { font-family: "EMS"; src: local("EMS_Serenissima"), local("EMS Serenissima"); }
+  :root { --ink: #1b1712; --paper: #fdfaf2; --desk: #cfc8b8; --textfont: "EB Garamond", "Palatino Linotype", "Book Antiqua", Georgia, serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--desk); color: var(--ink); }
+  #book { display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 28px 0 60px; }
+  .spread { display: flex; gap: 2px; }
+  .page { position: relative; background: var(--paper); box-shadow: 0 2px 12px rgba(0,0,0,.28); overflow: hidden; font-family: var(--textfont); }
+  .head { text-align: center; font-size: 19px; letter-spacing: .32em; padding-left: .32em; height: 34px; line-height: 34px; }
+  .titleline { display: flex; justify-content: space-between; align-items: baseline; height: 30px; font-size: 16px; border-bottom: 0.75px solid var(--ink); margin-bottom: 14px; }
+  .titleline .t { font-style: italic; } .titleline .c { font-variant: small-caps; letter-spacing: .06em; }
+  .region { position: relative; }
+  .label { font-size: 15px; letter-spacing: .28em; height: 24px; line-height: 24px; }
+  .systems { position: relative; }
+  .sys { position: relative; }
+  .ems { font-family: "EMS"; font-variant-ligatures: common-ligatures; font-feature-settings: "liga" 1; white-space: pre; line-height: 1em; }
+  .staff { position: absolute; left: 0; top: 0; }
+  .syl { position: absolute; transform: translateX(-50%); white-space: pre; line-height: 1; font-family: var(--textfont); }
+  .initial { position: absolute; left: 0; top: 0; border: 2.5px solid var(--ink); padding: 3px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .initial .in { width: 100%; height: 100%; border: 1px solid var(--ink); display: flex; align-items: center; justify-content: center; overflow: hidden;
+                 background: radial-gradient(circle, var(--ink) 0.8px, transparent 1.2px) 0 0 / 5px 5px; background-color: var(--paper); }
+  .initial .in span { font-family: "IM Fell French Canon", var(--textfont); line-height: 1; padding-top: .08em; color: var(--ink);
+                      text-shadow: 0 0 2px var(--paper), 0 0 3px var(--paper), 0 0 4px var(--paper), 0 0 6px var(--paper), 0 0 8px var(--paper); }
+  .initial.blank { border-width: 1px; border-style: dashed; padding: 0; } .initial.blank .in { border: 0; background: none; }
+  .initial img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .notice { max-width: 760px; background: #fbf1df; border: 1px solid #e8cf9f; border-radius: 6px; padding: 10px 14px; font: 13px/1.45 "Segoe UI", system-ui, sans-serif; }
+  .notice b { display: block; margin-bottom: 4px; }
+  @media print {
+    body { background: none; }
+    #book { display: block; padding: 0; }
+    .spread { display: block; }
+    .page { box-shadow: none; break-after: page; background: #fff; }
+    .initial .in { background-color: #fff; }
+    .initial .in span { text-shadow: 0 0 2px #fff, 0 0 3px #fff, 0 0 4px #fff, 0 0 6px #fff, 0 0 8px #fff; }
+    .notice { display: none; }
+  }
+</style>
+</head>
+<body>
+<div id="book"></div>
+<script>
+const DATA = /*__DATA__*/null;
+
+(async function () {
+  const book = document.getElementById('book');
+  if (!DATA) { book.innerHTML = '<div class="notice"><b>Layout template</b>ConvertTo-Ems.ps1 fills this in. Open a generated .partbook.html or .choirbook.html instead.</div>'; return; }
+  const D = DATA, O = D.opt, IN = 96;
+  // proportions of the staff font size F
+  const TEXT = 0.27;      // syllable size
+  const GAP = 0.06;       // minimum staff between signs
+  const SYS = 1.30;       // height of one system (staff + text)
+  const TEXT_TOP = 0.89;  // top of the syllables
+  const FMIN = 28, FMAX = 100;
+
+  document.documentElement.style.setProperty('--textfont', `"${O.textFont}", "EB Garamond", "Palatino Linotype", "Book Antiqua", Georgia, serif`);
+  try { await Promise.all([document.fonts.load('40px EMS'), document.fonts.load(`40px "${O.textFont}"`), document.fonts.load('40px "IM Fell French Canon"')]); } catch (e) {}
+  await document.fonts.ready;
+
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const notes = [];
+  if (!document.fonts.check('20px EMS')) notes.push('The EMS Serenissima font is not installed on this computer, so the music cannot be shown.');
+  (D.warnings || []).forEach(w => notes.push(w));
+
+  // ---- measuring (once at 100px, then scaled)
+  const meas = el('div'); meas.style.cssText = 'position:absolute;left:-20000px;top:0;visibility:hidden;white-space:pre';
+  document.body.appendChild(meas);
+  const cache = new Map();
+  function unit(str, cls) {
+    const key = cls + '|' + str; let v = cache.get(key);
+    if (v === undefined) { const s = el('span', cls, str); s.style.fontSize = '100px'; meas.appendChild(s); v = s.getBoundingClientRect().width / 100; s.remove(); cache.set(key, v); }
+    return v;
+  }
+  const wE = (s, F) => s ? unit(s, 'ems') * F : 0;
+  const wT = (s, T) => s ? unit(s, 'syl-m') * T : 0;
+  const sm = el('style'); sm.textContent = '.syl-m{font-family:var(--textfont)}'; document.head.appendChild(sm);
+
+  // ---- text: the decorated initial takes the first letter; the rest of the first word goes in capitals
+  const caps = s => s.toUpperCase().replace(/U/g, 'V').replace(/J/g, 'I');
+  for (const p of D.parts) {
+    const toks = p.tokens, first = toks.findIndex(t => t.s);
+    p.initialLetter = '';
+    if (first >= 0) {
+      const word = [];
+      for (let i = first; i < toks.length; i++) { if (!toks[i].s) continue; word.push(toks[i]); if (toks[i].y === 'single' || toks[i].y === 'end') break; }
+      p.initialLetter = caps(word[0].s.charAt(0));
+      if (O.initial.mode !== 'none') word[0].s = word[0].s.slice(1);
+      word.forEach(t => t.s = caps(t.s));
+    }
+    toks.forEach(t => { if (t.s != null) t.sd = t.s + (t.y === 'begin' || t.y === 'middle' ? '-' : ''); });
+    if (!p.initialLetter) p.initialLetter = p.label.charAt(0);
+  }
+
+  // ---- token boxes: [staff L][sign][staff R], wide enough for the syllable centred under the note head
+  function boxes(p, F) {
+    const T = F * TEXT, gap = GAP * F, tg = 0.5 * T;
+    return p.tokens.map(tk => {
+      const aW = wE(tk.a, F), gW = wE(tk.g, F), dW = wE(tk.d, F), glyph = aW + gW + dW, center = aW + gW / 2;
+      let L = 0, R = gap;
+      if (tk.sd) { const half = (wT(tk.sd, T) + tg) / 2; L = Math.max(0, half - center); R = Math.max(gap, half - (glyph - center)); }
+      if (tk.g === 'E') R = 0;
+      return { tk, aW, gW, glyph, L, R, w: L + glyph + R };
+    });
+  }
+  const prefix = (p, F) => { const gap = GAP * F * 1.5; return { gap, w: wE(p.clef, F) + gap + (p.sig ? wE(p.sig, F) + gap : 0) }; };
+  function breakLines(p, F, widthFor) {
+    const bx = boxes(p, F), pre = prefix(p, F), cW = wE('Ug', F) + GAP * F;
+    const lines = []; let cur = [], used = 0;
+    for (const b of bx) {
+      const avail = widthFor(lines.length) - pre.w - cW;
+      if (cur.length && b.tk.g !== 'E' && used + b.w > avail) {
+        const carry = [];
+        while (cur.length > 1 && (cur[cur.length - 1].tk.t === 'm')) carry.unshift(cur.pop());   // no sign stranded at a line end
+        lines.push(cur); cur = carry; used = carry.reduce((s, c) => s + c.w, 0);
+      }
+      cur.push(b); used += b.w;
+    }
+    if (cur.length) lines.push(cur);
+    return lines;
+  }
+
+  // ---- drawing
+  function fill(w, F) {
+    const s = el('span'); if (w <= 0.05) return s;
+    const iW = wE('i', F), pW = wE('p', F), n = Math.floor(w / iW), m = Math.ceil((w - n * iW) / pW - 1e-6);
+    s.textContent = 'i'.repeat(n) + 'p'.repeat(Math.max(0, m));
+    s.style.marginRight = (w - n * iW - Math.max(0, m) * pW) + 'px';
+    return s;
+  }
+  const pending = [];
+  function system(p, lines, li, F, width, indent) {
+    const line = lines[li], last = li === lines.length - 1, pre = prefix(p, F);
+    let nk = null;
+    if (!last) outer: for (let j = li + 1; j < lines.length; j++) for (const b of lines[j]) if (b.tk.k) { nk = b.tk.k; break outer; }
+    const used = pre.w + line.reduce((s, b) => s + b.w, 0), cW = nk ? wE('U' + nk, F) : 0;
+    const per = last ? 0 : Math.max(0, width - used - cW) / line.length;
+    const sys = el('div', 'sys'); sys.style.cssText = `width:${width}px;height:${F * SYS}px;margin-left:${indent}px`;
+    const staff = el('div', 'staff ems'); staff.style.fontSize = F + 'px';
+    staff.append(el('span', null, p.clef), fill(pre.gap, F));
+    if (p.sig) staff.append(el('span', null, p.sig), fill(pre.gap, F));
+    const marks = [];
+    for (const b of line) {
+      if (b.L > 0.05) staff.append(fill(b.L, F));
+      const g = el('span', null, (b.tk.a || '') + b.tk.g + (b.tk.d || '')); staff.append(g);
+      staff.append(fill(b.R + per, F));
+      if (b.tk.sd) marks.push([g, b]);
+    }
+    if (nk) staff.append(el('span', null, 'U' + nk));
+    sys.append(staff);
+    pending.push({ sys, marks, F });
+    return sys;
+  }
+  function placeSyllables() {
+    for (const { sys, marks, F } of pending) {
+      const left = sys.getBoundingClientRect().left;
+      for (const [g, b] of marks) {
+        const s = el('span', 'syl', b.tk.sd);
+        s.style.fontSize = F * TEXT + 'px'; s.style.top = F * TEXT_TOP + 'px';
+        s.style.left = (g.getBoundingClientRect().left - left + b.aW + b.gW / 2) + 'px';
+        sys.append(s);
+      }
+    }
+  }
+  function initialBox(p, F) {
+    const h = O.initialLines * F * SYS - 0.22 * F, box = el('div', 'initial' + (O.initial.mode === 'blank' ? ' blank' : ''));
+    box.style.width = box.style.height = h + 'px';
+    const inner = el('div', 'in'); box.append(inner);
+    if (O.initial.mode === 'image') { const img = el('img'); img.src = O.initial.src; img.alt = ''; inner.append(img); }
+    else if (O.initial.mode === 'letter') { const t = el('span', null, p.initialLetter); t.style.fontSize = h * 0.74 + 'px'; inner.append(t); }
+    return { box, w: h + 0.16 * F };
+  }
+  const initW = F => O.initialLines * F * SYS - 0.22 * F + 0.16 * F;
+  const widthFn = (W, F, withInitial) => n => (withInitial && n < O.initialLines) ? W - initW(F) : W;
+
+  // lays a run of lines into a systems block; spreads them evenly but not too far apart
+  function systemsBlock(p, lines, from, to, F, W, height, withInitial) {
+    const box = el('div', 'systems'); box.style.height = height + 'px';
+    const count = to - from, slack = height - count * F * SYS, extra = count > 1 ? Math.min(slack / (count - 1), 0.45 * F) : 0;
+    let iw = 0;
+    if (withInitial && from === 0) { const ini = initialBox(p, F); box.append(ini.box); iw = ini.w; }
+    for (let li = from; li < to; li++) {
+      const ind = (li < O.initialLines && withInitial) ? iw : 0;
+      const s = system(p, lines, li, F, W - ind, ind);
+      if (li < to - 1) s.style.marginBottom = extra + 'px';
+      box.append(s);
+    }
+    return box;
+  }
+  function page(Win, Hin, margin) {
+    const pg = el('div', 'page'); pg.style.cssText = `width:${Win * IN}px;height:${Hin * IN}px;padding:${margin}px`;
+    return pg;
+  }
+  const pickF = fits => { if (O.staffSize > 0) return O.staffSize; for (let F = FMAX; F > FMIN; F -= 0.5) if (fits(F)) return F; return FMIN; };
+
+  // ---------------------------------------------------------------- partbook: one voice per page
+  function partbook() {
+    const [Win, Hin] = O.partbookPage, M = 0.6 * IN, W = Win * IN - 2 * M;
+    const avail = first => Hin * IN - 2 * M - 34 - (first ? 44 : 0);
+    const cap = (F, first) => Math.max(1, Math.floor(avail(first) / (F * SYS)));
+    const F = pickF(F => D.parts.every(p => breakLines(p, F, widthFn(W, F, true)).length <= cap(F, true)));
+    for (const p of D.parts) {
+      const lines = breakLines(p, F, widthFn(W, F, true));
+      let from = 0, first = true;
+      while (from < lines.length) {
+        const pg = page(Win, Hin, M), to = Math.min(lines.length, from + cap(F, first));
+        pg.append(el('div', 'head', p.label));
+        if (first) { const tl = el('div', 'titleline'); tl.append(el('span', 't', D.title), el('span', 'c', D.composer || '')); pg.append(tl); }
+        pg.append(systemsBlock(p, lines, from, to, F, W, avail(first), first));
+        book.append(pg); from = to; first = false;
+      }
+    }
+    return [Win, Hin];
+  }
+
+  // ---------------------------------------------------------------- choirbook: voices spread over verso and recto
+  function choirbook() {
+    const [Win, Hin] = O.choirbookPage, M = 0.6 * IN, W = Win * IN - 2 * M;
+    const verso = O.verso.map(i => D.parts[i]), recto = O.recto.map(i => D.parts[i]);
+    const k = Math.max(verso.length, recto.length, 1);
+    const regionH = (Hin * IN - 2 * M - 34 - 10) / k, inner = regionH - 24 - 10;
+    const cap = F => Math.max(1, Math.floor(inner / (F * SYS)));
+    const all = verso.concat(recto);
+    const F = pickF(F => all.every(p => breakLines(p, F, widthFn(W, F, true)).length <= cap(F)));
+    const lines = new Map(all.map(p => [p, breakLines(p, F, widthFn(W, F, true))]));
+    const openings = Math.max(1, ...all.map(p => Math.ceil(lines.get(p).length / cap(F))));
+    for (let o = 0; o < openings; o++) {
+      const spread = el('div', 'spread');
+      for (const [side, parts] of [['verso', verso], ['recto', recto]]) {
+        const pg = page(Win, Hin, M);
+        pg.append(el('div', 'head', side === 'verso' ? D.title : (D.composer || '')));
+        pg.lastChild.style.cssText = 'font-style:italic;letter-spacing:.04em;padding:0;margin-bottom:10px;border-bottom:0.75px solid var(--ink)';
+        if (side === 'recto') pg.lastChild.style.fontStyle = 'normal', pg.lastChild.style.fontVariant = 'small-caps';
+        for (const p of parts) {
+          const ls = lines.get(p), from = o * cap(F), to = Math.min(ls.length, from + cap(F));
+          const reg = el('div', 'region'); reg.style.height = regionH + 'px';
+          reg.append(el('div', 'label', p.label));
+          if (from < to) reg.append(systemsBlock(p, ls, from, to, F, W, inner, o === 0));
+          pg.append(reg);
+        }
+        spread.append(pg);
+      }
+      book.append(spread);
+    }
+    return [Win, Hin];
+  }
+
+  const size = D.format === 'choirbook' ? choirbook() : partbook();
+  const ps = el('style'); ps.textContent = `@page { size: ${size[0]}in ${size[1]}in; margin: 0; }`; document.head.append(ps);
+  placeSyllables();
+  if (notes.length) { const n = el('div', 'notice'); n.innerHTML = '<b>Things to check</b>'; const ul = el('ul'); notes.forEach(t => ul.append(el('li', null, t))); n.append(ul); book.prepend(n); }
+  meas.remove();
+  document.body.dataset.ready = '1';
+})();
+</script>
+</body>
+</html>

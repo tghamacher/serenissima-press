@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EMS Serenissima Cheat Sheet</title>
+<style>
+  /* Uses the copy of EMS Serenissima installed on this computer. */
+  @font-face { font-family: "EMS"; src: url("fonts/EMS_Serenissima.otf") format("opentype"); font-display: block; }
+  :root { --ink: #1a1a1a; --muted: #6b6b6b; --rule: #d9d6cf; --accent: #8a2a1b; --paper: #fffdf8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 13px/1.4 "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 1050px; margin: 0 auto; padding: 24px 16px 40px; }
+  h1 { font: 600 24px/1.2 Georgia, serif; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 18px; }
+  h2 { font: 600 15px/1.2 Georgia, serif; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--rule); }
+  h2 small { font: 400 12px "Segoe UI", sans-serif; color: var(--muted); margin-left: 8px; }
+  .ems { font-family: "EMS"; font-variant-ligatures: common-ligatures; font-feature-settings: "liga" 1; font-size: 64px; line-height: 1; white-space: pre; }
+  .row { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .staffrow { display: flex; flex-wrap: nowrap; gap: 0; overflow-x: auto; }
+  .cell { display: flex; flex-direction: column; align-items: center; min-width: 56px; }
+  .staffrow .cell { min-width: 0; width: 0.62em; font-size: 80px; }
+  .staffrow .ems { font-size: 80px; }
+  .staffrow .code, .staffrow .name { font-size: 13px; }
+  .staffrow .name { font-size: 10px; white-space: nowrap; }
+  .code { font: 600 14px Consolas, monospace; color: var(--accent); }
+  .name { font-size: 11px; color: var(--muted); text-align: center; max-width: 90px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 0 28px; }
+  .rules { margin: 8px 0 0; padding-left: 18px; }
+  .rules li { margin: 2px 0; }
+  kbd { font: 600 12px Consolas, monospace; background: #f1ede4; border: 1px solid var(--rule); border-radius: 3px; padding: 0 4px; color: var(--accent); }
+  .example { border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; margin-top: 6px; background: #fff; }
+  .example .ems { font-size: 84px; }
+  .warn { background: #fbf1df; border: 1px solid #e8cf9f; border-radius: 6px; padding: 8px 12px; margin-top: 12px; }
+  @media print { body { background: #fff; } main { padding: 0; } .ems { font-size: 52px; } h2 { break-after: avoid; } section { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>EMS Serenissima: keyboard cheat sheet</h1>
+  <p class="sub"><a href="./">&larr; Serenissima Press</a> &middot; Every sign = <b>symbol key</b> + <b>pitch key</b>. Each glyph carries its own piece of five‑line staff, so just keep typing. Ligatures must be switched on in your editor.</p>
+
+  <section>
+    <h2>Pitch keys <small>lowest → highest · home row = lines, bottom row = spaces</small></h2>
+    <div class="staffrow" id="pitches"></div>
+    <ul class="rules">
+      <li>Staff lines, bottom to top: <kbd>d</kbd> <kbd>f</kbd> <kbd>g</kbd> <kbd>h</kbd> <kbd>j</kbd>. Spaces inside: <kbd>c</kbd> <kbd>v</kbd> <kbd>b</kbd> <kbd>n</kbd>.</li>
+      <li>Below the staff: <kbd>x</kbd> <kbd>s</kbd> <kbd>z</kbd> (stepping down). Above: <kbd>m</kbd> <kbd>k</kbd> <kbd>,</kbd> (stepping up). No ledger lines are drawn, as in the original sources.</li>
+      <li>Stem direction is chosen automatically by pitch.</li>
+    </ul>
+  </section>
+
+  <div class="grid">
+    <section><h2>Notes <small>shown on <kbd>g</kbd></small></h2><div class="row" id="notes"></div></section>
+    <section><h2>Coloured (black) notes</h2><div class="row" id="black"></div></section>
+  </div>
+
+  <section><h2>Rests <small>note number + 0 + pitch; pitch sets the height</small></h2><div class="row" id="rests"></div></section>
+
+  <div class="grid">
+    <section><h2>Signs on a pitch <small>sign + pitch key</small></h2><div class="row" id="signs"></div></section>
+    <section><h2>Clefs <small>number = staff line, from the bottom</small></h2><div class="row" id="clefs"></div></section>
+  </div>
+
+  <section><h2>Mensuration &amp; proportion signs</h2><div class="row" id="mens"></div></section>
+
+  <section><h2>Staff, barlines, extras <small>single keys</small></h2><div class="row" id="misc"></div></section>
+
+  <section>
+    <h2>Worked example</h2>
+    <div class="example">
+      <div class="code">C3 T1 i 3g 3b 2h .n 4b 5g 5v 3g i 1f i B</div>
+      <div class="ems" id="ex1"></div>
+      <div class="name" style="max-width:none;text-align:left">C clef on line 3 (so <kbd>g</kbd> = middle C) · C · semibreves C D · dotted breve E · minim D · semiminims C B · semibreve C · longa A · barline. (Spaces in the code line are only for reading. Don't type them.)</div>
+    </div>
+    <div class="warn"><b>If you see loose letters or single shapes instead of notes on a staff,</b> ligatures are off. In Word: Font dialog (Ctrl+D) → Advanced → Ligatures → <i>Standard Only</i>. Browsers turn them on automatically. Never put a space between a symbol key and its pitch key: the space glyph is blank and breaks the staff. Use <kbd>i</kbd>/<kbd>o</kbd>/<kbd>p</kbd> for staff‑only spacing.</div>
+  </section>
+  <p class="sub" style="margin-top:24px">Font: EMS Serenissima by Elam Rotem, <a href="https://www.earlymusicsources.com/">Early Music Sources</a>, licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.</p>
+</main>
+<script>
+  document.fonts.load('40px EMS').then(() => {
+  const P = [["z",""],["s",""],["x",""],["d","line 1"],["c",""],["f","line 2"],["v",""],["g","line 3"],["b",""],["h","line 4"],["n",""],["j","line 5"],["m",""],["k",""],[",",""]];
+  const cell = (glyph, code, name) => `<div class="cell"><div class="ems">${glyph}</div><div class="code">${code}</div>${name ? `<div class="name">${name}</div>` : ""}</div>`;
+  const fill = (id, items) => document.getElementById(id).innerHTML = items.map(a => cell(...a)).join("");
+  fill("pitches", P.map(([k, n]) => ["i3" + k + "i", k, n]));
+  fill("notes", [["pr" + "gp", "r", "maxima"], ["p1gp", "1", "longa"], ["p2gp", "2", "breve"], ["p3gp", "3", "semibreve"], ["p4gp", "4", "minima"], ["p5gp", "5", "semiminima"], ["p6gp", "6", "fusa"], ["p7gp", "7", "fusa (alt. flag)"], ["p8gp", "8", "semifusa"]]);
+  fill("black", [["pqgp", "q", "black longa"], ["pwgp", "w", "black breve"], ["pegp", "e", "black semibreve"]]);
+  fill("rests", [["p10gp", "10", "longa rest"], ["p20gp", "20", "breve rest"], ["p30gp", "30", "semibreve rest"], ["p40gp", "40", "minim rest"], ["p50gp", "50", "semiminim rest"], ["p60gp", "60", "fusa rest"], ["p70gp", "70", "semifusa rest"]]);
+  fill("signs", [["pbg3gp", "b", "flat (before note)"], ["p-g3gp", "-", "flat (same)"], ["p+g3gp", "+", "sharp"], ["p3g.gp", ".", "dot (after note)"], ["pUgp", "U", "custos (line end)"]]);
+  fill("clefs", ["C1", "C2", "C3", "C4", "C5", "F3", "F4", "F5", "G1", "G2"].map(c => ["p" + c + "p", c, ""]));
+  fill("mens", [["pT1p", "T1", "C"], ["pT2p", "T2", "cut C"], ["pT3p", "T3", "O"], ["pT4p", "T4", "cut O"], ["pT5p", "T5", "3"], ["pT6p", "T6", "3/2"], ["pT7p", "T7", "6/4"], ["pT8p", "T8", "2"], ["pT9p", "T9", "3/4"]]);
+  fill("misc", [["u", "u", "long staff"], ["i", "i", "staff"], ["o", "o", "half staff"], ["p", "p", "narrow staff"], ["pBp", "B", "barline"], ["pEp", "E", "double bar"], ["pRp", "R", "final / repeat"], ["pB(p", "B(", "barline, arc above"], ["pB)p", "B)", "barline, arc below"], ["p3g*p", "*", "fermata (after note)"], ["p(3g3h)p", "( )", "bracket below └ ┘"], ["p{3g3h}p", "{ }", "bracket below ┌ ┐"], ["pypyp", "y / t / space", "blank gap, no staff"]]);
+  document.getElementById("ex1").textContent = "C3T1i3g3b2h.n4b5g5v3gi1fiB";
+  });
+</script>
+</body>
+</html>
