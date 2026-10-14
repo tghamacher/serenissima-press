@@ -1,9 +1,13 @@
 /* EMS Serenissima by Elam Rotem, Early Music Sources, CC BY 4.0. See fonts/LICENSE-EMS_Serenissima.md */
 @font-face { font-family: "EMS Serenissima"; src: url("../fonts/EMS_Serenissima.otf") format("opentype"); font-display: block; }
+/* Initials: EB Garamond Initials (Georg Duffner) and Libertinus Serif Initials, SIL OFL 1.1; Yinit (Yannis Haralambous), public domain */
+@font-face { font-family: "EB Garamond Initials"; src: url("../fonts/EBGaramond-Initials.otf") format("opentype"); font-display: block; }
+@font-face { font-family: "Libertinus Serif Initials"; src: url("../fonts/LibertinusSerifInitials-Regular.otf") format("opentype"); font-display: block; }
+@font-face { font-family: "Yinit"; src: url("../fonts/Yinit.otf") format("opentype"); font-display: block; }
 
 :root {
   --ink: #1b1712; --muted: #6b6255; --rule: #d8cfbd; --paper: #fdfaf2; --desk: #e9e3d6;
-  --panel: #fffdf8; --accent: #8a2a1b; --accent-ink: #fff; --focus: #b5542f;
+  --panel: #fffdf8; --accent: #8a2a1b; --accent-ink: #fff; --focus: #b5542f; --rubric: #a8261b;
   --textfont: "EB Garamond", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --ui: "Segoe UI", system-ui, -apple-system, sans-serif;
 }
@@ -94,6 +98,9 @@ button, select, input { font: inherit; color: inherit; }
               text-shadow: 0 0 2px var(--paper), 0 0 3px var(--paper), 0 0 4px var(--paper), 0 0 6px var(--paper), 0 0 8px var(--paper); }
 .sp-initial.sp-blank { border-width: 1px; border-style: dashed; padding: 0; } .sp-blank .sp-in { border: 0; background: none; }
 .sp-in img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.sp-initial.sp-glyph { border: 0; padding: 0; color: var(--ink); }
+.sp-initial.sp-red { color: var(--rubric); } .sp-red .sp-in span { color: var(--rubric); }
+.sp-glyph svg { display: block; width: 100%; height: 100%; overflow: visible; fill: currentColor; }
 
 @media print {
   body { background: none; }

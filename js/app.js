@@ -81,6 +81,9 @@
     const on = state.format === 'choirbook';
     document.querySelectorAll('.sideCol').forEach(e => e.style.display = on ? '' : 'none');
     $('sideHint').hidden = !on;
+    // a choirbook opens with one large initial; each partbook opens with its own
+    $('otherInitials').hidden = !on;
+    $('initialFor').textContent = on ? 'First voice (top left)' : 'Each voice';
   }
 
   // ---- typesetting (debounced)
@@ -105,14 +108,17 @@
     $('book').classList.add('sp-busy');
     const out = await L.render($('book'), { title: $('title').value, composer: $('composer').value, parts: res.parts }, {
       format: state.format, staffSize: +$('staffSize').value,
-      initial: { mode: $('initial').value === 'image' && !state.initialSrc ? 'letter' : $('initial').value, src: state.initialSrc },
-      initialLines: +$('initialLines').value,
+      initials: {
+        first: { style: $('initial').value, lines: +$('initialLines').value },
+        other: { style: $('initial2').value, lines: +$('initialLines2').value },
+        src: state.initialSrc, red: $('rubric').checked
+      },
       partbookPage: pg(state.page.partbook), choirbookPage: pg(state.page.choirbook), verso, recto
     });
     $('book').classList.remove('sp-busy');
     setPageRule(out.pageSize);
     fitPreview();
-    status(null, res.warnings);
+    status(null, res.warnings.concat(out.warnings));
     document.title = `${$('title').value || 'Serenissima Press'} – ${state.format}`;
   }
   function setPageRule([w, h]) {
@@ -150,7 +156,7 @@
   $('page').value = state.page.partbook;
   $('page').onchange = () => { state.page[state.format] = $('page').value; typeset(); };
   for (const id of ['title', 'composer']) $(id).oninput = typeset;
-  for (const id of ['staffSize', 'reduction', 'mens', 'transpose', 'ficta', 'barlines', 'initialLines']) $(id).onchange = typeset;
+  for (const id of ['staffSize', 'reduction', 'mens', 'transpose', 'ficta', 'barlines', 'initialLines', 'initial2', 'initialLines2', 'rubric']) $(id).onchange = typeset;
   $('initial').onchange = () => { if ($('initial').value === 'image' && !state.initialSrc) $('initialFile').click(); typeset(); };
   $('initialFile').onchange = e => {
     const f = e.target.files[0]; if (!f) return;

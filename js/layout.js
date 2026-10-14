@@ -69,6 +69,34 @@
     return lines;
   }
 
+  // ---------------------------------------------------------------- initials
+  // Glyph-font initials are drawn as SVG cropped to the letter's ink. Framed ones (a letter cut into a
+  // decorated block) fill the initial's height; bare capitals stand on its foot, as tall as their H.
+  const INITIAL_FONTS = {
+    woodcut: { family: '"EB Garamond Initials"', framed: true, letters: 'ADFGLNOQT', name: 'Woodcut' },
+    gothic: { family: 'Yinit', framed: true },
+    engraved: { family: '"Libertinus Serif Initials", "IM Fell French Canon"' },
+    capital: { family: '"IM Fell French Canon"' }
+  };
+  const inkCache = new Map();
+  let ctx = null;
+  function ink(ch, family) {
+    const key = family + '|' + ch; let v = inkCache.get(key);
+    if (!v) {
+      ctx = ctx || document.createElement('canvas').getContext('2d');
+      ctx.font = '100px ' + family; const m = ctx.measureText(ch);
+      v = { x: m.actualBoundingBoxLeft, y: m.actualBoundingBoxAscent, w: m.actualBoundingBoxLeft + m.actualBoundingBoxRight, h: m.actualBoundingBoxAscent + m.actualBoundingBoxDescent };
+      inkCache.set(key, v);
+    }
+    return v;
+  }
+  function glyph(ch, family, view) {
+    const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg'), t = document.createElementNS(NS, 'text');
+    svg.setAttribute('viewBox', view.join(' ')); svg.setAttribute('aria-hidden', 'true');
+    t.setAttribute('font-size', '100'); t.style.fontFamily = family; t.textContent = ch;
+    svg.append(t); return svg;
+  }
+
   function fill(w, F) {
     const s = el('span'); if (w <= 0.05) return s;
     const iW = wE('i', F), pW = wE('p', F), n = Math.floor(w / iW), m = Math.max(0, Math.ceil((w - n * iW) / pW - 1e-6));
@@ -79,16 +107,33 @@
 
   // ---------------------------------------------------------------- render
   // D: { title, composer, parts: [{label, clef, sig, tokens}] }
-  // o: { format, staffSize, initial: {mode, src}, initialLines, partbookPage: [w,h], choirbookPage: [w,h], verso: [i], recto: [i] }
+  // o: { format, staffSize, initials: {first: {style, lines}, other: {style, lines}, src, red},
+  //      partbookPage: [w,h], choirbookPage: [w,h], verso: [i], recto: [i] }
+  // In a choirbook the voice at the top of the left page gets the first initial; in partbooks every voice does.
   async function render(book, D, o) {
+    const I = o.initials, warnings = [];
+    const lead = o.format === 'choirbook' ? (o.verso.length ? o.verso[0] : o.recto[0]) : null;
+    const specFor = i => (lead === null || i === lead) ? I.first : I.other;
+    const families = new Set(['"EMS Serenissima"', '"EB Garamond"', '"IM Fell French Canon"']);
+    D.parts.forEach((p, i) => { const f = INITIAL_FONTS[specFor(i).style]; if (f) f.family.split(', ').forEach(x => families.add(x)); });
     // fonts only start loading when used, so ask for them before measuring anything
-    try { await Promise.all(['"EMS Serenissima"', '"EB Garamond"', '"IM Fell French Canon"'].map(f => document.fonts.load('40px ' + f))); } catch (e) { }
+    try { await Promise.all([...families].map(f => document.fonts.load('40px ' + f))); } catch (e) { }
     await document.fonts.ready;
     if (!document.fonts.check('20px "EMS Serenissima"')) throw new Error('The EMS Serenissima music font could not be loaded.');
     meas = el('div'); meas.style.cssText = 'position:absolute;left:-20000px;top:0;visibility:hidden;white-space:pre';
     document.body.appendChild(meas);
     D = JSON.parse(JSON.stringify(D));   // text preparation edits the tokens
-    D.parts.forEach(p => prepareText(p, o.initial.mode));
+    D.parts.forEach((p, i) => {
+      const spec = specFor(i);
+      let style = spec.style === 'image' && !I.src ? 'letter' : spec.style;
+      prepareText(p, style);
+      const f = INITIAL_FONTS[style];
+      if (f && f.letters && !f.letters.includes(p.initialLetter)) {
+        warnings.push(`${f.name} initials have no ${p.initialLetter}, so the ${p.label} has its ${p.initialLetter} on a dotted ground.`);
+        style = 'letter';
+      }
+      p.init = { style, lines: spec.lines, red: I.red && spec === I.other && lead !== null };
+    });
     book.innerHTML = '';
     const pending = [];
 
@@ -114,23 +159,33 @@
       pending.push({ sys, marks, F });
       return sys;
     }
-    const initialSize = F => o.initialLines * F * SYS - 0.22 * F;
+    // size of a voice's initial: framed boxes are square, glyph initials as wide as their letter
+    function initialDims(p, F) {
+      const { style, lines } = p.init, h = lines * F * SYS - 0.22 * F, f = INITIAL_FONTS[style];
+      if (style === 'none') return null;
+      if (!f) return { h, w: h };
+      const k = ink(p.initialLetter, f.family), top = f.framed ? k.y : ink('H', f.family).y, kh = f.framed ? k.h : top;
+      return { h, w: h * k.w / kh, f, view: [-k.x, -top, k.w, kh] };
+    }
     function initialBox(p, F) {
-      const h = initialSize(F), box = el('div', 'sp-initial' + (o.initial.mode === 'blank' ? ' sp-blank' : ''));
-      box.style.width = box.style.height = h + 'px';
+      const d = initialDims(p, F), { style, red } = p.init;
+      const box = el('div', 'sp-initial' + (d.f ? ' sp-glyph' : '') + (style === 'blank' ? ' sp-blank' : '') + (red ? ' sp-red' : ''));
+      box.style.width = d.w + 'px'; box.style.height = d.h + 'px';
+      if (d.f) { box.append(glyph(p.initialLetter, d.f.family, d.view)); return box; }
       const inner = el('div', 'sp-in'); box.append(inner);
-      if (o.initial.mode === 'image' && o.initial.src) { const img = el('img'); img.src = o.initial.src; img.alt = ''; inner.append(img); }
-      else if (o.initial.mode === 'letter') { const t = el('span', null, p.initialLetter); t.style.fontSize = h * 0.74 + 'px'; inner.append(t); }
+      if (style === 'image') { const img = el('img'); img.src = I.src; img.alt = ''; inner.append(img); }
+      else if (style === 'letter') { const t = el('span', null, p.initialLetter); t.style.fontSize = d.h * 0.74 + 'px'; inner.append(t); }
       return box;
     }
-    const initW = F => initialSize(F) + 0.16 * F;
-    const widthFn = (W, F) => n => n < o.initialLines ? W - initW(F) : W;
+    const initW = (p, F) => { const d = initialDims(p, F); return d ? d.w + 0.16 * F : 0; };
+    const widthFn = (p, W, F) => { const iw = initW(p, F); return n => n < p.init.lines ? W - iw : W; };
     function systemsBlock(p, lines, from, to, F, W, height, withInitial) {
       const box = el('div', 'sp-systems'); box.style.height = height + 'px';
       const count = to - from, slack = height - count * F * SYS, extra = count > 1 ? Math.min(slack / (count - 1), 0.45 * F) : 0;
-      if (withInitial && from === 0) box.append(initialBox(p, F));
+      const iw = withInitial && from === 0 ? initW(p, F) : 0;
+      if (iw) box.append(initialBox(p, F));
       for (let li = from; li < to; li++) {
-        const ind = (withInitial && li < o.initialLines) ? initW(F) : 0;
+        const ind = li < p.init.lines ? iw : 0;
         const s = system(p, lines, li, F, W - ind, ind);
         if (li < to - 1) s.style.marginBottom = extra + 'px';
         box.append(s);
@@ -139,7 +194,7 @@
     }
     const page = (Win, Hin, M) => { const pg = el('div', 'sp-page'); pg.style.cssText = `width:${Win * IN}px;height:${Hin * IN}px;padding:${M}px`; return pg; };
     const pickF = fits => { if (o.staffSize > 0) return o.staffSize; for (let F = FMAX; F > FMIN; F -= 0.5) if (fits(F)) return F; return FMIN; };
-    const fitsAt = (parts, F, W, cap) => parts.every(p => breakLines(p, F, widthFn(W, F)).length <= cap(F));
+    const fitsAt = (parts, F, W, cap) => parts.every(p => breakLines(p, F, widthFn(p, W, F)).length <= cap(F));
 
     let size;
     if (o.format === 'choirbook') {
@@ -150,7 +205,7 @@
       const cap = F => Math.max(1, Math.floor(inner / (F * SYS)));
       const all = verso.concat(recto);
       const F = pickF(F => fitsAt(all, F, W, cap));
-      const lines = new Map(all.map(p => [p, breakLines(p, F, widthFn(W, F))]));
+      const lines = new Map(all.map(p => [p, breakLines(p, F, widthFn(p, W, F))]));
       const openings = Math.max(1, ...all.map(p => Math.ceil(lines.get(p).length / cap(F))));
       for (let op = 0; op < openings; op++) {
         const spread = el('div', 'sp-spread');
@@ -175,7 +230,7 @@
       const cap = (F, first) => Math.max(1, Math.floor(avail(first) / (F * SYS)));
       const F = pickF(F => fitsAt(D.parts, F, W, F => cap(F, true)));
       for (const p of D.parts) {
-        const lines = breakLines(p, F, widthFn(W, F));
+        const lines = breakLines(p, F, widthFn(p, W, F));
         let from = 0, first = true;
         while (from < lines.length) {
           const pg = page(Win, Hin, M), to = Math.min(lines.length, from + cap(F, first));
@@ -206,7 +261,7 @@
       }
     }
     meas.remove();
-    return { pageSize: size };
+    return { pageSize: size, warnings };
   }
 
   global.SPLayout = { render, CREDIT };

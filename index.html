@@ -63,15 +63,44 @@
       <label class="sp-check"><input type="checkbox" id="ficta"> Print editorial accidentals (ficta)</label>
       <label class="sp-check"><input type="checkbox" id="barlines"> Barlines at every bar</label>
 
-      <h2>5 · Initial</h2>
+      <h2>5 · Initials</h2>
       <div class="sp-row">
-        <label class="sp-field"><span>Style</span>
-          <select id="initial"><option value="letter">Letter on dotted ground</option><option value="blank">Blank frame (decorate by hand)</option><option value="image">My own image…</option></select>
+        <label class="sp-field"><span id="initialFor">Each voice</span>
+          <select id="initial">
+            <option value="woodcut">Woodcut, 1592</option>
+            <option value="gothic">Gothic, flourished</option>
+            <option value="letter">Letter on dotted ground</option>
+            <option value="engraved">Engraved capital</option>
+            <option value="capital">Plain capital</option>
+            <option value="blank">Blank frame (decorate by hand)</option>
+            <option value="image">My own image…</option>
+            <option value="none">None</option>
+          </select>
         </label>
         <label class="sp-field" style="flex:0 0 90px"><span>Height</span>
           <select id="initialLines"><option value="2">2 staves</option><option value="3">3 staves</option><option value="1">1 staff</option></select>
         </label>
       </div>
+      <div id="otherInitials">
+        <div class="sp-row">
+          <label class="sp-field"><span>Other voices</span>
+            <select id="initial2">
+              <option value="engraved">Engraved capital</option>
+              <option value="capital">Plain capital</option>
+              <option value="letter">Letter on dotted ground</option>
+              <option value="woodcut">Woodcut, 1592</option>
+              <option value="gothic">Gothic, flourished</option>
+              <option value="blank">Blank frame (decorate by hand)</option>
+              <option value="none">None</option>
+            </select>
+          </label>
+          <label class="sp-field" style="flex:0 0 90px"><span>Height</span>
+            <select id="initialLines2"><option value="1">1 staff</option><option value="2">2 staves</option><option value="3">3 staves</option></select>
+          </label>
+        </div>
+        <label class="sp-check"><input type="checkbox" id="rubric"> Other voices’ initials in red</label>
+      </div>
+      <p class="sp-hint">The woodcut alphabet has only A D F G L N O Q T; other letters are set on a dotted ground.</p>
       <input type="file" id="initialFile" accept="image/*" hidden>
 
       <h2>6 · Print</h2>
@@ -89,7 +118,7 @@
 
 <footer class="sp-foot" id="about">
   <p><strong>Serenissima Press</strong> (beta) converts modern MusicXML into mensural notation in the browser; nothing is uploaded anywhere. The result is a starting point: check ties, perfection, ficta and text underlay against your source.</p>
-  <p>Music font: <a href="https://www.earlymusicsources.com/">EMS Serenissima</a> by Elam Rotem, Early Music Sources, licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Text fonts: EB Garamond and IM Fell French Canon (SIL Open Font License), via Google Fonts.</p>
+  <p>Music font: <a href="https://www.earlymusicsources.com/">EMS Serenissima</a> by Elam Rotem, Early Music Sources, licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Text fonts: EB Garamond and IM Fell French Canon (SIL Open Font License), via Google Fonts. Initials: EB Garamond Initials by Georg Duffner, after Conrad Berner’s 1592 specimen, and Libertinus Serif Initials (SIL Open Font License); Yinit by Yannis Haralambous (public domain).</p>
   <p>When you share a book, credit the editor of the MusicXML edition you used.</p>
 </footer>
 

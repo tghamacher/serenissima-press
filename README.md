@@ -17,7 +17,8 @@ A link like `index.html?score=examples/sample.musicxml&format=choirbook` opens a
 
 - Notes become mensural values (maxima to semifusa); ties merge, triplets become coloration, dotted notes get a dot of addition, and 3-semibreve breves under O are perfect.
 - Accidentals are worked out from pitch against the key signature; editorial accidentals (ficta) are left out unless you ask for them. Mensural notation has no sharp key signatures, so sharps are printed on their notes; transposing can help.
-- Each line has a clef, signature and custos; staves are justified to full width; a decorated initial opens each voice.
+- Each line has a clef, signature and custos; staves are justified to full width.
+- Initials: in a choirbook, a large decorated initial opens the voice at the top left and smaller ones open the others (engraved or plain capitals, optionally in red); in partbooks each voice opens with the large one. Styles: woodcut (EB Garamond Initials, after Berner's 1592 specimen; it has only A D F G L N O Q T, other letters fall back to a dotted ground), flourished Gothic (Yinit), letter on dotted ground, engraved capital (Libertinus Serif Initials), plain capital, blank frame, your own image, or none.
 - The font has no ledger lines, so a clef is chosen that keeps every note on the staff.
 
 ### Not yet
@@ -28,7 +29,7 @@ Mensural ligatures, perfection and alteration beyond simple cases, "ij" repeat s
 
 - `index.html`, `css/`, `js/` — the web tool (`convert.js`: MusicXML to mensural tokens; `layout.js`: page layout; `app.js`: controls; `zip.js`: `.mxl` reader)
 - `cheatsheet.html` — keyboard map of the font
-- `fonts/` — EMS Serenissima and its licence
+- `fonts/` — EMS Serenissima and the initial fonts, with their licences
 - `tools/` — the original Windows PowerShell converter (`ConvertTo-Ems.ps1`), which writes HTML/PDF books locally
 - `examples/` — a small test score
 
@@ -36,4 +37,5 @@ Mensural ligatures, perfection and alteration beyond simple cases, "ij" repeat s
 
 - **Music font:** EMS Serenissima by Elam Rotem, Early Music Sources, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See `fonts/LICENSE-EMS_Serenissima.md`.
 - **Text fonts:** EB Garamond and IM Fell French Canon (SIL Open Font License), loaded from Google Fonts.
+- **Initials:** EB Garamond Initials by Georg Duffner and Libertinus Serif Initials by the Libertinus Project ([SIL Open Font License 1.1](https://openfontlicense.org), see `fonts/OFL-*.txt`); Yinit by Yannis Haralambous (public domain, see `fonts/LICENSE-Yinit.md`). Shipped unmodified from CTAN.
 - When you share a book, credit the editor of the MusicXML edition it was made from.
