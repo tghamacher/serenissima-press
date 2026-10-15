@@ -5,7 +5,7 @@
   const C = window.SPConvert, L = window.SPLayout;
 
   const PAGES = { letter: ['US Letter', 8.5, 11], legal: ['US Legal', 8.5, 14], tabloid: ['Tabloid 11×17', 11, 17], a4: ['A4', 8.27, 11.69], a3: ['A3', 11.69, 16.54] };
-  const state = { doc: null, info: null, format: 'partbook', page: { partbook: 'letter', choirbook: 'tabloid' }, initialSrc: '', parts: [], sections: {}, secKey: '' };
+  const state = { doc: null, info: null, format: 'partbook', page: { partbook: 'letter', choirbook: 'tabloid' }, orient: { partbook: 'portrait', choirbook: 'portrait' }, initialSrc: '', parts: [], sections: {}, secKey: '' };
 
   // ---- fixed option lists
   for (const [k, [name]] of Object.entries(PAGES)) $('page').append(new Option(name, k));
@@ -53,7 +53,7 @@
     const lines = [
       `Version: ${$('version').dataset.version}`,
       `Score: ${$('fileName').textContent}`,
-      `Format: ${state.format}, ${sel('page')}, staff ${sel('staffSize')}${state.staffUsed ? ` (${Math.round(state.staffUsed)} px)` : ''}`,
+      `Format: ${state.format}, ${sel('page')} ${state.orient[state.format]}, staff ${sel('staffSize')}${state.staffUsed ? ` (${Math.round(state.staffUsed)} px)` : ''}`,
       `Note values: ${sel('reduction')}; mensuration: ${sel('mens')}; transpose: ${sel('transpose')}; repeats: ${sel('repeats')}`,
       `Clefs: ${sel('clefs')}; voices: ${state.parts.filter(p => p.include).map(p => `${p.label} ${p.clef || 'auto'}${state.format === 'choirbook' ? ' ' + p.side : ''}`).join(', ')}`,
       `Options: ${on(['ledgers', 'ficta', 'barlines', 'ij', 'brackets'])}`,
@@ -139,7 +139,8 @@
     } catch (e) { status(e.message); return; }
     const verso = [], recto = [];
     sel.forEach((p, i) => (p.side === 'recto' ? recto : verso).push(i));
-    const pg = k => [PAGES[k][1], PAGES[k][2]];
+    // [width, height] in inches, turned for landscape
+    const pg = f => { const [, w, h] = PAGES[state.page[f]]; return state.orient[f] === 'landscape' ? [h, w] : [w, h]; };
     const scale = $('scale'); scale.style.transform = 'none'; scale.style.height = ''; scale.style.width = '';
     $('book').classList.add('sp-busy');
     // the sections as found, with the user's changes: whether each starts a new opening (none unless ticked), and its name
@@ -151,7 +152,7 @@
         other: { style: $('initial2').value, lines: +$('initialLines2').value },
         src: state.initialSrc, red: $('rubric').checked
       },
-      partbookPage: pg(state.page.partbook), choirbookPage: pg(state.page.choirbook), verso, recto
+      partbookPage: pg('partbook'), choirbookPage: pg('choirbook'), verso, recto
     });
     $('book').classList.remove('sp-busy');
     setPageRule(out.pageSize);
@@ -216,10 +217,12 @@
     state.format = b.dataset.format;
     document.querySelectorAll('[data-format]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
     $('page').value = state.page[state.format];
+    $('orient').value = state.orient[state.format];
     showSideColumn(); typeset();
   });
   $('page').value = state.page.partbook;
   $('page').onchange = () => { state.page[state.format] = $('page').value; typeset(); };
+  $('orient').onchange = () => { state.orient[state.format] = $('orient').value; typeset(); };
   for (const id of ['title', 'composer']) $(id).oninput = typeset;
   // "Custom…" opens a box starting at the size last used, so it is easy to nudge
   $('staffSize').onchange = () => {

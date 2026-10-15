@@ -1,6 +1,6 @@
 # Serenissima Press
 
-**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.6.1 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
+**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.7.0 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
 
 Turn a MusicXML score of Renaissance polyphony into **partbooks** (one voice per book) or a **choirbook** (voices spread across facing pages), in mensural notation with text underlay, set in the [EMS Serenissima](https://www.earlymusicsources.com/) font.
 
@@ -19,7 +19,7 @@ It is in **beta**: the result is a good starting point, but check ties, perfecti
 ## Using it
 
 1. Open the [site](https://tghamacher.github.io/serenissima-press/) and choose a `.musicxml`, `.xml` or `.mxl` file (one voice per part, lyrics included).
-2. Pick **Partbook** or **Choirbook**, page size, labels and clefs.
+2. Pick **Partbook** or **Choirbook**, page size and orientation (portrait or landscape), labels and clefs.
 3. Check **Note values**: editions in x/2 time usually keep the original values (whole note = semibreve); editions in x/4 usually halve them (half note = semibreve). The tool guesses; check it.
 4. **Print / save as PDF**: choose "Save as PDF", margins "None", and turn on "Background graphics".
 
@@ -52,6 +52,10 @@ If you have a GitHub account you can also [open an issue](https://github.com/tgh
 ## Release notes
 
 Versions are numbered 0.*feature*.*fix* while the tool is in beta: a release with new features raises the middle number, a release of fixes only raises the last.
+
+### 0.7.0 (2026-10-15)
+
+- **Orientation:** partbooks and choirbooks can be set portrait or landscape, each with its own setting; the PDF follows it.
 
 ### 0.6.1 (2026-10-15)
 
