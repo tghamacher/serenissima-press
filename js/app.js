@@ -142,8 +142,8 @@
     const pg = k => [PAGES[k][1], PAGES[k][2]];
     const scale = $('scale'); scale.style.transform = 'none'; scale.style.height = ''; scale.style.width = '';
     $('book').classList.add('sp-busy');
-    // the sections as found, with the user's changes: whether each must start a new opening (a movement does), and its name
-    const sections = res.sections.map(s => ({ ...s, opening: s.movement, ...state.sections[s.step] }));
+    // the sections as found, with the user's changes: whether each starts a new opening (none unless ticked), and its name
+    const sections = res.sections.map(s => ({ ...s, opening: false, ...state.sections[s.step] }));
     const out = await L.render($('book'), { title: $('title').value, composer: $('composer').value, parts: res.parts, sections }, {
       format: state.format, staffSize: staffSize(),
       initials: {
@@ -172,7 +172,7 @@
       sections.forEach((s, n) => {
         const tr = document.createElement('tr'); tr.dataset.step = s.step; if (s.movement) tr.className = 'mv';
         const on = document.createElement('input'); on.type = 'checkbox'; on.checked = s.opening; on.disabled = !n;
-        on.setAttribute('aria-label', `Always start ${s.name || 'this section'} on a new opening`);
+        on.setAttribute('aria-label', `Start ${s.name || 'this section'} on a new opening`);
         on.onchange = () => { (state.sections[s.step] = state.sections[s.step] || {}).opening = on.checked; typeset(); };
         const nm = document.createElement('input'); nm.type = 'text'; nm.value = s.name; nm.setAttribute('aria-label', `Name of the section at bar ${s.mno}`);
         nm.title = s.auto ? 'Not named in the edition: taken from its first words' : 'As named in the edition';

@@ -266,8 +266,8 @@
 
     let size, staff, sections = [];
     if (o.format === 'choirbook') {
-      // The page is turned only where every singer has reached the same bar: each section starts an
-      // opening, and a section too long for one is turned at the last bar every voice reaches on it.
+      // The page is turned only where every singer has reached the same bar: the last bar every voice
+      // reaches on the opening. Sections the user ticks start a new opening.
       const [Win, Hin] = o.choirbookPage, M = 0.6 * IN, W = Win * IN - 2 * M;
       const verso = o.verso.map(i => D.parts[i]).filter(Boolean), recto = o.recto.map(i => D.parts[i]).filter(Boolean);
       const k = Math.max(verso.length, recto.length, 1);
@@ -275,8 +275,8 @@
       const cap = F => Math.max(1, Math.floor(inner / (F * SYS)));
       const all = verso.concat(recto);
       const cutAt = st => all.every(p => p.cuts && p.cuts[st] !== undefined);
-      // sections (s.opening: must start an opening; the others share one when there is room)
-      const secs = (D.sections || []).filter((s, n) => n && cutAt(s.step));
+      // the music runs on from opening to opening; only the sections the user ticks start a new one
+      const secs = (D.sections || []).filter((s, n) => n && s.opening && cutAt(s.step));
       secs.unshift({ step: 0, name: (D.sections || [])[0] ? D.sections[0].name : '', opening: true });
       const bars = all.length ? Object.keys(all[0].cuts || {}).map(Number).filter(cutAt).sort((a, b) => a - b) : [];
       // each section: its voices (with their initials) and the bars inside it where the page may turn
@@ -290,7 +290,7 @@
           v.tacet = !v.tokens.some(t => t.t === 'n');
           return v;
         });
-        return { s, views, last: inside.length + 1, hard: !!s.opening };
+        return { s, views, inside, last: inside.length + 1 };
       });
       // a voice from bar a to bar b of its section; only the section's first opening has the initial
       function part(v, a, b, F) {
@@ -316,8 +316,8 @@
         }
         return out;
       }
-      // fit to page: the largest staff with every section on one opening, but no smaller than a choir can
-      // read from a lectern; below that, long sections take more than one
+      // automatic: the largest staff with the piece (or each ticked section) on one opening, but no smaller
+      // than a choir can read from a lectern; below that, the music runs on to more openings
       const READABLE = 40, whole = F => segs.every(g => fits(g, 0, g.last, F));
       let F = o.staffSize;
       if (!(F > 0)) {
@@ -325,27 +325,25 @@
         for (let f = FMAX; f >= READABLE; f -= 2) if (whole(f)) { F = f; while (F + 0.5 < f + 2 && F + 0.5 <= FMAX && whole(F + 0.5)) F += 0.5; break; }
       }
       staff = F;
-      // Fill the openings: a section goes on the current opening if every voice still has room for it,
-      // else (or if it must start an opening, or needs more than one) the page is turned before it.
+      // each opening holds as many bars as every voice has room for
       const openings = [];
       for (const g of segs) {
-        const chunks = openingsOf(g, F); let first = 0;
+        const chunks = openingsOf(g, F), base = openings.length;
         chunks.forEach(([a, b], ci) => {
           const parts = g.views.map(v => v.tacet ? null : part(v, a, b, F));
-          const lens = parts.map(x => x ? x.lines.length : 0);
-          if (lens.some(n => n > cap(F)) && !warnings.some(w => w.includes('single bar')))
-            warnings.push(`${g.s.name || 'A section'}: a single bar is too long for one opening at this staff size. Choose a smaller staff.`);
-          let cur = openings[openings.length - 1];
-          if (!cur || ci || g.hard || chunks.length > 1 || lens.some((n, q) => cur.used[q] + n > cap(F))) {
-            cur = { used: all.map(() => 0), blocks: [] }; openings.push(cur);
-          }
-          // the first note on the next opening, for the custos at the end of a section cut in two
+          if (parts.some(x => x && x.lines.length > cap(F)) && !warnings.some(w => w.includes('single bar')))
+            warnings.push(`${g.s.name || 'The music'}: a single bar is too long for one opening at this staff size. Choose a smaller staff.`);
+          // the first note on the next opening, for the custos
           const after = g.views.map(v => b < g.last ? v.tokens.slice(v.bounds[b]).find(t => t.k) : null);
-          cur.blocks.push({ g, ci, parts, after });
-          if (!ci) first = openings.length;
-          lens.forEach((n, q) => cur.used[q] += n);
+          openings.push({ blocks: [{ g, ci, parts, after }] });
         });
-        sections.push({ step: g.s.step, first, last: openings.length });
+        // where each of the edition's sections falls, for the list of sections
+        const at = j => base + chunks.findIndex(([a, b]) => j >= a && j < b) + 1;
+        sections.push({ step: g.s.step, first: base + 1, last: openings.length });
+        for (const s of D.sections || []) {
+          const j = g.inside.indexOf(s.step) + 1;
+          if (j > 0) sections.push({ step: s.step, first: at(j), last: at(j) });
+        }
       }
       for (const op of openings) {
         const spread = el('div', 'sp-spread');

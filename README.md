@@ -1,6 +1,6 @@
 # Serenissima Press
 
-**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.6.0 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
+**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.6.1 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
 
 Turn a MusicXML score of Renaissance polyphony into **partbooks** (one voice per book) or a **choirbook** (voices spread across facing pages), in mensural notation with text underlay, set in the [EMS Serenissima](https://www.earlymusicsources.com/) font.
 
@@ -32,8 +32,8 @@ A link like `index.html?score=examples/o-quam-gloriosum.mxl&format=choirbook` op
 - **Lines:** each line has a clef, signature and custos; staves are justified to full width.
 - **Initials:** in a choirbook, a large decorated initial opens the voice at the top left and smaller ones open the others (engraved or plain capitals, optionally in red); in partbooks each voice opens with the large one. Styles: woodcut (EB Garamond Initials, after Berner's 1592 specimen; it has only A D F G L N O Q T, other letters fall back to a dotted ground), flourished Gothic (Yinit), letter on dotted ground, engraved capital (Libertinus Serif Initials), plain capital, blank frame, your own image, or none.
 - **Clefs:** the font reaches one ledger line above and below the staff. With **period** clefs (the default), a part that goes further in the edition's clef gets the clef a scribe would have used: a common one (C1, C3, C4, F4, then G2, C2, F3) that keeps every note within reach. This is listed as a note, not a warning. **Modern** clefs, for singers learning the notation, set sopranos and altos in treble, tenors in treble an octave lower and basses in F4. A note past the font's reach is drawn from the font's own note, with only the extra ledger lines it needs, copied from the font's first one (the option can be turned off).
-- **Sections and page turns:** the edition's double and final barlines divide the music into sections (Kyrie I, Christe, …), named from the edition or from their first words, each with a double bar and its own initials. In a choirbook the page is turned only where every singer has reached the same point: sections share an opening while every voice has room, the page is turned between them, and a section too long for one opening is turned at a bar every voice has reached. A movement (after a final barline) always starts a new opening; tick any other section to do the same.
-- **Staff size:** automatic in a choirbook means the largest staff that keeps every section on one opening, down to 40 px. A partbook keeps a comfortable size (56 px, text about 11 pt) and runs on to as many pages as it needs. Either can be set by hand.
+- **Page turns:** in a choirbook the page is turned only where every singer has reached the same point: each opening ends at the last bar every voice reaches on it, and the music runs on from opening to opening. The edition's double and final barlines mark sections (Kyrie I, Christe, …), each ending with a double bar; they are named from the edition or from their first words and listed under **Sections**, where you can tick any to start it on a new opening with its own initials. None is ticked unless you choose.
+- **Staff size:** automatic in a choirbook means the largest staff that keeps the piece (or each ticked section) on one opening, down to 40 px. A partbook keeps a comfortable size (56 px, text about 11 pt) and runs on to as many pages as it needs. Either can be set by hand.
 - **Ligature brackets:** optionally, ligature brackets marked in the edition (MusicXML brackets) are printed above the staff. Slurs have no place in mensural notation and are not drawn, but they guide the text given to a voice that has none of its own.
 - **Repeats** (with first and second endings) are written out in full by default, or kept as written with the dotted repeat sign.
 - **Choral scores** with two singers on a staff (S+A, T+B) are split into separate voices by pitch, so swapped layers and shared chords still come out right; a lower voice without its own words takes the text sung on its staff.
@@ -52,6 +52,10 @@ If you have a GitHub account you can also [open an issue](https://github.com/tgh
 ## Release notes
 
 Versions are numbered 0.*feature*.*fix* while the tool is in beta: a release with new features raises the middle number, a release of fixes only raises the last.
+
+### 0.6.1 (2026-10-15)
+
+- Choirbooks no longer start sections or movements on a new opening by default: the music runs on from opening to opening, still turning only at a bar every voice has reached. Tick a section under **Sections** to start it on a new opening.
 
 ### 0.6.0 (2026-10-15)
 
