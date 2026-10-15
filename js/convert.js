@@ -204,7 +204,7 @@
     track.forEach((s, k) => {
       const next = k + 1 < track.length ? track[k + 1].t : Infinity;
       while (j < notes.length && notes[j].end <= s.t + 1e-6) j++;
-      let n = j; while (n < notes.length && notes[n].syl) n++;
+      let n = j; while (n < notes.length && (notes[n].syl || notes[n].cont)) n++;   // not on a slurred melisma
       if (n < notes.length && notes[n].t < next - 1e-6) { notes[n].syl = s.syl; if (!near(notes[n].t, s.t)) off.push(s.mno); j = n + 1; }
       else off.push(s.mno);
     });
@@ -218,7 +218,7 @@
     for (const s of track) {
       if (s.syl.syllabic !== 'begin' && s.syl.syllabic !== 'single') continue;
       const i = notes.findIndex(e => near(e.t, s.t));
-      if (i < 0 || notes[i].syl) continue;
+      if (i < 0 || notes[i].syl || notes[i].cont) continue;
       const before = notes.slice(0, i).reverse().find(e => e.syl), after = notes.slice(i + 1).find(e => e.syl);
       if (before && (before.syl.syllabic === 'begin' || before.syl.syllabic === 'middle')) continue;
       if (after && key(after.syl) === key(s.syl)) continue;
@@ -266,7 +266,8 @@
   // split: null for the whole part (its first voice), or { line, voices } for one singer of a shared staff.
   function readPart(partEl, name, o, tr, warn, split) {
     const events = [], track = [];
-    let divisions = 1, clefInfo = null, fifths = 0, shown = Math.min(tr.fifths, 0), voice = null, tie = null, perfect = false, origSign = null, mstart = 0, pass = 1;
+    let divisions = 1, clefInfo = null, editionClef = null, fifths = 0, shown = Math.min(tr.fifths, 0), voice = null, tie = null, perfect = false, origSign = null, mstart = 0, pass = 1;
+    const slurs = new Map();   // open slurs: number -> voice that opened it
     const seen = new Set();   // measures already read (a repeat comes round again)
     // the verse for this pass through a repeat ("2", "verse2", "part1verse2"), else the first
     const lyricOf = node => {
@@ -282,7 +283,7 @@
       if (prev && prev.kind === 'rest') prev.ql += ql; else events.push({ kind: 'rest', ql, where, perfect });
       tie = null;
     }
-    function pushNote(node, t, ql, where, edMem, head) {
+    function pushNote(node, t, ql, where, edMem, head, cont) {
       const fermata = !!kid(node, 'notations', 'fermata');
       const step = text(kid(node, 'pitch', 'step')), oct = +text(kid(node, 'pitch', 'octave'));
       const alter = Math.round(+text(kid(node, 'pitch', 'alter')) || 0);
@@ -308,7 +309,7 @@
         if (!ties.includes('start')) tie = null;
         return;
       }
-      const ev = { kind: 'note', dia, ql, acc: accKey, fermata, syl: lyricOf(node) || (head && lyricOf(head)), where, perfect, t, end: t + ql };
+      const ev = { kind: 'note', dia, ql, acc: accKey, fermata, syl: lyricOf(node) || (head && lyricOf(head)), cont, where, perfect, t, end: t + ql };
       events.push(ev);
       tie = ties.includes('start') ? ev : null;
     }
@@ -318,7 +319,7 @@
       const mno = measure.getAttribute('number'), edMem = {}, where = `${name} m.${mno}`;
       const incipit = !events.some(e => e.kind === 'note' || e.kind === 'rest') && isPrefatory(measure);
       if (incipit) warn('The score opens with a prefatory staff (original clefs and signs): its clefs and signs are used, its measure is not printed.');
-      const items = [];
+      let items = [];
       let pos = 0, last = 0, mlen = 0;
       const dur = node => +text(kid(node, 'duration')) / divisions;
       for (const node of measure.children) {
@@ -335,6 +336,7 @@
             const c = kids(node, 'clef').find(c => !c.getAttribute('number') || c.getAttribute('number') === '1');
             if (c && !(clefInfo && c.getAttribute('print-object') === 'no')) {   // a hidden clef is the edition's, not the source's
               const ci = { sign: text(kid(c, 'sign')), line: +text(kid(c, 'line')) || 0, octave: +text(kid(c, 'clef-octave-change')) || 0 };
+              if (!incipit && !editionClef) editionClef = ci;
               if (!clefInfo) clefInfo = ci; else if (ci.sign !== clefInfo.sign || ci.line !== clefInfo.line) warn(`${name} m.${mno}: clef change ignored (kept the first clef).`);
             }
             const t = kid(node, 'time');
@@ -348,13 +350,16 @@
             }
             break;
           }
-          case 'direction':
+          case 'direction': {
+            // the edition's ligature brackets, placed by time among the notes
             if (!o.brackets) break;
+            const at = pos + (+text(kid(node, 'offset')) || 0) / divisions, v = text(kid(node, 'voice'));
             for (const br of node.querySelectorAll('direction-type > bracket')) {
-              if (br.getAttribute('type') === 'start') events.push({ kind: 'bracket', code: '{' });
-              else if (br.getAttribute('type') === 'stop') events.push({ kind: 'bracket', code: '}' });
+              const type = br.getAttribute('type');
+              if (type === 'start' || type === 'stop') items.push({ bracket: type === 'start' ? '{' : '}', voice: v, start: at, end: at });
             }
             break;
+          }
           case 'backup': pos -= dur(node); break;
           case 'forward': pos += dur(node); mlen = Math.max(mlen, pos); break;
           case 'note': {
@@ -367,12 +372,23 @@
             const p = rest ? null : +text(kid(pitch, 'octave')) * 12 + NATURAL[STEP[text(kid(pitch, 'step'))]] + (+text(kid(pitch, 'alter')) || 0);
             // a chord's syllable is on its first note; every note of the chord sings it
             const head = chord ? [...items].reverse().find(it => !it.chord) : null;
-            items.push({ node, voice: text(kid(node, 'voice')) || '1', chord, rest, start, end: start + d, p, head: head && head.node });
+            // inside a slur its own voice opened (not the slur's first note): a melisma, so no syllable of its own.
+            // Slurs pair by number across the part; a rest ends any left open in that voice.
+            const v = text(kid(node, 'voice')) || '1';
+            const cont = !rest && [...slurs.values()].includes(v);
+            if (rest) for (const [k, sv] of slurs) if (sv === v) slurs.delete(k);
+            for (const s of kids(node, 'notations').flatMap(n => kids(n, 'slur'))) {
+              const k = s.getAttribute('number') || '1';
+              if (s.getAttribute('type') === 'stop') slurs.delete(k); else if (s.getAttribute('type') === 'start') slurs.set(k, v);
+            }
+            items.push({ node, voice: v, chord, rest, start, end: start + d, p, head: head && head.node, cont });
           }
         }
       }
       if (incipit) continue;
 
+      const brackets = items.filter(it => it.bracket);
+      items = items.filter(it => !it.bracket);
       let line;
       if (split) line = splitLine(items, split, mlen, where, warn);
       else {
@@ -380,11 +396,20 @@
         line = items.filter(it => it.voice === voice);
         if (line.some(it => it.chord)) { warn(`${where}: chord note skipped (one line per part).`); line = line.filter(it => !it.chord); }
       }
+      // a bracket belongs to this line unless it names another voice; at the same moment a closing
+      // bracket comes before the notes that start then, an opening one just before them
+      const mineVoice = split ? split.voices[split.line] : voice;
+      line = line.concat(brackets.filter(b => !b.voice || b.voice === mineVoice))
+        .sort((a, b) => a.start - b.start || (a.bracket === '}' ? -1 : a.bracket ? 0 : 1) - (b.bracket === '}' ? -1 : b.bracket ? 0 : 1));
       if (step.open && !(events.length && events[events.length - 1].kind === 'repeat')) events.push({ kind: 'repeat' });
       let cur = 0;
       for (const it of line) {
+        if (it.bracket) {
+          if (it.bracket === '{' && it.start > cur + 1e-6) { pushRest(it.start - cur, where); cur = it.start; }
+          events.push({ kind: 'bracket', code: it.bracket }); continue;
+        }
         if (it.start > cur + 1e-6) pushRest(it.start - cur, where);
-        if (it.rest) pushRest(it.end - Math.max(it.start, cur), where); else pushNote(it.node, mstart + it.start, it.end - it.start, where, edMem, it.head);
+        if (it.rest) pushRest(it.end - Math.max(it.start, cur), where); else pushNote(it.node, mstart + it.start, it.end - it.start, where, edMem, it.head, it.cont);
         cur = Math.max(cur, it.end);
       }
       if (mlen > cur + 1e-6) pushRest(mlen - cur, where);
@@ -403,26 +428,39 @@
       if (notes.filter(e => e.syl).length < track.length / 2) { notes.forEach(e => e.syl = null); borrowText(notes, track, name, warn); }
       else fillText(notes, track);
     }
-    return { events, clefInfo, fifths: shown };
+    return { events, clefInfo, editionClef, fifths: shown };
   }
 
   // ---------------------------------------------------------------- clefs
+  // how often the sources use each clef: the chiavi naturali first, then the chiavette, then the rare ones
+  const CLEF_RARITY = { C1: 0, C3: 0, C4: 0, F4: 0, G2: 0.4, C2: 0.4, F3: 0.4, C5: 1.2, F5: 1.2, G1: 1.5 };
   function clefFit(name, dias) {
     const [line, ref] = CLEFS[name]; let out = 0, spread = 0;
     for (const d of dias) { const p = line + (d - ref); if (p < 0 || p > 14) out++; spread += Math.abs(p - 7); }
     return out * 1000 + spread / Math.max(1, dias.length);
   }
-  function chooseClef(info, dias, override, name, warn) {
+  // modern clefs for learners, as in choral editions: soprano and alto in treble, tenor in treble an octave
+  // lower, bass in F4. By the voice's name, else the edition's own clef, else the average pitch.
+  function modernClef(name, ed, dias) {
+    const label = partLabel(name);
+    if (label === 'CANTVS' || label === 'ALTVS') return 'G2';
+    if (label === 'TENOR') return 'G2-8';
+    if (label === 'BASSVS') return 'F4';
+    if (ed && ed.sign === 'G') return ed.octave < 0 ? 'G2-8' : 'G2';
+    if (ed && ed.sign === 'F') return 'F4';
+    const mean = dias.reduce((s, d) => s + d, 0) / Math.max(1, dias.length);
+    return !dias.length || mean >= 29 ? 'G2' : mean >= 25 ? 'G2-8' : 'F4';
+  }
+  // The font reaches only one ledger line past the staff: a part that goes further in the edition's clef
+  // gets the clef a scribe would have used, a common one that keeps every note within that reach.
+  function chooseClef(info, dias, override, name, note) {
     if (override && override !== 'auto') { if (!CLEFS[override]) throw new Error(`Unknown clef ${override}`); return override; }
     // the file's clef, if the font has it and every note fits on the staff
     const own = info && info.octave === 0 && CLEFS[info.sign + info.line] ? info.sign + info.line : null;
     if (!override && own && clefFit(own, dias) < 1000) return own;
-    const best = Object.keys(CLEFS).filter(c => !c.endsWith('-8')).sort((a, b) => clefFit(a, dias) - clefFit(b, dias) || a.localeCompare(b))[0];
-    if (!override) {
-      const from = info ? `${info.sign}${info.line}${info.octave ? ` (octave ${info.octave})` : ''}` : 'none';
-      warn(own ? `${name}: some notes don't fit the file's clef ${from} in this font (it has no ledger lines), so ${best} was chosen.`
-               : `${name}: the file's clef ${from} isn't in the font, so ${best} was chosen to fit the range.`);
-    }
+    const score = c => clefFit(c, dias) + CLEF_RARITY[c];
+    const best = Object.keys(CLEF_RARITY).sort((a, b) => score(a) - score(b) || a.localeCompare(b))[0];
+    if (!override) note(name, info ? `${info.sign}${info.line}${info.octave ? (info.octave < 0 ? ' octave lower' : ' octave higher') : ''}` : '', best);
     return best;
   }
 
@@ -430,10 +468,13 @@
   // a: accidental, g: the sign itself, d: dot/fermata after it, k: pitch key (for the custos), s/y: syllable + syllabic
   function tokens(parsed, clefName, o, warn) {
     const [line, ref, glyph] = CLEFS[clefName];
-    const keyOf = (dia, where) => {
-      let p = line + (dia - ref);
-      if (p < 0 || p > 14) { warn(`${where}: note is off the staff in ${clefName} (it can't be drawn there); placed at the nearest position.`); p = Math.max(0, Math.min(14, p)); }
-      return PITCH_KEYS[p];
+    // the font draws one ledger line above and below the staff; past that, layout adds the lines (lp)
+    // when ledgers are on, else the note is drawn at the nearest position it has
+    const placeOf = (dia, where) => {
+      const p = line + (dia - ref);
+      if (p >= 0 && p <= 14) return { k: PITCH_KEYS[p] };
+      if (!o.ledgers) warn(`${where}: note is past the font's range in ${clefName}; placed at the nearest position. Turn on extra ledger lines to draw it.`);
+      return { k: PITCH_KEYS[Math.max(0, Math.min(14, p))], lp: o.ledgers ? p : undefined };
     };
     let sig = '';
     if (parsed.fifths < 0) {
@@ -448,10 +489,11 @@
       else if (e.kind === 'bracket') out.push({ t: 'x', g: e.code });
       else if (e.kind === 'rest') { for (const [, k] of values(e.ql / o.reduction, true, e.perfect, e.where, warn)) out.push({ t: 'r', g: k + 'g' }); }
       else if (e.kind === 'note') {
-        const k = keyOf(e.dia, e.where); let first = true;
+        const { k, lp } = placeOf(e.dia, e.where); let first = true;
         for (const [kind, v] of values(e.ql / o.reduction, false, e.perfect, e.where, warn)) {
           if (kind === 'dot') { out[out.length - 1].d += '.' + k; continue; }
           const tk = { t: 'n', a: '', g: v + k, d: '', k };
+          if (lp !== undefined) { tk.lp = lp; tk.v = v; }
           if (first) { if (e.acc) tk.a = e.acc + k; if (e.syl) { tk.s = e.syl.text; tk.y = e.syl.syllabic; } }
           out.push(tk); first = false;
         }
@@ -499,18 +541,21 @@
     const tr = transposition(o.transpose || 0);
     const info = inspect(doc);
     const partEls = kids(doc.documentElement, 'part');
-    const parts = [];
+    const parts = [], clefs = [];
     for (const sel of o.parts) {
-      const entry = info.parts[sel.index], el = partEls[entry.part], name = entry.name;
+      const entry = info.parts[sel.index], el = partEls[entry.part], name = entry.name, label = sel.label || partLabel(name);
       if (entry.split) warn(`${entry.split.staff}: two voices share this staff, so it was split by pitch into ${entry.split.pair.join(' and ')}. Check where they cross.`);
       const parsed = readPart(el, name, o, tr, warn, entry.split);
       const dias = parsed.events.filter(e => e.kind === 'note').map(e => e.dia);
-      const clefName = chooseClef(parsed.clefInfo, dias, sel.clef, name, warn);
+      const clefName = o.clefs === 'modern' && !sel.clef ? modernClef(name, parsed.editionClef, dias)
+        : chooseClef(parsed.clefInfo, dias, sel.clef, name, (n, from, to) => clefs.push(`${label} ${to}${from ? ` (edition: ${from})` : ''}`));
       const built = tokens(parsed, clefName, o, warn);
       if (o.ij) markRepeats(built.tokens);
-      parts.push({ name, label: sel.label || partLabel(name), clefName, ...built });
+      parts.push({ name, label, clefName, ...built });
     }
-    return { parts, warnings };
+    // not a problem, but worth knowing: one note for all the parts
+    const notes = clefs.length ? [`The font reaches only one ledger line past the staff, so, as a scribe would, these parts take a clef that keeps them on it: ${clefs.join(', ')}. Choose another in the parts table, or modern clefs, if you like.`] : [];
+    return { parts, warnings, notes };
   }
 
   global.SPConvert = { parseScore, inspect, convert, partLabel, CLEFS, CLEF_NAMES, MENS };

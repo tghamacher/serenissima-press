@@ -53,7 +53,7 @@
   under the staff. Off by default: the bracket glyphs leave a small gap in the staff.
 
 .EXAMPLE
-  .\ConvertTo-Ems.ps1 .\examples\sample.musicxml
+  .\ConvertTo-Ems.ps1 .\examples\o-quam-gloriosum.mxl
   .\ConvertTo-Ems.ps1 .\josquin.mxl -Reduction 2 -Clef C1,C3,C4,F4 -Mensuration T2
 #>
 [CmdletBinding()]

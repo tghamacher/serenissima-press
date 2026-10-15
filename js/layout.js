@@ -105,6 +105,56 @@
     return s;
   }
 
+  // ---------------------------------------------------------------- notes past the font's range
+  // The font draws each note with its own piece of staff, reaching one ledger line above or below it.
+  // A note further out is drawn from the bare sign (which stands on the middle line) over plain staff,
+  // moved to its place, with ledger lines copied from the font's own: measured once from the glyphs.
+  let geom = null;
+  const dark = (d, i) => d[i * 4 + 3] > 110;
+  function measureGeom() {
+    const S = 100, H = 400, base = 250, cv = document.createElement('canvas'); cv.width = H; cv.height = H;
+    const c = cv.getContext('2d', { willReadFrequently: true }); c.font = S + 'px "EMS Serenissima"';
+    c.fillText('iiii', 0, base);
+    const col = c.getImageData(Math.round(c.measureText('i').width * 1.5), 0, 1, H).data, bands = [];
+    for (let y = 0; y < H; y++) if (dark(col, y)) { const b = bands[bands.length - 1]; if (b && y === b[1] + 1) b[1] = y; else bands.push([y, y]); }
+    if (bands.length !== 5) return null;
+    const mid = b => (b[0] + b[1] + 1) / 2 - base, step = (mid(bands[4]) - mid(bands[0])) / 8;
+    const y = p => mid(bands[4]) - (p - 3) * step;   // position -> height above (-) the baseline; the bottom line is 3
+    const m = c.measureText('3'), ref = Math.round(3 + (y(3) - (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2) / step);
+    return { S, H, c, base, step, y, ref, ledgers: new Map() };
+  }
+  // the font's ledger line for sign v, from v on position 1 (line through the head): left, width, thickness
+  function ledgerOf(v) {
+    if (geom.ledgers.has(v)) return geom.ledgers.get(v) || ledgerOf('3');
+    const { S, H, c, base } = geom, yl = Math.round(base + geom.y(1));
+    c.clearRect(0, 0, H, H); c.fillText(v + 's', 0, base);
+    const row = c.getImageData(0, yl, H, 1).data; let x0 = -1, x1 = -1;
+    for (let x = 0; x < H; x++) if (dark(row, x)) { if (x0 < 0) x0 = x; x1 = x; }
+    let L = null;
+    if (x0 >= 0) {
+      const col = c.getImageData(x0 + 1, 0, 1, H).data; let t = 0;
+      for (let y = yl - 10; y <= yl + 10; y++) if (dark(col, y)) t++;
+      L = { x: x0 / S, w: (x1 - x0 + 1) / S, t: Math.max(1, t) / S };
+    }
+    geom.ledgers.set(v, L);
+    return L || ledgerOf('3');
+  }
+  // tk: { lp: position, v: sign, a: accidental, d: dots/fermata }, with the widths of its parts in the font
+  function farNote(tk, aW, gW, F) {
+    const p = tk.lp, k = F / geom.S, g = el('span');
+    const raw = (ch, w) => { const r = el('span', 'sp-raw', ch); r.style.top = (geom.ref - p) * geom.step * k + 'px'; g.append(r, fill(w, F)); };
+    if (tk.a) raw(tk.a[0], aW);
+    const L = ledgerOf(tk.v), down = p < 0;
+    for (let q = down ? 1 : 13; down ? q >= p : q <= p; q += down ? -2 : 2) {
+      const z = el('span', 'sp-ledger'), line = el('b');
+      line.style.cssText = `left:${L.x * F}px;width:${L.w * F}px;border-top-width:${L.t * F}px;top:${geom.y(q) * k - L.t * F / 2}px`;
+      z.append(line); g.append(z);
+    }
+    raw(tk.v, gW);
+    for (const part of (tk.d || '').match(/\.[^.*]|\*/g) || []) { if (part === '*') g.append('*'); else raw('.', wE(part, F)); }
+    return g;
+  }
+
   // ---------------------------------------------------------------- render
   // D: { title, composer, parts: [{label, clef, sig, tokens}] }
   // o: { format, staffSize, initials: {first: {style, lines}, other: {style, lines}, src, red},
@@ -120,6 +170,7 @@
     try { await Promise.all([...families].map(f => document.fonts.load('40px ' + f))); } catch (e) { }
     await document.fonts.ready;
     if (!document.fonts.check('20px "EMS Serenissima"')) throw new Error('The EMS Serenissima music font could not be loaded.');
+    geom = geom || measureGeom();
     meas = el('div'); meas.style.cssText = 'position:absolute;left:-20000px;top:0;visibility:hidden;white-space:pre';
     document.body.appendChild(meas);
     D = JSON.parse(JSON.stringify(D));   // text preparation edits the tokens
@@ -140,24 +191,31 @@
 
     function system(p, lines, li, F, width, indent) {
       const line = lines[li], last = li === lines.length - 1, pre = prefix(p, F);
-      let nk = null;
-      if (!last) outer: for (let j = li + 1; j < lines.length; j++) for (const b of lines[j]) if (b.tk.k) { nk = b.tk.k; break outer; }
+      let nk = null, nlp;
+      if (!last) outer: for (let j = li + 1; j < lines.length; j++) for (const b of lines[j]) if (b.tk.k) { nk = b.tk.k; nlp = b.tk.lp; break outer; }
       const used = pre.w + line.reduce((s, b) => s + b.w, 0), cW = nk ? wE('U' + nk, F) : 0;
       const per = last ? 0 : Math.max(0, width - used - cW) / line.length;
-      const sys = el('div', 'sp-sys'); sys.style.cssText = `width:${width}px;height:${F * SYS}px;margin-left:${indent}px`;
-      const staff = el('div', 'sp-staff sp-ems'); staff.style.fontSize = F + 'px';
+      // room for notes past the font's range: the staff moves down for high ones, the text for low ones
+      const lps = geom ? line.map(b => b.tk.lp).concat(nlp).filter(p => p !== undefined) : [], stepF = geom ? geom.step / geom.S * F : 0;
+      const above = Math.max(0, ...lps.map(p => p - 14)) * stepF, below = Math.max(0, ...lps.map(p => -p)) * stepF;
+      const sys = el('div', 'sp-sys'); sys.style.cssText = `width:${width}px;height:${F * SYS + above + below}px;margin-left:${indent}px`;
+      const staff = el('div', 'sp-staff sp-ems'); staff.style.fontSize = F + 'px'; staff.style.top = above + 'px';
       staff.append(el('span', null, p.clef), fill(pre.gap, F));
       if (p.sig) staff.append(el('span', null, p.sig), fill(pre.gap, F));
       const marks = [];
       for (const b of line) {
         if (b.L > 0.05) staff.append(fill(b.L, F));
-        const g = el('span', null, (b.tk.a || '') + b.tk.g + (b.tk.d || '')); staff.append(g);
+        let g;
+        if (b.tk.t === 'x') { g = fill(b.gW, F); g.classList.add('sp-ligf'); g.append(el('span', 'sp-lig', b.tk.g)); }   // ligature bracket: staff, with the bracket above it
+        else if (b.tk.lp !== undefined && geom) g = farNote(b.tk, b.aW, b.gW, F);
+        else g = el('span', null, (b.tk.a || '') + b.tk.g + (b.tk.d || ''));
+        staff.append(g);
         staff.append(fill(b.R + per, F));
         if (b.tk.sd) marks.push([g, b]);
       }
-      if (nk) staff.append(el('span', null, 'U' + nk));
+      if (nk) staff.append(nlp !== undefined && geom ? farNote({ lp: nlp, v: 'U' }, 0, cW, F) : el('span', null, 'U' + nk));
       sys.append(staff);
-      pending.push({ sys, marks, F });
+      pending.push({ sys, marks, F, drop: above + below });
       return sys;
     }
     // size of a voice's initial: framed boxes are square, glyph initials as wide as their letter
@@ -182,15 +240,16 @@
     const widthFn = (p, W, F) => { const iw = initW(p, F); return n => n < p.init.lines ? W - iw : W; };
     function systemsBlock(p, lines, from, to, F, W, height, withInitial) {
       const box = el('div', 'sp-systems'); box.style.height = height + 'px';
-      const count = to - from, slack = height - count * F * SYS, extra = count > 1 ? Math.min(slack / (count - 1), 0.45 * F) : 0;
       const iw = withInitial && from === 0 ? initW(p, F) : 0;
       if (iw) box.append(initialBox(p, F));
+      const made = [];
       for (let li = from; li < to; li++) {
         const ind = li < p.init.lines ? iw : 0;
-        const s = system(p, lines, li, F, W - ind, ind);
-        if (li < to - 1) s.style.marginBottom = extra + 'px';
-        box.append(s);
+        made.push(system(p, lines, li, F, W - ind, ind));
       }
+      const count = made.length, slack = height - made.reduce((s, m) => s + parseFloat(m.style.height), 0);
+      const extra = count > 1 ? Math.max(0, Math.min(slack / (count - 1), 0.45 * F)) : 0;
+      made.forEach((s, i) => { if (i < count - 1) s.style.marginBottom = extra + 'px'; box.append(s); });
       return box;
     }
     const page = (Win, Hin, M) => { const pg = el('div', 'sp-page'); pg.style.cssText = `width:${Win * IN}px;height:${Hin * IN}px;padding:${M}px`; return pg; };
@@ -252,11 +311,11 @@
     } else if (pages.length) pages[pages.length - 1].append(el('div', 'sp-credit', CREDIT));
 
     // syllables are placed from the real positions of the notes
-    for (const { sys, marks, F } of pending) {
+    for (const { sys, marks, F, drop } of pending) {
       const left = sys.getBoundingClientRect().left;
       for (const [g, b] of marks) {
         const s = el('span', 'sp-syl', b.tk.sd);
-        s.style.fontSize = F * TEXT + 'px'; s.style.top = F * TEXT_TOP + 'px';
+        s.style.fontSize = F * TEXT + 'px'; s.style.top = F * TEXT_TOP + drop + 'px';
         s.style.left = (g.getBoundingClientRect().left - left + b.aW + b.gW / 2) + 'px';
         sys.append(s);
       }

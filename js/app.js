@@ -25,9 +25,10 @@
   $('transpose').value = '0';
 
   // ---- status
-  function status(errors, warnings) {
+  function status(errors, warnings, notes) {
     const box = $('status'); box.innerHTML = '';
     if (errors) { const d = document.createElement('div'); d.className = 'sp-notice err'; d.textContent = errors; box.append(d); }
+    for (const n of notes || []) { const d = document.createElement('div'); d.className = 'sp-notice info'; d.textContent = n; box.append(d); }
     if (warnings && warnings.length) {
       const d = document.createElement('div'); d.className = 'sp-notice';
       const b = document.createElement('strong'); b.textContent = `${warnings.length} thing${warnings.length > 1 ? 's' : ''} to check`; d.append(b);
@@ -104,7 +105,8 @@
     try {
       res = C.convert(state.doc, {
         reduction: +$('reduction').value, transpose: +$('transpose').value, mensuration: $('mens').value, repeats: $('repeats').value,
-        ficta: $('ficta').checked, barlines: $('barlines').checked, ij: $('ij').checked, brackets: false,
+        ficta: $('ficta').checked, barlines: $('barlines').checked, ij: $('ij').checked, brackets: $('brackets').checked,
+        clefs: $('clefs').value, ledgers: $('ledgers').checked,
         parts: sel.map(p => ({ index: p.index, clef: p.clef, label: p.label }))
       });
     } catch (e) { status(e.message); return; }
@@ -126,7 +128,7 @@
     setPageRule(out.pageSize);
     state.staffUsed = out.staffSize;
     fitPreview();
-    status(null, res.warnings.concat(out.warnings));
+    status(null, res.warnings.concat(out.warnings), res.notes);
     document.title = `${$('title').value || 'Serenissima Press'} – ${state.format}`;
   }
   function setPageRule([w, h]) {
@@ -152,7 +154,7 @@
   ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
   drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
   $('sample').onclick = async () => {
-    try { const r = await fetch('examples/sample.musicxml'); if (!r.ok) throw new Error(); loadXml(await r.text(), 'sample.musicxml'); }
+    try { const r = await fetch('examples/o-quam-gloriosum.mxl'); if (!r.ok) throw new Error(); await loadFile(new File([await r.arrayBuffer()], 'o-quam-gloriosum.mxl')); }
     catch { status('Could not load the sample.'); }
   };
   document.querySelectorAll('[data-format]').forEach(b => b.onclick = () => {
@@ -172,7 +174,7 @@
     typeset();
   };
   $('staffCustom').oninput = typeset;
-  for (const id of ['reduction', 'mens', 'repeats', 'transpose', 'ficta', 'barlines', 'ij', 'initialLines', 'initial2', 'initialLines2', 'rubric']) $(id).onchange = typeset;
+  for (const id of ['reduction', 'mens', 'repeats', 'transpose', 'ficta', 'barlines', 'ij', 'brackets', 'clefs', 'ledgers', 'initialLines', 'initial2', 'initialLines2', 'rubric']) $(id).onchange = typeset;
   $('initial').onchange = () => { if ($('initial').value === 'image' && !state.initialSrc) $('initialFile').click(); typeset(); };
   $('initialFile').onchange = e => {
     const f = e.target.files[0]; if (!f) return;
@@ -180,7 +182,7 @@
   };
   $('print').onclick = () => window.print();
 
-  // links like ?score=examples/sample.musicxml&format=choirbook open a score directly
+  // links like ?score=examples/o-quam-gloriosum.mxl&format=choirbook open a score directly
   const q = new URLSearchParams(location.search);
   if (q.get('format') === 'choirbook') document.querySelector('[data-format=choirbook]').click();
   if (q.get('score')) (async () => {

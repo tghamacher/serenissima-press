@@ -49,6 +49,10 @@
         <tbody id="parts"></tbody>
       </table>
       <p class="sp-hint" id="sideHint">Choirbook: “left”/“right” page, top to bottom in this order.</p>
+      <label class="sp-field"><span>Automatic clefs</span>
+        <select id="clefs"><option value="period">Period: keep every note on the staff</option><option value="modern">Modern: treble, treble an octave lower, bass</option></select>
+      </label>
+      <label class="sp-check"><input type="checkbox" id="ledgers" checked> Extra ledger lines where a note needs them</label>
 
       <h2>4 · Notation</h2>
       <label class="sp-field"><span>Note values</span>
@@ -68,6 +72,7 @@
       <label class="sp-check"><input type="checkbox" id="ficta"> Print editorial accidentals (ficta)</label>
       <label class="sp-check"><input type="checkbox" id="barlines"> Barlines at every bar</label>
       <label class="sp-check"><input type="checkbox" id="ij"> Write repeated text as “ij”</label>
+      <label class="sp-check"><input type="checkbox" id="brackets"> Ligature brackets from the edition</label>
 
       <h2>5 · Initials</h2>
       <div class="sp-row">
