@@ -1,0 +1,11 @@
+name: Idea or request
+description: Something the tool should do, or do differently.
+labels: [idea]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: What would you like, and what would you use it for? Examples from period sources (a library shelfmark, a link to a facsimile) are very welcome.
+    validations:
+      required: true

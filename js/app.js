@@ -5,11 +5,11 @@
   const C = window.SPConvert, L = window.SPLayout;
 
   const PAGES = { letter: ['US Letter', 8.5, 11], legal: ['US Legal', 8.5, 14], tabloid: ['Tabloid 11×17', 11, 17], a4: ['A4', 8.27, 11.69], a3: ['A3', 11.69, 16.54] };
-  const state = { doc: null, info: null, format: 'partbook', page: { partbook: 'letter', choirbook: 'tabloid' }, initialSrc: '', parts: [] };
+  const state = { doc: null, info: null, format: 'partbook', page: { partbook: 'letter', choirbook: 'tabloid' }, initialSrc: '', parts: [], sections: {}, secKey: '' };
 
   // ---- fixed option lists
   for (const [k, [name]] of Object.entries(PAGES)) $('page').append(new Option(name, k));
-  $('staffSize').append(new Option('Fit to page', '0'));
+  $('staffSize').append(new Option('Automatic', '0'));
   for (const s of [32, 40, 48, 56, 64, 72, 80]) $('staffSize').append(new Option(`${s} px`, s));
   $('staffSize').append(new Option('Custom…', 'custom'));
   // a custom size, in px, between the box's limits; 0 (fit to page) if empty
@@ -35,6 +35,32 @@
       const ul = document.createElement('ul'); warnings.forEach(w => { const li = document.createElement('li'); li.textContent = w; ul.append(li); }); d.append(ul);
       box.append(d);
     }
+    if (state.doc) {
+      const p = document.createElement('p'); p.className = 'sp-report';
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'sp-link'; b.textContent = 'Report a problem with this score';
+      b.onclick = () => window.open(reportUrl(warnings), '_blank', 'noopener');
+      p.append(b, ' (opens the feedback form with your settings filled in)'); box.append(p);
+    }
+  }
+  // the feedback form (no account needed), with the version and the settings in use filled in, to
+  // save asking for them; its "Version and settings" question is entry.321599493
+  const FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform';
+  const formUrl = settings => `${FORM}?${new URLSearchParams({ usp: 'pp_url', 'entry.321599493': settings })}`;
+  $('feedback').href = formUrl(`Version ${$('version').dataset.version}`);
+  function reportUrl(warnings) {
+    const sel = id => { const e = $(id); return e.options ? e.options[e.selectedIndex].text : e.value; };
+    const on = ids => ids.filter(id => $(id).checked).join(', ') || 'none';
+    const lines = [
+      `Version: ${$('version').dataset.version}`,
+      `Score: ${$('fileName').textContent}`,
+      `Format: ${state.format}, ${sel('page')}, staff ${sel('staffSize')}${state.staffUsed ? ` (${Math.round(state.staffUsed)} px)` : ''}`,
+      `Note values: ${sel('reduction')}; mensuration: ${sel('mens')}; transpose: ${sel('transpose')}; repeats: ${sel('repeats')}`,
+      `Clefs: ${sel('clefs')}; voices: ${state.parts.filter(p => p.include).map(p => `${p.label} ${p.clef || 'auto'}${state.format === 'choirbook' ? ' ' + p.side : ''}`).join(', ')}`,
+      `Options: ${on(['ledgers', 'ficta', 'barlines', 'ij', 'brackets'])}`,
+      `Browser: ${navigator.userAgent}`
+    ];
+    if (warnings && warnings.length) lines.push('', 'Warnings shown:', ...warnings.slice(0, 12).map(w => `- ${w}`), ...(warnings.length > 12 ? [`- … and ${warnings.length - 12} more`] : []));
+    return formUrl(lines.join('\n'));
   }
 
   // ---- loading a score
@@ -57,6 +83,7 @@
     $('composer').value = i.composer;
     $('reduction').value = String(i.reduction);
     let side = 0;
+    state.sections = {}; state.secKey = '';
     state.parts = i.parts.map(p => ({ index: p.index, name: p.name, include: !p.keyboard, label: p.label, clef: '', side: p.keyboard ? 'verso' : (side++ % 2 ? 'recto' : 'verso') }));
     buildPartsTable();
     $('settings').hidden = false; $('empty').hidden = true;
@@ -115,7 +142,9 @@
     const pg = k => [PAGES[k][1], PAGES[k][2]];
     const scale = $('scale'); scale.style.transform = 'none'; scale.style.height = ''; scale.style.width = '';
     $('book').classList.add('sp-busy');
-    const out = await L.render($('book'), { title: $('title').value, composer: $('composer').value, parts: res.parts }, {
+    // the sections as found, with the user's changes: whether each must start a new opening (a movement does), and its name
+    const sections = res.sections.map(s => ({ ...s, opening: s.movement, ...state.sections[s.step] }));
+    const out = await L.render($('book'), { title: $('title').value, composer: $('composer').value, parts: res.parts, sections }, {
       format: state.format, staffSize: staffSize(),
       initials: {
         first: { style: $('initial').value, lines: +$('initialLines').value },
@@ -127,9 +156,35 @@
     $('book').classList.remove('sp-busy');
     setPageRule(out.pageSize);
     state.staffUsed = out.staffSize;
+    showSections(sections, out.sections);
     fitPreview();
     status(null, res.warnings.concat(out.warnings), res.notes);
     document.title = `${$('title').value || 'Serenissima Press'} – ${state.format}`;
+  }
+  // choirbook sections: rebuilt only when the score's sections change, so typing a name keeps its focus
+  function showSections(sections, laid) {
+    const box = $('sectionsBox'), tb = $('sections');
+    box.hidden = state.format !== 'choirbook' || !sections.length;
+    if (box.hidden) return;
+    const key = sections.map(s => s.step).join();
+    if (key !== state.secKey) {
+      state.secKey = key; tb.innerHTML = '';
+      sections.forEach((s, n) => {
+        const tr = document.createElement('tr'); tr.dataset.step = s.step; if (s.movement) tr.className = 'mv';
+        const on = document.createElement('input'); on.type = 'checkbox'; on.checked = s.opening; on.disabled = !n;
+        on.setAttribute('aria-label', `Always start ${s.name || 'this section'} on a new opening`);
+        on.onchange = () => { (state.sections[s.step] = state.sections[s.step] || {}).opening = on.checked; typeset(); };
+        const nm = document.createElement('input'); nm.type = 'text'; nm.value = s.name; nm.setAttribute('aria-label', `Name of the section at bar ${s.mno}`);
+        nm.title = s.auto ? 'Not named in the edition: taken from its first words' : 'As named in the edition';
+        nm.oninput = () => { (state.sections[s.step] = state.sections[s.step] || {}).name = nm.value; typeset(); };
+        const cells = [[on], [nm], [`m. ${s.mno}`], ['']];
+        cells.forEach(els => { const td = document.createElement('td'); td.append(...els); tr.append(td); });
+        tb.append(tr);
+      });
+    }
+    // the openings each section is on (sections share an opening while there is room)
+    const where = new Map(laid.map(s => [s.step, s.first === s.last ? `${s.first}` : `${s.first}–${s.last}`]));
+    for (const tr of tb.rows) tr.cells[3].textContent = where.get(+tr.dataset.step) || '–';
   }
   function setPageRule([w, h]) {
     let s = $('pageRule'); if (!s) { s = document.createElement('style'); s.id = 'pageRule'; document.head.append(s); }

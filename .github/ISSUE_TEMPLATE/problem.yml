@@ -1,0 +1,32 @@
+name: Problem with a score
+description: Something came out wrong, or the tool stopped with an error.
+labels: [problem]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. The more of the score we can see, the faster it can be fixed.
+  - type: textarea
+    id: what
+    attributes:
+      label: What went wrong?
+      description: Where in the music (voice and bar), what you expected, and what you got.
+      placeholder: "ALTVS, bar 23: the dotted minim came out as a semibreve."
+    validations:
+      required: true
+  - type: textarea
+    id: score
+    attributes:
+      label: The score
+      description: Where is the edition from (CPDL, your own, …)? If you can share it, attach the file here. GitHub doesn't accept .mxl, so rename it to .zip first. A screenshot of the problem helps too.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Shown next to the title on the site.
+  - type: textarea
+    id: settings
+    attributes:
+      label: Settings
+      description: The page size, staff size, clefs and options you used.
+      render: text

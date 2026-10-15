@@ -8,7 +8,8 @@
   const GAP = 0.06;              // minimum staff between signs
   const SYS = 1.30;              // height of one system (staff + text)
   const TEXT_TOP = 0.89;         // top of the syllables
-  const FMIN = 28, FMAX = 100;
+  const FMAX = 100;
+  const PARTBOOK = 56;           // a partbook's staff, with its syllables about 11 pt
   const CREDIT = 'Music font: EMS Serenissima by Elam Rotem, Early Music Sources (CC BY 4.0) · Set with Serenissima Press';
 
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -26,7 +27,7 @@
   const wT = (s, T) => s ? unit(s, 'sp-text') * T : 0;
 
   // the decorated initial takes the first letter; the rest of the first word goes in capitals
-  function prepareText(p, mode) {
+  function prepareText(p, mode, fallback) {
     const caps = s => s.toUpperCase().replace(/U/g, 'V').replace(/J/g, 'I');
     const toks = p.tokens, first = toks.findIndex(t => t.s);
     p.initialLetter = '';
@@ -38,7 +39,7 @@
       word.forEach(t => t.s = caps(t.s));
     }
     toks.forEach(t => { if (t.s) t.sd = t.s + (t.y === 'begin' || t.y === 'middle' ? '-' : ''); });
-    if (!p.initialLetter) p.initialLetter = p.label.charAt(0);
+    if (!p.initialLetter) p.initialLetter = fallback || p.label.charAt(0);
   }
 
   // token boxes: [staff L][sign][staff R], wide enough for the syllable centred under the note head
@@ -165,7 +166,7 @@
     const lead = o.format === 'choirbook' ? (o.verso.length ? o.verso[0] : o.recto[0]) : null;
     const specFor = i => (lead === null || i === lead) ? I.first : I.other;
     const families = new Set(['"EMS Serenissima"', '"EB Garamond"', '"IM Fell French Canon"']);
-    D.parts.forEach((p, i) => { const f = INITIAL_FONTS[specFor(i).style]; if (f) f.family.split(', ').forEach(x => families.add(x)); });
+    for (const spec of [I.first, I.other]) { const f = INITIAL_FONTS[spec.style]; if (f) f.family.split(', ').forEach(x => families.add(x)); }
     // fonts only start loading when used, so ask for them before measuring anything
     try { await Promise.all([...families].map(f => document.fonts.load('40px ' + f))); } catch (e) { }
     await document.fonts.ready;
@@ -174,8 +175,8 @@
     meas = el('div'); meas.style.cssText = 'position:absolute;left:-20000px;top:0;visibility:hidden;white-space:pre';
     document.body.appendChild(meas);
     D = JSON.parse(JSON.stringify(D));   // text preparation edits the tokens
-    D.parts.forEach((p, i) => {
-      const spec = specFor(i);
+    // a voice (or a section of it) gets its text ready and its initial
+    function dress(p, spec) {
       let style = spec.style === 'image' && !I.src ? 'letter' : spec.style;
       prepareText(p, style);
       const f = INITIAL_FONTS[style];
@@ -185,14 +186,18 @@
         style = 'letter';
       }
       p.init = { style, lines: spec.lines, red: I.red && spec === I.other && lead !== null };
-    });
+      return p;
+    }
+    if (o.format !== 'choirbook') D.parts.forEach((p, i) => dress(p, specFor(i)));
     book.innerHTML = '';
     const pending = [];
 
-    function system(p, lines, li, F, width, indent) {
+    // after: the first note past these lines (on the next opening), for the custos at the end of the last
+    function system(p, lines, li, F, width, indent, after) {
       const line = lines[li], last = li === lines.length - 1, pre = prefix(p, F);
       let nk = null, nlp;
       if (!last) outer: for (let j = li + 1; j < lines.length; j++) for (const b of lines[j]) if (b.tk.k) { nk = b.tk.k; nlp = b.tk.lp; break outer; }
+      if (last && after) { nk = after.k; nlp = after.lp; }
       const used = pre.w + line.reduce((s, b) => s + b.w, 0), cW = nk ? wE('U' + nk, F) : 0;
       const per = last ? 0 : Math.max(0, width - used - cW) / line.length;
       // room for notes past the font's range: the staff moves down for high ones, the text for low ones
@@ -238,45 +243,126 @@
     }
     const initW = (p, F) => { const d = initialDims(p, F); return d ? d.w + 0.16 * F : 0; };
     const widthFn = (p, W, F) => { const iw = initW(p, F); return n => n < p.init.lines ? W - iw : W; };
-    function systemsBlock(p, lines, from, to, F, W, height, withInitial) {
+    // pieces: [{ p, lines, from, to, initial, after }], one after another down the block (a choirbook
+    // opening may hold several sections, each starting a new line with its initial)
+    function systemsBlock(pieces, F, W, height) {
       const box = el('div', 'sp-systems'); box.style.height = height + 'px';
-      const iw = withInitial && from === 0 ? initW(p, F) : 0;
-      if (iw) box.append(initialBox(p, F));
       const made = [];
-      for (let li = from; li < to; li++) {
-        const ind = li < p.init.lines ? iw : 0;
-        made.push(system(p, lines, li, F, W - ind, ind));
+      for (const { p, lines, from, to, initial, after } of pieces) {
+        const wrap = el('div', 'sp-piece'); box.append(wrap);
+        const iw = initial && from === 0 ? initW(p, F) : 0;
+        if (iw) wrap.append(initialBox(p, F));
+        for (let li = from; li < to; li++) {
+          const ind = li < p.init.lines ? iw : 0, s = system(p, lines, li, F, W - ind, ind, after);
+          wrap.append(s); made.push(s);
+        }
       }
       const count = made.length, slack = height - made.reduce((s, m) => s + parseFloat(m.style.height), 0);
       const extra = count > 1 ? Math.max(0, Math.min(slack / (count - 1), 0.45 * F)) : 0;
-      made.forEach((s, i) => { if (i < count - 1) s.style.marginBottom = extra + 'px'; box.append(s); });
+      made.forEach((s, i) => { if (i < count - 1) s.style.marginBottom = extra + 'px'; });
       return box;
     }
     const page = (Win, Hin, M) => { const pg = el('div', 'sp-page'); pg.style.cssText = `width:${Win * IN}px;height:${Hin * IN}px;padding:${M}px`; return pg; };
-    const pickF = fits => { if (o.staffSize > 0) return o.staffSize; for (let F = FMAX; F > FMIN; F -= 0.5) if (fits(F)) return F; return FMIN; };
-    const fitsAt = (parts, F, W, cap) => parts.every(p => breakLines(p, F, widthFn(p, W, F)).length <= cap(F));
 
-    let size, staff;
+    let size, staff, sections = [];
     if (o.format === 'choirbook') {
+      // The page is turned only where every singer has reached the same bar: each section starts an
+      // opening, and a section too long for one is turned at the last bar every voice reaches on it.
       const [Win, Hin] = o.choirbookPage, M = 0.6 * IN, W = Win * IN - 2 * M;
       const verso = o.verso.map(i => D.parts[i]).filter(Boolean), recto = o.recto.map(i => D.parts[i]).filter(Boolean);
       const k = Math.max(verso.length, recto.length, 1);
       const regionH = (Hin * IN - 2 * M - 34 - 10 - 16) / k, inner = regionH - 24 - 10;
       const cap = F => Math.max(1, Math.floor(inner / (F * SYS)));
       const all = verso.concat(recto);
-      const F = pickF(F => fitsAt(all, F, W, cap)); staff = F;
-      const lines = new Map(all.map(p => [p, breakLines(p, F, widthFn(p, W, F))]));
-      const openings = Math.max(1, ...all.map(p => Math.ceil(lines.get(p).length / cap(F))));
-      for (let op = 0; op < openings; op++) {
+      const cutAt = st => all.every(p => p.cuts && p.cuts[st] !== undefined);
+      // sections (s.opening: must start an opening; the others share one when there is room)
+      const secs = (D.sections || []).filter((s, n) => n && cutAt(s.step));
+      secs.unshift({ step: 0, name: (D.sections || [])[0] ? D.sections[0].name : '', opening: true });
+      const bars = all.length ? Object.keys(all[0].cuts || {}).map(Number).filter(cutAt).sort((a, b) => a - b) : [];
+      // each section: its voices (with their initials) and the bars inside it where the page may turn
+      const segs = secs.map((s, n) => {
+        const next = secs[n + 1], start = p => n ? p.cuts[s.step] : 0, end = p => next ? p.cuts[next.step] : p.tokens.length;
+        const inside = bars.filter(st => st > s.step && (!next || st < next.step));
+        const views = all.map(p => {
+          const v = { label: p.label, clef: p.clef, sig: p.sig, tokens: p.tokens.slice(start(p), end(p)) };
+          dress(v, n === 0 || s.movement ? specFor(D.parts.indexOf(p)) : I.other);   // a movement opens like the book
+          v.bounds = [0, ...inside.map(st => p.cuts[st] - start(p)), v.tokens.length];
+          v.tacet = !v.tokens.some(t => t.t === 'n');
+          return v;
+        });
+        return { s, views, last: inside.length + 1, hard: !!s.opening };
+      });
+      // a voice from bar a to bar b of its section; only the section's first opening has the initial
+      function part(v, a, b, F) {
+        const key = `${F}|${a}|${b}`; v.memo = v.memo || new Map();
+        if (!v.memo.has(key)) {
+          const t = { ...v, tokens: v.tokens.slice(v.bounds[a], v.bounds[b]) };
+          if (a) t.init = { ...v.init, style: 'none', lines: 0 };
+          v.memo.set(key, { t, lines: breakLines(t, F, widthFn(t, W, F)) });
+        }
+        return v.memo.get(key);
+      }
+      const fits = (g, a, b, F) => g.views.every(v => v.tacet || part(v, a, b, F).lines.length <= cap(F));
+      // the openings of a section: [first bar, bar after the last], as many bars on each as every voice has room for
+      function openingsOf(g, F) {
+        const out = []; let a = 0;
+        while (a < g.last) {
+          let b = g.last;
+          if (!fits(g, a, b, F)) {
+            let lo = a + 2, hi = g.last - 1; b = a + 1;
+            while (lo <= hi) { const mid = (lo + hi) >> 1; if (fits(g, a, mid, F)) { b = mid; lo = mid + 1; } else hi = mid - 1; }
+          }
+          out.push([a, b]); a = b;
+        }
+        return out;
+      }
+      // fit to page: the largest staff with every section on one opening, but no smaller than a choir can
+      // read from a lectern; below that, long sections take more than one
+      const READABLE = 40, whole = F => segs.every(g => fits(g, 0, g.last, F));
+      let F = o.staffSize;
+      if (!(F > 0)) {
+        F = READABLE;
+        for (let f = FMAX; f >= READABLE; f -= 2) if (whole(f)) { F = f; while (F + 0.5 < f + 2 && F + 0.5 <= FMAX && whole(F + 0.5)) F += 0.5; break; }
+      }
+      staff = F;
+      // Fill the openings: a section goes on the current opening if every voice still has room for it,
+      // else (or if it must start an opening, or needs more than one) the page is turned before it.
+      const openings = [];
+      for (const g of segs) {
+        const chunks = openingsOf(g, F); let first = 0;
+        chunks.forEach(([a, b], ci) => {
+          const parts = g.views.map(v => v.tacet ? null : part(v, a, b, F));
+          const lens = parts.map(x => x ? x.lines.length : 0);
+          if (lens.some(n => n > cap(F)) && !warnings.some(w => w.includes('single bar')))
+            warnings.push(`${g.s.name || 'A section'}: a single bar is too long for one opening at this staff size. Choose a smaller staff.`);
+          let cur = openings[openings.length - 1];
+          if (!cur || ci || g.hard || chunks.length > 1 || lens.some((n, q) => cur.used[q] + n > cap(F))) {
+            cur = { used: all.map(() => 0), blocks: [] }; openings.push(cur);
+          }
+          // the first note on the next opening, for the custos at the end of a section cut in two
+          const after = g.views.map(v => b < g.last ? v.tokens.slice(v.bounds[b]).find(t => t.k) : null);
+          cur.blocks.push({ g, ci, parts, after });
+          if (!ci) first = openings.length;
+          lens.forEach((n, q) => cur.used[q] += n);
+        });
+        sections.push({ step: g.s.step, first, last: openings.length });
+      }
+      for (const op of openings) {
         const spread = el('div', 'sp-spread');
-        for (const [side, parts] of [['verso', verso], ['recto', recto]]) {
+        // the names of the sections that begin on this opening, at the head of each voice
+        const names = segs.length > 1 ? op.blocks.filter(bl => !bl.ci && bl.g.s.name).map(bl => bl.g.s.name).join(' · ') : '';
+        for (const [side, list] of [['verso', verso], ['recto', recto]]) {
           const pg = page(Win, Hin, M);
           pg.append(el('div', 'sp-runhead ' + side, side === 'verso' ? D.title : (D.composer || '')));
-          for (const p of parts) {
-            const ls = lines.get(p), from = op * cap(F), to = Math.min(ls.length, from + cap(F));
-            const reg = el('div', 'sp-region'); reg.style.height = regionH + 'px';
-            reg.append(el('div', 'sp-label', p.label));
-            if (from < to) reg.append(systemsBlock(p, ls, from, to, F, W, inner, op === 0));
+          for (const p of list) {
+            const q = all.indexOf(p), reg = el('div', 'sp-region'); reg.style.height = regionH + 'px';
+            const pieces = op.blocks.filter(bl => bl.parts[q] && bl.parts[q].lines.length)
+              .map(bl => ({ p: bl.parts[q].t, lines: bl.parts[q].lines, from: 0, to: bl.parts[q].lines.length, initial: !bl.ci, after: bl.after[q] }));
+            if (pieces.length) {
+              const lab = el('div', 'sp-label', p.label);
+              if (names) lab.append(el('span', 'sp-sec', names));
+              reg.append(lab, systemsBlock(pieces, F, W, inner));
+            }
             pg.append(reg);
           }
           spread.append(pg);
@@ -288,7 +374,8 @@
       const [Win, Hin] = o.partbookPage, M = 0.6 * IN, W = Win * IN - 2 * M;
       const avail = first => Hin * IN - 2 * M - 34 - 16 - (first ? 44 : 0);
       const cap = (F, first) => Math.max(1, Math.floor(avail(first) / (F * SYS)));
-      const F = pickF(F => fitsAt(D.parts, F, W, F => cap(F, true))); staff = F;
+      // a partbook runs on over as many pages as it needs, at a size that is comfortable to sing from
+      const F = o.staffSize > 0 ? o.staffSize : PARTBOOK; staff = F;
       for (const p of D.parts) {
         const lines = breakLines(p, F, widthFn(p, W, F));
         let from = 0, first = true;
@@ -296,7 +383,7 @@
           const pg = page(Win, Hin, M), to = Math.min(lines.length, from + cap(F, first));
           pg.append(el('div', 'sp-head', p.label));
           if (first) { const tl = el('div', 'sp-titleline'); tl.append(el('span', 'sp-t', D.title), el('span', 'sp-c', D.composer || '')); pg.append(tl); }
-          pg.append(systemsBlock(p, lines, from, to, F, W, avail(first), first));
+          pg.append(systemsBlock([{ p, lines, from, to, initial: first }], F, W, avail(first)));
           book.append(pg); from = to; first = false;
         }
       }
@@ -321,7 +408,7 @@
       }
     }
     meas.remove();
-    return { pageSize: size, staffSize: staff, warnings };
+    return { pageSize: size, staffSize: staff, sections, warnings };
   }
 
   global.SPLayout = { render, CREDIT };

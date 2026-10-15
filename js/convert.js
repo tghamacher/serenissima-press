@@ -261,11 +261,49 @@
     return order;
   }
 
+  // ---------------------------------------------------------------- sections
+  // Where the edition's double and final barlines fall (not repeat signs): a section ends there, and a
+  // final barline ends a movement. Named from the edition's words at its first bar, if any.
+  // Steps index the order in which the measures are sung, the same in every part.
+  function findSections(partEls, mode) {
+    const orders = partEls.map(p => measureOrder(p, mode, () => { }));
+    const n = Math.min(...orders.map(o => o.length));
+    const bars = (i, loc) => orders.flatMap(o => kids(o[i].el, 'barline').filter(b => !kid(b, 'repeat') && (b.getAttribute('location') || 'right') === loc).map(b => text(kid(b, 'bar-style'))));
+    const out = [{ step: 0, movement: true }];
+    for (let i = 1; i < n; i++) {
+      const ends = bars(i - 1, 'right').concat(bars(i, 'left'));
+      if (!ends.some(s => /^(light-light|light-heavy|heavy-light|heavy-heavy)$/.test(s))) continue;
+      out.push({ step: i, movement: ends.includes('light-heavy') });
+    }
+    for (const s of out) {
+      const m = orders[0][s.step].el;
+      s.mno = m.getAttribute('number');
+      const words = orders.flatMap(o => [...o[s.step].el.querySelectorAll('direction > direction-type > words')].map(w => w.textContent.replace(/\s+/g, ' ').trim()));
+      s.name = words.find(Boolean) || '';
+    }
+    // a prefatory incipit is not a bar of music
+    if (out.length > 1 && isPrefatory(orders[0][0].el)) out[0].mno = orders[0][1].el.getAttribute('number');
+    return out;
+  }
+  // a name for a section the edition leaves unnamed: its first word, or two if the first is short ("Et incarnatus")
+  function sectionName(toks) {
+    const words = []; let w = '';
+    for (const t of toks) {
+      if (!t.s) continue;
+      w += t.s;
+      // some editions mark every syllable single and hyphenate in the text ("Cru–")
+      if ((t.y === 'single' || t.y === 'end') && !/[-–—]\s*$/.test(t.s)) { words.push(w.replace(/[^\p{L}'’]/gu, '')); w = ''; if (words[0].length > 3 || words.length === 2) break; }
+    }
+    return words.filter(Boolean).join(' ');
+  }
+
   // ---------------------------------------------------------------- read one part into events
   // Notes are placed by time (backup/forward followed), so gaps in a voice become rests.
   // split: null for the whole part (its first voice), or { line, voices } for one singer of a shared staff.
-  function readPart(partEl, name, o, tr, warn, split) {
-    const events = [], track = [];
+  // secs: the steps at which sections start; each gets a double bar, and rests never run across one.
+  // Every event carries t0, its start time, so bars can be found where the layout may turn the page.
+  function readPart(partEl, name, o, tr, warn, split, secs) {
+    const events = [], track = [], bars = [];
     let divisions = 1, clefInfo = null, editionClef = null, fifths = 0, shown = Math.min(tr.fifths, 0), voice = null, tie = null, perfect = false, origSign = null, mstart = 0, pass = 1;
     const slurs = new Map();   // open slurs: number -> voice that opened it
     const seen = new Set();   // measures already read (a repeat comes round again)
@@ -276,11 +314,11 @@
       const t = lyr ? kids(lyr, 'text').map(e => e.textContent).join(' ').trim() : '';
       return t ? { text: t, syllabic: text(kid(lyr, 'syllabic')) || 'single' } : null;
     };
-    function pushRest(ql, where) {
+    function pushRest(ql, where, t0) {
       if (ql < 1e-6) return;
       // consecutive rests merge, so long silences come out as longa + breve rests as in the sources
       const prev = events[events.length - 1];
-      if (prev && prev.kind === 'rest') prev.ql += ql; else events.push({ kind: 'rest', ql, where, perfect });
+      if (prev && prev.kind === 'rest') prev.ql += ql; else events.push({ kind: 'rest', ql, where, perfect, t0 });
       tie = null;
     }
     function pushNote(node, t, ql, where, edMem, head, cont) {
@@ -309,16 +347,21 @@
         if (!ties.includes('start')) tie = null;
         return;
       }
-      const ev = { kind: 'note', dia, ql, acc: accKey, fermata, syl: lyricOf(node) || (head && lyricOf(head)), cont, where, perfect, t, end: t + ql };
+      const ev = { kind: 'note', dia, ql, acc: accKey, fermata, syl: lyricOf(node) || (head && lyricOf(head)), cont, where, perfect, t, t0: t, end: t + ql };
       events.push(ev);
       tie = ties.includes('start') ? ev : null;
     }
 
-    for (const step of measureOrder(partEl, o.repeats, warn)) {
+    measureOrder(partEl, o.repeats, warn).forEach((step, si) => {
       const measure = step.el, revisit = seen.has(measure); pass = step.pass; seen.add(measure);
       const mno = measure.getAttribute('number'), edMem = {}, where = `${name} m.${mno}`;
       const incipit = !events.some(e => e.kind === 'note' || e.kind === 'rest') && isPrefatory(measure);
       if (incipit) warn('The score opens with a prefatory staff (original clefs and signs): its clefs and signs are used, its measure is not printed.');
+      if (!incipit && secs && secs.has(si) && events.length) {
+        if (events[events.length - 1].kind === 'bar') events.pop();
+        events.push({ kind: 'sec', t0: mstart });
+      }
+      if (!incipit) bars.push({ step: si, ev: events.length, t: mstart });
       let items = [];
       let pos = 0, last = 0, mlen = 0;
       const dur = node => +text(kid(node, 'duration')) / divisions;
@@ -346,7 +389,7 @@
               const sign = (opening && o.mensuration) || (opening && origSign) || mensSign(t, o.reduction, warn);
               const beats = +(text(kid(t, 'beats')).split('+')[0]), type = +text(kid(t, 'beat-type'));
               perfect = sign === 'T3' || sign === 'T4' || (beats === 3 && near(beats * 4 / type / o.reduction, 3));
-              if (!revisit) events.push({ kind: 'mens', code: sign });   // not restated when a repeat comes round again
+              if (!revisit) events.push({ kind: 'mens', code: sign, t0: mstart });   // not restated when a repeat comes round again
             }
             break;
           }
@@ -385,7 +428,7 @@
           }
         }
       }
-      if (incipit) continue;
+      if (incipit) return;
 
       const brackets = items.filter(it => it.bracket);
       items = items.filter(it => !it.bracket);
@@ -401,26 +444,26 @@
       const mineVoice = split ? split.voices[split.line] : voice;
       line = line.concat(brackets.filter(b => !b.voice || b.voice === mineVoice))
         .sort((a, b) => a.start - b.start || (a.bracket === '}' ? -1 : a.bracket ? 0 : 1) - (b.bracket === '}' ? -1 : b.bracket ? 0 : 1));
-      if (step.open && !(events.length && events[events.length - 1].kind === 'repeat')) events.push({ kind: 'repeat' });
+      if (step.open && !(events.length && events[events.length - 1].kind === 'repeat')) events.push({ kind: 'repeat', t0: mstart });
       let cur = 0;
       for (const it of line) {
         if (it.bracket) {
-          if (it.bracket === '{' && it.start > cur + 1e-6) { pushRest(it.start - cur, where); cur = it.start; }
-          events.push({ kind: 'bracket', code: it.bracket }); continue;
+          if (it.bracket === '{' && it.start > cur + 1e-6) { pushRest(it.start - cur, where, mstart + cur); cur = it.start; }
+          events.push({ kind: 'bracket', code: it.bracket, t0: mstart + it.start }); continue;
         }
-        if (it.start > cur + 1e-6) pushRest(it.start - cur, where);
-        if (it.rest) pushRest(it.end - Math.max(it.start, cur), where); else pushNote(it.node, mstart + it.start, it.end - it.start, where, edMem, it.head, it.cont);
+        if (it.start > cur + 1e-6) pushRest(it.start - cur, where, mstart + cur);
+        if (it.rest) pushRest(it.end - Math.max(it.start, cur), where, mstart + Math.max(it.start, cur)); else pushNote(it.node, mstart + it.start, it.end - it.start, where, edMem, it.head, it.cont);
         cur = Math.max(cur, it.end);
       }
-      if (mlen > cur + 1e-6) pushRest(mlen - cur, where);
+      if (mlen > cur + 1e-6) pushRest(mlen - cur, where, mstart + cur);
       if (split) for (const it of items) {
         const s = !it.rest && lyricOf(it.node), t = mstart + it.start;
         if (s && !track.some(x => near(x.t, t))) track.push({ t, syl: s, mno });
       }
       mstart += mlen;
-      if (step.close) events.push({ kind: 'repeat' });
-      else if (o.barlines) events.push({ kind: 'bar' });
-    }
+      if (step.close) events.push({ kind: 'repeat', t0: mstart });
+      else if (o.barlines) events.push({ kind: 'bar', t0: mstart });
+    });
     if (o.barlines && events.length && events[events.length - 1].kind === 'bar') events.pop();
     if (split && track.length) {
       track.sort((a, b) => a.t - b.t);
@@ -428,7 +471,9 @@
       if (notes.filter(e => e.syl).length < track.length / 2) { notes.forEach(e => e.syl = null); borrowText(notes, track, name, warn); }
       else fillText(notes, track);
     }
-    return { events, clefInfo, editionClef, fifths: shown };
+    // bars where the music can be cut: nothing (a rest, a tied note) runs across them
+    const clean = bars.filter(b => events[b.ev] && near(events[b.ev].t0, b.t));
+    return { events, clefInfo, editionClef, fifths: shown, bars: clean };
   }
 
   // ---------------------------------------------------------------- clefs
@@ -481,10 +526,12 @@
       for (const st of ['B', 'E', 'A', 'D', 'G', 'C', 'F'].slice(0, -parsed.fifths))
         for (let p = 3; p <= 11; p++) if (mod(p - line + ref, 7) === STEP[st]) sig += 'b' + PITCH_KEYS[p];
     }
-    const out = [];
+    const out = [], at = [];
     for (const e of parsed.events) {
+      at.push(out.length);
       if (e.kind === 'mens') out.push({ t: 'm', g: e.code });
       else if (e.kind === 'bar') out.push({ t: 'b', g: 'B' });
+      else if (e.kind === 'sec') out.push({ t: 'b', g: 'E' });
       else if (e.kind === 'repeat') out.push({ t: 'b', g: 'R' });
       else if (e.kind === 'bracket') out.push({ t: 'x', g: e.code });
       else if (e.kind === 'rest') { for (const [, k] of values(e.ql / o.reduction, true, e.perfect, e.where, warn)) out.push({ t: 'r', g: k + 'g' }); }
@@ -501,7 +548,10 @@
       }
     }
     out.push({ t: 'b', g: 'E' });
-    return { clef: glyph, sig, tokens: out };
+    // step -> the token that starts that bar, where the layout may cut
+    const cuts = {};
+    for (const b of parsed.bars) cuts[b.step] = at[b.ev];
+    return { clef: glyph, sig, tokens: out, cuts };
   }
 
   // ---------------------------------------------------------------- "ij" repeat signs
@@ -541,21 +591,29 @@
     const tr = transposition(o.transpose || 0);
     const info = inspect(doc);
     const partEls = kids(doc.documentElement, 'part');
+    const sections = findSections(o.parts.map(sel => partEls[info.parts[sel.index].part]), o.repeats);
+    const secSteps = new Set(sections.map(s => s.step));
     const parts = [], clefs = [];
     for (const sel of o.parts) {
       const entry = info.parts[sel.index], el = partEls[entry.part], name = entry.name, label = sel.label || partLabel(name);
       if (entry.split) warn(`${entry.split.staff}: two voices share this staff, so it was split by pitch into ${entry.split.pair.join(' and ')}. Check where they cross.`);
-      const parsed = readPart(el, name, o, tr, warn, entry.split);
+      const parsed = readPart(el, name, o, tr, warn, entry.split, secSteps);
       const dias = parsed.events.filter(e => e.kind === 'note').map(e => e.dia);
       const clefName = o.clefs === 'modern' && !sel.clef ? modernClef(name, parsed.editionClef, dias)
         : chooseClef(parsed.clefInfo, dias, sel.clef, name, (n, from, to) => clefs.push(`${label} ${to}${from ? ` (edition: ${from})` : ''}`));
-      const built = tokens(parsed, clefName, o, warn);
-      if (o.ij) markRepeats(built.tokens);
-      parts.push({ name, label, clefName, ...built });
+      parts.push({ name, label, clefName, ...tokens(parsed, clefName, o, warn) });
     }
+    // each section's tokens in a part (the first from the start, as an incipit has no bar of its own)
+    const slice = (p, k) => p.tokens.slice(k ? p.cuts[sections[k].step] : 0, k + 1 < sections.length ? p.cuts[sections[k + 1].step] : undefined);
+    sections.forEach((s, k) => {
+      s.auto = !s.name;
+      for (const p of parts) if (!s.name && (k === 0 || p.cuts[s.step] !== undefined)) s.name = sectionName(slice(p, k));
+    });
+    // "ij" within a section only: a new section starts its text afresh
+    if (o.ij) for (const p of parts) sections.forEach((s, k) => { if (!k || p.cuts[s.step] !== undefined) markRepeats(slice(p, k)); });
     // not a problem, but worth knowing: one note for all the parts
     const notes = clefs.length ? [`The font reaches only one ledger line past the staff, so, as a scribe would, these parts take a clef that keeps them on it: ${clefs.join(', ')}. Choose another in the parts table, or modern clefs, if you like.`] : [];
-    return { parts, warnings, notes };
+    return { parts, sections: sections.length > 1 ? sections : [], warnings, notes };
   }
 
   global.SPConvert = { parseScore, inspect, convert, partLabel, CLEFS, CLEF_NAMES, MENS };
