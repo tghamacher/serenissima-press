@@ -20,6 +20,8 @@ A link like `index.html?score=examples/sample.musicxml&format=choirbook` opens a
 - Each line has a clef, signature and custos; staves are justified to full width.
 - Initials: in a choirbook, a large decorated initial opens the voice at the top left and smaller ones open the others (engraved or plain capitals, optionally in red); in partbooks each voice opens with the large one. Styles: woodcut (EB Garamond Initials, after Berner's 1592 specimen; it has only A D F G L N O Q T, other letters fall back to a dotted ground), flourished Gothic (Yinit), letter on dotted ground, engraved capital (Libertinus Serif Initials), plain capital, blank frame, your own image, or none.
 - The font has no ledger lines, so a clef is chosen that keeps every note on the staff.
+- Repeats (with first and second endings) are written out in full by default, or kept as written with the dotted repeat sign.
+- Choral scores with two singers on a staff (S+A, T+B) are split into separate voices by pitch, so swapped layers and shared chords still come out right; a lower voice without its own words takes the text sung on its staff.
 - Optionally, text sung again straight away is written as "ij" under the first note of the repeat, as in the sources (the longest repeated phrase, up to 8 words).
 
 ### Not yet

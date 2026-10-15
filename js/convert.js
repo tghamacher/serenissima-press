@@ -60,11 +60,17 @@
     const composer = text(kids(kid(root, 'identification'), 'creator').find(c => c.getAttribute('type') === 'composer'));
     const names = {};
     for (const sp of kids(kid(root, 'part-list'), 'score-part')) names[sp.getAttribute('id')] = (text(kid(sp, 'part-name')) || sp.getAttribute('id')).replace(/\s+/g, ' ');
-    const parts = kids(root, 'part').map((p, i) => {
+    // a staff shared by two singers becomes two entries; part: the <part>, split: which singer
+    const parts = [];
+    kids(root, 'part').forEach((p, i) => {
       const name = names[p.getAttribute('id')] || `Part ${i + 1}`;
       const staves = p.querySelector('attributes > staves');
       const keyboard = /piano|rehearsal|reduction|keyboard|organ/i.test(name) || (staves && +text(staves) > 1);
-      return { index: i, name, label: partLabel(name), keyboard };
+      const voices = keyboard ? [] : partVoices(p);
+      if (voices.length === 2) {
+        const pair = pairNames(name, p);
+        pair.forEach((nm, line) => parts.push({ index: parts.length, part: i, split: { line, voices, pair, staff: name }, name: `${nm} (${name})`, label: partLabel(nm), keyboard }));
+      } else parts.push({ index: parts.length, part: i, split: null, name, label: partLabel(name), keyboard });
     });
     // note values: x/2 or x/1 time (or breves) usually means original values; x/4 usually halved
     const firstPart = kids(root, 'part')[0], music = kids(firstPart, 'measure').filter((m, i) => !(i === 0 && isPrefatory(m)));
@@ -123,14 +129,198 @@
   // mensuration over an invisible rest, before the music proper in modern clefs.
   const isPrefatory = m => { const ns = kids(m, 'note'); return ns.length > 0 && ns.every(n => n.getAttribute('print-object') === 'no'); };
 
+  // ---------------------------------------------------------------- voices sharing a staff
+  // Choral scores often put two singers on one staff (S+A, T+B) as voices 1 and 2. Such a part is
+  // offered as two voices. "Real" voices have notes in at least a quarter of the measures; stray
+  // layers (a few notes in voice 3) don't count, but their notes are still placed by pitch.
+  function partVoices(p) {
+    const ms = kids(p, 'measure'), seen = new Map();
+    for (const m of ms) new Set(kids(m, 'note').filter(n => !kid(n, 'rest')).map(n => text(kid(n, 'voice')) || '1')).forEach(v => seen.set(v, (seen.get(v) || 0) + 1));
+    return [...seen].filter(([, c]) => c >= ms.length / 4).map(([v]) => v).sort((a, b) => a - b);
+  }
+  const VOICE_WORDS = {
+    s: 'Soprano', soprano: 'Soprano', superius: 'Soprano', cantus: 'Soprano', discantus: 'Soprano', treble: 'Soprano',
+    a: 'Alto', alto: 'Alto', altus: 'Alto', contralto: 'Alto', t: 'Tenor', tenor: 'Tenor',
+    b: 'Bass', bass: 'Bass', bassus: 'Bass', baritone: 'Bass'
+  };
+  // names for the two singers: from the part name ("Soprano/Alto", "T B"), else from the clef
+  function pairNames(name, p) {
+    const words = name.toLowerCase().split(/[^a-z]+/).map(w => VOICE_WORDS[w]).filter(Boolean);
+    if (words.length === 2) return words;
+    const sign = text(p.querySelector('attributes > clef > sign'));
+    return sign === 'F' ? ['Tenor', 'Bass'] : sign === 'C' ? ['Alto', 'Tenor'] : ['Soprano', 'Alto'];
+  }
+
+  // One measure of a shared staff: the notes the upper (line 0) or lower (line 1) singer sings.
+  // Decided by pitch where voices sound together, so swapped layers and stray voices still land right;
+  // chords split top/bottom; if one voice is missing from the measure both singers share the other.
+  function splitLine(items, split, mlen, where, warn) {
+    const notes = items.filter(it => !it.rest), real = split.voices;
+    const present = real.filter(v => items.some(it => it.voice === v));
+    const sounding = (m, t) => m.start <= t + 1e-6 && m.end > t + 1e-6;
+    const mine = [];
+    for (const n of notes) {
+      const group = notes.filter(m => m.voice === n.voice && near(m.start, n.start));
+      let line;
+      if (group.length > 1) {
+        const ps = group.map(m => m.p), hi = Math.max(...ps), lo = Math.min(...ps);
+        line = hi === lo ? 'both' : n.p === hi ? 0 : n.p === lo ? 1 : -1;
+      } else {
+        const others = notes.filter(m => m.voice !== n.voice && sounding(m, n.start));
+        if (others.length) {
+          const ps = others.map(m => m.p), hi = Math.max(...ps), lo = Math.min(...ps);
+          if (n.p > hi) line = 0;
+          else if (n.p < lo) line = 1;
+          else if (n.p > lo && n.p < hi) line = hi - n.p <= n.p - lo ? 0 : 1;   // between two others: the nearer singer
+          else line = real.includes(n.voice) ? real.indexOf(n.voice) : n.p === hi ? 0 : 1;   // unison: keep its layer
+        } else if (present.length < 2 && real.includes(n.voice)) line = 'both';
+        else if (real.includes(n.voice)) line = real.indexOf(n.voice);
+        else line = items.some(m => m.voice === real[0] && sounding(m, n.start)) ? 1 : 0;   // a stray layer fills the gap
+      }
+      if (line === split.line || line === 'both') mine.push(n);
+    }
+    mine.sort((a, b) => a.start - b.start);
+    const out = [];
+    for (let k = 0; k < mine.length; k++) {
+      const n = mine[k], prev = out[out.length - 1];
+      if (prev && n.start < prev.end - 1e-6) {
+        if (near(n.start, prev.start) && n.p === prev.p) continue;   // the same note reached twice
+        // usually a note misplaced by the exporting program: move it after the note it overlaps if there is room
+        const d = n.end - n.start, next = mine[k + 1] ? mine[k + 1].start : mlen;
+        if (prev.end + d <= next + 1e-6) { out.push({ ...n, start: prev.end, end: prev.end + d }); warn(`${where}: a note overlapped the one before it and was moved after it. Check it.`); }
+        else warn(`${where}: a note overlapping the one before it was dropped. Check it.`);
+        continue;
+      }
+      out.push(n);
+    }
+    return out;
+  }
+
+  // Text for a lower voice that has none of its own: the staff's syllables, each given to the note
+  // sounding when it is sung, or the next untexted note before the following syllable.
+  function borrowText(notes, track, name, warn) {
+    const off = [];
+    let j = 0;
+    track.forEach((s, k) => {
+      const next = k + 1 < track.length ? track[k + 1].t : Infinity;
+      while (j < notes.length && notes[j].end <= s.t + 1e-6) j++;
+      let n = j; while (n < notes.length && notes[n].syl) n++;
+      if (n < notes.length && notes[n].t < next - 1e-6) { notes[n].syl = s.syl; if (!near(notes[n].t, s.t)) off.push(s.mno); j = n + 1; }
+      else off.push(s.mno);
+    });
+    const ms = [...new Set(off)];
+    if (ms.length) warn(`${name}: text taken from the other voice on its staff; ${off.length} syllable(s) don't match its rhythm (m. ${ms.slice(0, 8).join(', ')}${ms.length > 8 ? '…' : ''}). Check the underlay.`);
+  }
+  // A voice with its own text: add a word the other voice carries where this one starts a note untexted
+  // (as "A-" of "Amen" written only in the other voice), unless this voice sings that word itself next.
+  function fillText(notes, track) {
+    const key = s => s.text.toLowerCase().replace(/[^\p{L}]/gu, '');
+    for (const s of track) {
+      if (s.syl.syllabic !== 'begin' && s.syl.syllabic !== 'single') continue;
+      const i = notes.findIndex(e => near(e.t, s.t));
+      if (i < 0 || notes[i].syl) continue;
+      const before = notes.slice(0, i).reverse().find(e => e.syl), after = notes.slice(i + 1).find(e => e.syl);
+      if (before && (before.syl.syllabic === 'begin' || before.syl.syllabic === 'middle')) continue;
+      if (after && key(after.syl) === key(s.syl)) continue;
+      notes[i].syl = s.syl;
+    }
+  }
+
+  // ---------------------------------------------------------------- repeats
+  // The order in which a part's measures are sung. "out": repeats written out in full, taking only the
+  // measures of the ending that belongs to each pass. Otherwise the measures as written, marking where
+  // repeat signs go. Each entry: { el, pass, open, close } (open/close: a repeat sign before/after it).
+  function measureOrder(partEl, mode, warn) {
+    const ms = kids(partEl, 'measure');
+    let ending = null;
+    const info = ms.map(m => {
+      const bars = kids(m, 'barline'), rep = d => bars.some(b => kid(b, 'repeat') && kid(b, 'repeat').getAttribute('direction') === d);
+      const back = bars.map(b => kid(b, 'repeat')).find(r => r && r.getAttribute('direction') === 'backward');
+      const start = bars.map(b => kid(b, 'ending')).find(e => e && e.getAttribute('type') === 'start');
+      if (start) ending = (start.getAttribute('number') || '1').split(/[\s,]+/).filter(Boolean).map(Number);
+      const mine = ending;
+      if (bars.some(b => kid(b, 'ending') && /stop|discontinue/.test(kid(b, 'ending').getAttribute('type')))) ending = null;
+      return { el: m, forward: rep('forward'), backward: !!back, times: back ? +back.getAttribute('times') || 2 : 0, ending: mine };
+    });
+    if (!info.some(m => m.backward)) return ms.map(el => ({ el, pass: 1 }));
+    if (mode !== 'out') return info.map((m, i) => ({ el: m.el, pass: 1, open: m.forward && i > 0, close: m.backward }));
+    const fwd = info.find(m => m.forward);
+    warn(`Repeats are written out in full${fwd ? ` (from m.${fwd.el.getAttribute('number')})` : ''}. Choose "Repeat signs" to keep them as written.`);
+    const order = [];
+    let i = 0, from = 0, pass = 1, after = false;
+    while (i < info.length && order.length < info.length * 10) {
+      const m = info[i];
+      if (m.forward && from !== i) { from = i; pass = 1; after = false; }
+      if (after && !m.ending) { from = i; pass = 1; after = false; }
+      if (m.ending && !m.ending.includes(pass)) { i++; continue; }
+      order.push({ el: m.el, pass });
+      if (m.backward && pass < m.times) { pass++; i = from; continue; }
+      if (m.backward) after = true;
+      i++;
+    }
+    return order;
+  }
+
   // ---------------------------------------------------------------- read one part into events
-  function readPart(partEl, name, o, tr, warn) {
-    const events = [];
-    let divisions = 1, clefInfo = null, fifths = 0, shown = Math.min(tr.fifths, 0), voice = null, tie = null, perfect = false, origSign = null;
-    for (const measure of kids(partEl, 'measure')) {
-      const mno = measure.getAttribute('number'), edMem = {};
+  // Notes are placed by time (backup/forward followed), so gaps in a voice become rests.
+  // split: null for the whole part (its first voice), or { line, voices } for one singer of a shared staff.
+  function readPart(partEl, name, o, tr, warn, split) {
+    const events = [], track = [];
+    let divisions = 1, clefInfo = null, fifths = 0, shown = Math.min(tr.fifths, 0), voice = null, tie = null, perfect = false, origSign = null, mstart = 0, pass = 1;
+    const seen = new Set();   // measures already read (a repeat comes round again)
+    // the verse for this pass through a repeat ("2", "verse2", "part1verse2"), else the first
+    const lyricOf = node => {
+      const all = kids(node, 'lyric'), num = l => +((l.getAttribute('number') || '1').match(/(\d+)\D*$/) || [0, 1])[1];
+      const lyr = all.find(l => num(l) === pass) || all.find(l => num(l) === 1) || all[0];
+      const t = lyr ? kids(lyr, 'text').map(e => e.textContent).join(' ').trim() : '';
+      return t ? { text: t, syllabic: text(kid(lyr, 'syllabic')) || 'single' } : null;
+    };
+    function pushRest(ql, where) {
+      if (ql < 1e-6) return;
+      // consecutive rests merge, so long silences come out as longa + breve rests as in the sources
+      const prev = events[events.length - 1];
+      if (prev && prev.kind === 'rest') prev.ql += ql; else events.push({ kind: 'rest', ql, where, perfect });
+      tie = null;
+    }
+    function pushNote(node, t, ql, where, edMem, head) {
+      const fermata = !!kid(node, 'notations', 'fermata');
+      const step = text(kid(node, 'pitch', 'step')), oct = +text(kid(node, 'pitch', 'octave'));
+      const alter = Math.round(+text(kid(node, 'pitch', 'alter')) || 0);
+      const dia0 = oct * 7 + STEP[step];
+      // editorial (ficta) status: from this note's accidental, or carried from earlier in the bar
+      const acc = kid(node, 'accidental');
+      if (acc) edMem[dia0] = acc.getAttribute('editorial') === 'yes' || acc.getAttribute('parentheses') === 'yes' || acc.getAttribute('bracket') === 'yes';
+      const chromatic = alter !== keyAlter(fifths, STEP[step]);
+      const editorial = chromatic && !!edMem[dia0];
+      // transpose, then compare with the key signature actually printed
+      const dia = dia0 + tr.dia;
+      const midi = oct * 12 + NATURAL[STEP[step]] + alter + tr.semitones;
+      const alter2 = midi - (Math.floor(dia / 7) * 12 + NATURAL[mod(dia, 7)]);
+      const key2 = keyAlter(shown, mod(dia, 7));
+      let accKey = null;
+      if (alter2 !== key2 && (!editorial || o.ficta)) {
+        if (Math.abs(alter2) > 1) warn(`${where}: double sharp/flat can't be shown.`);
+        accKey = alter2 > key2 ? '+' : 'b';
+      }
+      const ties = kids(node, 'tie').map(t => t.getAttribute('type'));
+      if (tie && ties.includes('stop') && tie.dia === dia) {
+        tie.ql += ql; tie.end += ql; if (fermata) tie.fermata = true;
+        if (!ties.includes('start')) tie = null;
+        return;
+      }
+      const ev = { kind: 'note', dia, ql, acc: accKey, fermata, syl: lyricOf(node) || (head && lyricOf(head)), where, perfect, t, end: t + ql };
+      events.push(ev);
+      tie = ties.includes('start') ? ev : null;
+    }
+
+    for (const step of measureOrder(partEl, o.repeats, warn)) {
+      const measure = step.el, revisit = seen.has(measure); pass = step.pass; seen.add(measure);
+      const mno = measure.getAttribute('number'), edMem = {}, where = `${name} m.${mno}`;
       const incipit = !events.some(e => e.kind === 'note' || e.kind === 'rest') && isPrefatory(measure);
       if (incipit) warn('The score opens with a prefatory staff (original clefs and signs): its clefs and signs are used, its measure is not printed.');
+      const items = [];
+      let pos = 0, last = 0, mlen = 0;
+      const dur = node => +text(kid(node, 'duration')) / divisions;
       for (const node of measure.children) {
         if (incipit && node.localName !== 'attributes') continue;
         switch (node.localName) {
@@ -138,7 +328,7 @@
             const d = kid(node, 'divisions'); if (d) divisions = +text(d);
             const k = kid(node, 'key', 'fifths');
             if (k) {
-              if (events.length) warn(`${name} m.${mno}: key change; signature not reprinted, accidentals follow the new key.`);
+              if (events.length && !revisit) warn(`${name} m.${mno}: key change; signature not reprinted, accidentals follow the new key.`);
               fifths = +text(k); shown = fifths + tr.fifths;
               if (shown > 0) { warn(`${name}: the key needs ${shown} sharp(s); mensural notation has no sharp signatures, so each sharp is printed on its note. Consider transposing.`); shown = 0; }
             }
@@ -154,7 +344,7 @@
               const sign = (opening && o.mensuration) || (opening && origSign) || mensSign(t, o.reduction, warn);
               const beats = +(text(kid(t, 'beats')).split('+')[0]), type = +text(kid(t, 'beat-type'));
               perfect = sign === 'T3' || sign === 'T4' || (beats === 3 && near(beats * 4 / type / o.reduction, 3));
-              events.push({ kind: 'mens', code: sign });
+              if (!revisit) events.push({ kind: 'mens', code: sign });   // not restated when a repeat comes round again
             }
             break;
           }
@@ -165,62 +355,54 @@
               else if (br.getAttribute('type') === 'stop') events.push({ kind: 'bracket', code: '}' });
             }
             break;
+          case 'backup': pos -= dur(node); break;
+          case 'forward': pos += dur(node); mlen = Math.max(mlen, pos); break;
           case 'note': {
-            if (kid(node, 'grace')) { warn(`${name} m.${mno}: grace note skipped.`); break; }
-            const v = text(kid(node, 'voice')) || '1';
-            if (voice === null) voice = v;
-            if (v !== voice) break;
-            if (kid(node, 'chord')) { warn(`${name} m.${mno}: chord note skipped (one line per part).`); break; }
-            const dur = kid(node, 'duration'); if (!dur) break;
-            const ql = +text(dur) / divisions;
-            const fermata = !!kid(node, 'notations', 'fermata');
-            const where = `${name} m.${mno}`;
-            if (kid(node, 'rest')) {
-              // consecutive rests merge, so long silences come out as longa + breve rests as in the sources
-              const prev = events[events.length - 1];
-              if (prev && prev.kind === 'rest') prev.ql += ql; else events.push({ kind: 'rest', ql, where, perfect });
-              tie = null; break;
-            }
-            const step = text(kid(node, 'pitch', 'step')), oct = +text(kid(node, 'pitch', 'octave'));
-            const alter = Math.round(+text(kid(node, 'pitch', 'alter')) || 0);
-            const dia0 = oct * 7 + STEP[step];
-            // editorial (ficta) status: from this note's accidental, or carried from earlier in the bar
-            const acc = kid(node, 'accidental');
-            if (acc) edMem[dia0] = acc.getAttribute('editorial') === 'yes' || acc.getAttribute('parentheses') === 'yes' || acc.getAttribute('bracket') === 'yes';
-            const chromatic = alter !== keyAlter(fifths, STEP[step]);
-            const editorial = chromatic && !!edMem[dia0];
-            // transpose, then compare with the key signature actually printed
-            const dia = dia0 + tr.dia;
-            const midi = oct * 12 + NATURAL[STEP[step]] + alter + tr.semitones;
-            const alter2 = midi - (Math.floor(dia / 7) * 12 + NATURAL[mod(dia, 7)]);
-            const key2 = keyAlter(shown, mod(dia, 7));
-            let accKey = null;
-            if (alter2 !== key2 && (!editorial || o.ficta)) {
-              if (Math.abs(alter2) > 1) warn(`${where}: double sharp/flat can't be shown.`);
-              accKey = alter2 > key2 ? '+' : 'b';
-            }
-            const ties = kids(node, 'tie').map(t => t.getAttribute('type'));
-            if (tie && ties.includes('stop') && tie.dia === dia) {
-              tie.ql += ql; if (fermata) tie.fermata = true;
-              if (!ties.includes('start')) tie = null;
-              break;
-            }
-            let syl = null;
-            const lyr = kids(node, 'lyric').find(l => l.getAttribute('number') === '1') || kid(node, 'lyric');
-            if (lyr) {
-              const t = kids(lyr, 'text').map(e => e.textContent).join(' ').trim();
-              if (t) syl = { text: t, syllabic: text(kid(lyr, 'syllabic')) || 'single' };
-            }
-            const ev = { kind: 'note', dia, ql, acc: accKey, fermata, syl, where, perfect };
-            events.push(ev);
-            tie = ties.includes('start') ? ev : null;
-            break;
+            if (kid(node, 'grace')) { warn(`${where}: grace note skipped.`); break; }
+            if (kid(node, 'cue') || !kid(node, 'duration')) break;
+            const chord = !!kid(node, 'chord'), d = dur(node), start = chord ? last : pos;
+            if (!chord) { last = pos; pos += d; mlen = Math.max(mlen, pos); }
+            const rest = !!kid(node, 'rest'), pitch = kid(node, 'pitch');
+            if (!rest && !pitch) break;   // unpitched
+            const p = rest ? null : +text(kid(pitch, 'octave')) * 12 + NATURAL[STEP[text(kid(pitch, 'step'))]] + (+text(kid(pitch, 'alter')) || 0);
+            // a chord's syllable is on its first note; every note of the chord sings it
+            const head = chord ? [...items].reverse().find(it => !it.chord) : null;
+            items.push({ node, voice: text(kid(node, 'voice')) || '1', chord, rest, start, end: start + d, p, head: head && head.node });
           }
         }
       }
-      if (o.barlines && !incipit) events.push({ kind: 'bar' });
+      if (incipit) continue;
+
+      let line;
+      if (split) line = splitLine(items, split, mlen, where, warn);
+      else {
+        if (voice === null && items.length) voice = items[0].voice;
+        line = items.filter(it => it.voice === voice);
+        if (line.some(it => it.chord)) { warn(`${where}: chord note skipped (one line per part).`); line = line.filter(it => !it.chord); }
+      }
+      if (step.open && !(events.length && events[events.length - 1].kind === 'repeat')) events.push({ kind: 'repeat' });
+      let cur = 0;
+      for (const it of line) {
+        if (it.start > cur + 1e-6) pushRest(it.start - cur, where);
+        if (it.rest) pushRest(it.end - Math.max(it.start, cur), where); else pushNote(it.node, mstart + it.start, it.end - it.start, where, edMem, it.head);
+        cur = Math.max(cur, it.end);
+      }
+      if (mlen > cur + 1e-6) pushRest(mlen - cur, where);
+      if (split) for (const it of items) {
+        const s = !it.rest && lyricOf(it.node), t = mstart + it.start;
+        if (s && !track.some(x => near(x.t, t))) track.push({ t, syl: s, mno });
+      }
+      mstart += mlen;
+      if (step.close) events.push({ kind: 'repeat' });
+      else if (o.barlines) events.push({ kind: 'bar' });
     }
     if (o.barlines && events.length && events[events.length - 1].kind === 'bar') events.pop();
+    if (split && track.length) {
+      track.sort((a, b) => a.t - b.t);
+      const notes = events.filter(e => e.kind === 'note');
+      if (notes.filter(e => e.syl).length < track.length / 2) { notes.forEach(e => e.syl = null); borrowText(notes, track, name, warn); }
+      else fillText(notes, track);
+    }
     return { events, clefInfo, fifths: shown };
   }
 
@@ -262,6 +444,7 @@
     for (const e of parsed.events) {
       if (e.kind === 'mens') out.push({ t: 'm', g: e.code });
       else if (e.kind === 'bar') out.push({ t: 'b', g: 'B' });
+      else if (e.kind === 'repeat') out.push({ t: 'b', g: 'R' });
       else if (e.kind === 'bracket') out.push({ t: 'x', g: e.code });
       else if (e.kind === 'rest') { for (const [, k] of values(e.ql / o.reduction, true, e.perfect, e.where, warn)) out.push({ t: 'r', g: k + 'g' }); }
       else if (e.kind === 'note') {
@@ -318,8 +501,9 @@
     const partEls = kids(doc.documentElement, 'part');
     const parts = [];
     for (const sel of o.parts) {
-      const el = partEls[sel.index], name = info.parts[sel.index].name;
-      const parsed = readPart(el, name, o, tr, warn);
+      const entry = info.parts[sel.index], el = partEls[entry.part], name = entry.name;
+      if (entry.split) warn(`${entry.split.staff}: two voices share this staff, so it was split by pitch into ${entry.split.pair.join(' and ')}. Check where they cross.`);
+      const parsed = readPart(el, name, o, tr, warn, entry.split);
       const dias = parsed.events.filter(e => e.kind === 'note').map(e => e.dia);
       const clefName = chooseClef(parsed.clefInfo, dias, sel.clef, name, warn);
       const built = tokens(parsed, clefName, o, warn);

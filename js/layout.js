@@ -37,7 +37,7 @@
       if (mode !== 'none') word[0].s = word[0].s.slice(1);
       word.forEach(t => t.s = caps(t.s));
     }
-    toks.forEach(t => { if (t.s != null) t.sd = t.s + (t.y === 'begin' || t.y === 'middle' ? '-' : ''); });
+    toks.forEach(t => { if (t.s) t.sd = t.s + (t.y === 'begin' || t.y === 'middle' ? '-' : ''); });
     if (!p.initialLetter) p.initialLetter = p.label.charAt(0);
   }
 

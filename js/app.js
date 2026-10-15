@@ -103,7 +103,7 @@
     let res;
     try {
       res = C.convert(state.doc, {
-        reduction: +$('reduction').value, transpose: +$('transpose').value, mensuration: $('mens').value,
+        reduction: +$('reduction').value, transpose: +$('transpose').value, mensuration: $('mens').value, repeats: $('repeats').value,
         ficta: $('ficta').checked, barlines: $('barlines').checked, ij: $('ij').checked, brackets: false,
         parts: sel.map(p => ({ index: p.index, clef: p.clef, label: p.label }))
       });
@@ -172,7 +172,7 @@
     typeset();
   };
   $('staffCustom').oninput = typeset;
-  for (const id of ['reduction', 'mens', 'transpose', 'ficta', 'barlines', 'ij', 'initialLines', 'initial2', 'initialLines2', 'rubric']) $(id).onchange = typeset;
+  for (const id of ['reduction', 'mens', 'repeats', 'transpose', 'ficta', 'barlines', 'ij', 'initialLines', 'initial2', 'initialLines2', 'rubric']) $(id).onchange = typeset;
   $('initial').onchange = () => { if ($('initial').value === 'image' && !state.initialSrc) $('initialFile').click(); typeset(); };
   $('initialFile').onchange = e => {
     const f = e.target.files[0]; if (!f) return;
