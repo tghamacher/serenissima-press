@@ -4,7 +4,15 @@
   const $ = id => document.getElementById(id);
   const C = window.SPConvert, L = window.SPLayout;
 
-  const PAGES = { letter: ['US Letter', 8.5, 11], legal: ['US Legal', 8.5, 14], tabloid: ['Tabloid 11×17', 11, 17], a4: ['A4', 8.27, 11.69], a3: ['A3', 11.69, 16.54] };
+  // page sizes in inches [name, width, height], portrait; grouped in the menu. The period sizes are those
+  // of 16th-century partbooks: Venetian quartos (Gardano, Scotto) and the Parisian octavo chanson books of
+  // Le Roy & Ballard, both usually oblong (landscape).
+  const PAGES = {
+    octavo: ['Octavo, about 11 × 17 cm', 4.33, 6.69, 'Period partbooks'], quarto: ['Quarto, about 16 × 22 cm', 6.3, 8.66, 'Period partbooks'],
+    half: ['Half Letter, 5.5 × 8.5 in', 5.5, 8.5, 'Small'], a5: ['A5', 5.83, 8.27, 'Small'],
+    letter: ['US Letter', 8.5, 11, 'Standard'], legal: ['US Legal', 8.5, 14, 'Standard'], a4: ['A4', 8.27, 11.69, 'Standard'],
+    tabloid: ['Tabloid 11×17', 11, 17, 'Large'], a3: ['A3', 11.69, 16.54, 'Large']
+  };
   // pieces: [{ file, doc, info, title, composer, reduction, mens, transpose, parts: [{index, name, include, label, clef, side}],
   //   secs: {step: {name, mode}}, sections (as last converted) }]; cur: the piece whose settings are shown
   const state = { format: 'partbook', page: { partbook: 'letter', choirbook: 'tabloid' }, orient: { partbook: 'portrait', choirbook: 'portrait' }, initialSrc: '', pieces: [], cur: 0, secKey: '' };
@@ -15,7 +23,7 @@
   const MARGINS = { narrow: [0.4, 0.4, 0.4, 0.4], normal: [0.6, 0.6, 0.6, 0.6], wide: [1, 1, 1, 1], book: [0.7, 1.3, 0.5, 1] };
   const MIDS = ['mTop', 'mBottom', 'mInside', 'mOutside'];
   state.margins = { partbook: { preset: 'normal', custom: MARGINS.normal.slice() }, choirbook: { preset: 'normal', custom: MARGINS.normal.slice() } };
-  const metric = () => ['a4', 'a3'].includes(state.page[state.format]);
+  const metric = () => ['a4', 'a3', 'a5', 'quarto', 'octavo'].includes(state.page[state.format]);
   function margins() {
     const m = state.margins[state.format], a = m.preset === 'custom' ? m.custom : MARGINS[m.preset];
     return { top: a[0], bottom: a[1], inside: a[2], outside: a[3] };
@@ -39,7 +47,11 @@
   }
 
   // ---- fixed option lists
-  for (const [k, [name]] of Object.entries(PAGES)) $('page').append(new Option(name, k));
+  for (const [k, [name, , , group]] of Object.entries(PAGES)) {
+    let g = [...$('page').children].find(x => x.label === group);
+    if (!g) { g = document.createElement('optgroup'); g.label = group; $('page').append(g); }
+    g.append(new Option(name, k));
+  }
   $('staffSize').append(new Option('Automatic', '0'));
   for (const s of [32, 40, 48, 56, 64, 72, 80]) $('staffSize').append(new Option(`${s} px`, s));
   $('staffSize').append(new Option('Custom…', 'custom'));
@@ -315,10 +327,10 @@
     document.querySelectorAll('[data-format]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
     $('page').value = state.page[state.format];
     $('orient').value = state.orient[state.format];
-    showFormat(); showMargins(); showSections(); typeset();
+    showFormat(); showMargins(); showPageHint(); showSections(); typeset();
   });
   $('page').value = state.page.partbook;
-  $('page').onchange = () => { state.page[state.format] = $('page').value; showMargins(); typeset(); };
+  $('page').onchange = () => { state.page[state.format] = $('page').value; showMargins(); showPageHint(); typeset(); };
   $('margins').onchange = () => {
     const m = state.margins[state.format], v = $('margins').value;
     // custom starts from the margins in use
@@ -329,7 +341,9 @@
     const n = parseFloat($(id).value);
     if (n >= 0) { state.margins[state.format].custom[i] = metric() ? n / 25.4 : n; typeset(); }
   });
-  $('orient').onchange = () => { state.orient[state.format] = $('orient').value; typeset(); };
+  $('orient').onchange = () => { state.orient[state.format] = $('orient').value; showPageHint(); typeset(); };
+  // the period sizes were usually oblong
+  function showPageHint() { $('pageHint').hidden = !(['quarto', 'octavo'].includes(state.page[state.format]) && state.orient[state.format] === 'portrait'); }
   for (const id of ['title', 'composer', 'imprint']) $(id).oninput = typeset;
   $('titlePage').onchange = () => { $('imprintRow').hidden = !$('titlePage').checked; typeset(); };
   // the piece shown: its own settings

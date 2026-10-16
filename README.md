@@ -1,6 +1,6 @@
 # Serenissima Press
 
-**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.9.0 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
+**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.10.0 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
 
 Turn a MusicXML score of Renaissance polyphony into **partbooks** (one voice per book) or a **choirbook** (voices spread across facing pages), in mensural notation with text underlay, set in the [EMS Serenissima](https://www.earlymusicsources.com/) font.
 
@@ -40,6 +40,7 @@ A link like `index.html?score=examples/o-quam-gloriosum.mxl&format=choirbook` op
 - **Numbering, title page and index:** as in the sources, partbooks are numbered by page in the outer corner (as Gardano numbered his) and choirbooks by leaf, on each right-hand page; in Arabic or Roman numerals, or not at all. An optional title page gives each partbook its own, headed by its voice, as the Venetian printers did, with your imprint at the foot; with several pieces, an index at the back lists them with their pages or folios.
 - **Voice names:** at the head of each voice, where a piece begins and on later pages or openings; either can be left off.
 - **Staff size:** automatic in a choirbook means the largest staff that keeps each piece (and each section set to start a new opening) on one opening, down to 40 px. A partbook keeps a comfortable size (56 px, text about 11 pt) and runs on to as many pages as it needs. Either can be set by hand.
+- **Page sizes:** small ones as well as the usual: Octavo (about 11 × 17 cm, as the Parisian chanson books of Le Roy & Ballard) and Quarto (about 16 × 22 cm, as the Venetian partbooks of Gardano and Scotto), both usually oblong, so choose Landscape; A5 and Half Letter; Letter, Legal and A4; Tabloid and A3. On a small page an automatic partbook staff shrinks (to no less than 36 px) so a page still holds several lines.
 - **Margins:** narrow, normal or wide, a "book" setting after the proportions of printed books (narrowest at the binding, deepest at the foot), or your own top, bottom, inside and outside margins, in inches or, for A4 and A3, millimetres. Inside and outside are mirrored on left- and right-hand pages; in a choirbook the inside is the fold of the opening.
 - **Ligature brackets:** optionally, ligature brackets marked in the edition (MusicXML brackets) are printed above the staff. Slurs have no place in mensural notation and are not drawn, but they guide the text given to a voice that has none of its own.
 - **Repeats** (with first and second endings) are written out in full by default, or kept as written with the dotted repeat sign.
@@ -58,6 +59,11 @@ If you have a GitHub account you can also [open an issue](https://github.com/tgh
 ## Release notes
 
 Versions are numbered 0.*feature*.*fix* while the tool is in beta: a release with new features raises the middle number, a release of fixes only raises the last.
+
+### 0.10.0 (2026-10-16)
+
+- **Smaller page sizes:** Octavo (about 11 × 17 cm, as Le Roy & Ballard's chanson books) and Quarto (about 16 × 22 cm, as the Venetian partbooks), with a hint that both were usually oblong; A5 and Half Letter. The page menu is grouped by size.
+- On a small page an automatic partbook staff shrinks (to no less than 36 px) so a page still holds several lines.
 
 ### 0.9.0 (2026-10-16)
 

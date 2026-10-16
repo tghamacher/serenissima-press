@@ -434,7 +434,8 @@
       // Partbooks: a book for each voice, in the order the voices first appear, holding that voice of
       // every piece that has it. The music runs on from page to page at a size comfortable to sing from.
       const [Win, Hin] = o.partbookPage, W = Win * IN - MG.i - MG.o, avail = Hin * IN - MG.t - MG.b - 34 - 16;
-      const F = o.staffSize > 0 ? o.staffSize : PARTBOOK; staff = F;
+      // automatic: comfortable to sing from, but smaller on a small page (an octavo), for about five lines
+      const F = o.staffSize > 0 ? o.staffSize : Math.max(36, Math.min(PARTBOOK, Math.floor(2 * avail / (5 * SYS)) / 2)); staff = F;
       const voices = [];
       D.pieces.forEach(pc => pc.parts.forEach(p => { if (!voices.includes(p.label)) voices.push(p.label); }));
       for (const label of voices) {
