@@ -1,6 +1,6 @@
 # Serenissima Press
 
-**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.10.0 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
+**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.11.0 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
 
 Turn a MusicXML score of Renaissance polyphony into **partbooks** (one voice per book) or a **choirbook** (voices spread across facing pages), in mensural notation with text underlay, set in the [EMS Serenissima](https://www.earlymusicsources.com/) font.
 
@@ -35,11 +35,13 @@ A link like `index.html?score=examples/o-quam-gloriosum.mxl&format=choirbook` op
 - **Initials:** in a choirbook, a large decorated initial opens the voice at the top left and smaller ones open the other voices and any sections set to start a new line or page (plain capitals by default, optionally in red); in partbooks each voice opens with the large one. Styles: woodcut (EB Garamond Initials, after Berner's 1592 specimen; it has only A D F G L N O Q T, other letters fall back to a dotted ground), flourished Gothic (Yinit), letter on dotted ground, plain capital, blank frame, your own image, or none.
 - **Clefs:** the font reaches one ledger line above and below the staff. With **period** clefs (the default), a part that goes further in the edition's clef gets the clef a scribe would have used: a common one (C1, C3, C4, F4, then G2, C2, F3) that keeps every note within reach. This is listed as a note, not a warning. **Modern** clefs, for singers learning the notation, set sopranos and altos in treble, tenors in treble an octave lower and basses in F4. A note past the font's reach is drawn from the font's own note, with only the extra ledger lines it needs, copied from the font's first one (the option can be turned off).
 - **Page turns:** in a choirbook the page is turned only where every singer has reached the same point: each opening ends at the last bar every voice reaches on it, and the music runs on from opening to opening.
+- **Choirbook pages are ruled alike:** at a given staff size every page has the same staves at the same places, as in a ruled choirbook. The voices on a page share them, a busier voice taking more, and when one page is full its lowest voice runs on at the foot of the facing page, below that page's lowest part, under its own name.
+- **Ruled staves, optionally:** the staves the music leaves empty (at the foot of a choirbook page, or after the end of a piece in a partbook) can be ruled all the same, as in a manuscript, whose pages were ruled before the music was copied. Printed books left the space blank.
 - **Sections:** the edition's double and final barlines mark sections (Kyrie I, Christe, …), each ending with a double bar, named from the edition or from their first words. Under **Sections** each can run on (the default), start a new line with its own initial and name, or start a new page (a new opening in a choirbook). A voice silent through a section that starts a new line or page gets a direction such as "Benedictus tacet", as in Morales's *Liber primus missarum* (Rome, 1544).
 - **Several pieces:** a book can hold several pieces. Each partbook holds its voice of every piece that has it (a piece without that voice is left out, as with a Quintus book); in printed partbooks a piece follows on below the last, or on a new page if you prefer. In a choirbook each piece starts a new opening, with the piece's title and composer as running heads.
 - **Numbering, title page and index:** as in the sources, partbooks are numbered by page in the outer corner (as Gardano numbered his) and choirbooks by leaf, on each right-hand page; in Arabic or Roman numerals, or not at all. An optional title page gives each partbook its own, headed by its voice, as the Venetian printers did, with your imprint at the foot; with several pieces, an index at the back lists them with their pages or folios.
 - **Voice names:** at the head of each voice, where a piece begins and on later pages or openings; either can be left off.
-- **Staff size:** automatic in a choirbook means the largest staff that keeps each piece (and each section set to start a new opening) on one opening, down to 40 px. A partbook keeps a comfortable size (56 px, text about 11 pt) and runs on to as many pages as it needs. Either can be set by hand.
+- **Staff size:** automatic in a choirbook means the largest staff that keeps each piece (and each section set to start a new opening) on one opening, but never smaller than 56 px, so a long part runs on to more openings rather than shrinking the book. A partbook keeps a comfortable size (56 px, text about 11 pt) and runs on to as many pages as it needs. Either can be set by hand.
 - **Page sizes:** small ones as well as the usual: Octavo (about 11 × 17 cm, as the Parisian chanson books of Le Roy & Ballard) and Quarto (about 16 × 22 cm, as the Venetian partbooks of Gardano and Scotto), both usually oblong, so choose Landscape; A5 and Half Letter; Letter, Legal and A4; Tabloid and A3. On a small page an automatic partbook staff shrinks (to no less than 36 px) so a page still holds several lines.
 - **Margins:** narrow, normal or wide, a "book" setting after the proportions of printed books (narrowest at the binding, deepest at the foot), or your own top, bottom, inside and outside margins, in inches or, for A4 and A3, millimetres. Inside and outside are mirrored on left- and right-hand pages; in a choirbook the inside is the fold of the opening.
 - **Ligature brackets:** optionally, ligature brackets marked in the edition (MusicXML brackets) are printed above the staff. Slurs have no place in mensural notation and are not drawn, but they guide the text given to a voice that has none of its own.
@@ -59,6 +61,12 @@ If you have a GitHub account you can also [open an issue](https://github.com/tgh
 ## Release notes
 
 Versions are numbered 0.*feature*.*fix* while the tool is in beta: a release with new features raises the middle number, a release of fixes only raises the last.
+
+### 0.11.0 (2026-10-16)
+
+- **Choirbook pages ruled alike:** at a given staff size every page has the same staves at the same places. The voices on a page share them, a busier voice taking more, and when a page is full its lowest voice runs on at the foot of the facing page, below that page's lowest part. Automatic staves are never smaller than 56 px; a part too long for that runs on to more openings.
+- **Rule the unused staves** (optional, both formats): the staves the music leaves empty are drawn all the same, as in a manuscript ruled before the music was copied. Printed books left the space blank.
+- The title page shrinks its text to fit, so an imprint is no longer cut off on a small landscape page.
 
 ### 0.10.0 (2026-10-16)
 

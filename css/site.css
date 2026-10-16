@@ -177,14 +177,22 @@ button, select, input { font: inherit; color: inherit; }
 .sp-num.l { left: 0; right: auto; }
 .sp-sechead { font-style: italic; white-space: nowrap; overflow: hidden; }
 .sp-tacet { font-style: italic; text-align: center; }
-.sp-tp { display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; }
-.sp-tp-voice { font-size: 40px; letter-spacing: .32em; padding-left: .32em; margin-top: 24px; }
-.sp-tp-mid { display: flex; flex-direction: column; align-items: center; gap: 20px; max-width: 85%; }
-.sp-tp-title { font: 400 46px/1.15 "IM Fell French Canon", var(--textfont); text-transform: uppercase; letter-spacing: .06em; }
-.sp-tp-comp { font-size: 26px; font-variant: small-caps; letter-spacing: .08em; }
-.sp-tp-orn { font-size: 44px; line-height: 1; }
-.sp-tp-imprint { font-size: 19px; font-style: italic; margin-bottom: 36px; min-height: 1em; }
+/* the title page: every size in em of one base size, which the layout shrinks until all fits the page */
+.sp-tp { display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; font-size: 19px; }
+.sp-tp-voice { font-size: 2.1em; letter-spacing: .32em; padding-left: .32em; margin-top: .6em; }
+.sp-tp-mid { display: flex; flex-direction: column; align-items: center; gap: 1.05em; max-width: 85%; }
+.sp-tp-title { font: 400 2.42em/1.15 "IM Fell French Canon", var(--textfont); text-transform: uppercase; letter-spacing: .06em; }
+.sp-tp-comp { font-size: 1.37em; font-variant: small-caps; letter-spacing: .08em; }
+.sp-tp-orn { font-size: 2.3em; line-height: 1; }
+.sp-tp-imprint { font-style: italic; margin-bottom: 1.9em; min-height: 1em; }
 .sp-ix-head { text-align: center; font-size: 22px; letter-spacing: .3em; padding-left: .3em; margin: 6px 0 26px; }
 .sp-ix-row { display: flex; align-items: baseline; font-size: 17px; line-height: 1.75; }
 .sp-ix-t { font-style: italic; }
 .sp-ix-dots { flex: 1; border-bottom: 1px dotted var(--muted); margin: 0 8px; position: relative; top: -4px; }
+
+/* a choirbook page: staves ruled at a fixed pitch, each with a band above it for the voice's or section's name */
+.sp-staves { position: relative; }
+.sp-slot { position: absolute; left: 0; right: 0; }
+.sp-band { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 2px; white-space: nowrap; overflow: hidden; }
+.sp-band-l { letter-spacing: .28em; }
+.sp-band-r { font-style: italic; }
