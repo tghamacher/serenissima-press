@@ -1,6 +1,6 @@
 # Serenissima Press
 
-**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.7.0 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
+**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.8.0 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
 
 Turn a MusicXML score of Renaissance polyphony into **partbooks** (one voice per book) or a **choirbook** (voices spread across facing pages), in mensural notation with text underlay, set in the [EMS Serenissima](https://www.earlymusicsources.com/) font.
 
@@ -18,12 +18,14 @@ It is in **beta**: the result is a good starting point, but check ties, perfecti
 
 ## Using it
 
-1. Open the [site](https://tghamacher.github.io/serenissima-press/) and choose a `.musicxml`, `.xml` or `.mxl` file (one voice per part, lyrics included).
+1. Open the [site](https://tghamacher.github.io/serenissima-press/) and choose one or more `.musicxml`, `.xml` or `.mxl` files (one voice per part, lyrics included). Each file is a piece of the book; add more at any time and put them in order.
 2. Pick **Partbook** or **Choirbook**, page size and orientation (portrait or landscape), labels and clefs.
 3. Check **Note values**: editions in x/2 time usually keep the original values (whole note = semibreve); editions in x/4 usually halve them (half note = semibreve). The tool guesses; check it.
 4. **Print / save as PDF**: choose "Save as PDF", margins "None", and turn on "Background graphics".
 
-A link like `index.html?score=examples/o-quam-gloriosum.mxl&format=choirbook` opens a score directly.
+The settings are in groups you can open and close; the editor can be light, dark or follow your system (the pages always stay paper-coloured, as they will print).
+
+A link like `index.html?score=examples/o-quam-gloriosum.mxl&format=choirbook` opens a score directly; repeat `score=` to open several.
 
 ### What it does
 
@@ -32,16 +34,19 @@ A link like `index.html?score=examples/o-quam-gloriosum.mxl&format=choirbook` op
 - **Lines:** each line has a clef, signature and custos; staves are justified to full width.
 - **Initials:** in a choirbook, a large decorated initial opens the voice at the top left and smaller ones open the others (engraved or plain capitals, optionally in red); in partbooks each voice opens with the large one. Styles: woodcut (EB Garamond Initials, after Berner's 1592 specimen; it has only A D F G L N O Q T, other letters fall back to a dotted ground), flourished Gothic (Yinit), letter on dotted ground, engraved capital (Libertinus Serif Initials), plain capital, blank frame, your own image, or none.
 - **Clefs:** the font reaches one ledger line above and below the staff. With **period** clefs (the default), a part that goes further in the edition's clef gets the clef a scribe would have used: a common one (C1, C3, C4, F4, then G2, C2, F3) that keeps every note within reach. This is listed as a note, not a warning. **Modern** clefs, for singers learning the notation, set sopranos and altos in treble, tenors in treble an octave lower and basses in F4. A note past the font's reach is drawn from the font's own note, with only the extra ledger lines it needs, copied from the font's first one (the option can be turned off).
-- **Page turns:** in a choirbook the page is turned only where every singer has reached the same point: each opening ends at the last bar every voice reaches on it, and the music runs on from opening to opening. The edition's double and final barlines mark sections (Kyrie I, Christe, …), each ending with a double bar; they are named from the edition or from their first words and listed under **Sections**, where you can tick any to start it on a new opening with its own initials. None is ticked unless you choose.
-- **Staff size:** automatic in a choirbook means the largest staff that keeps the piece (or each ticked section) on one opening, down to 40 px. A partbook keeps a comfortable size (56 px, text about 11 pt) and runs on to as many pages as it needs. Either can be set by hand.
+- **Page turns:** in a choirbook the page is turned only where every singer has reached the same point: each opening ends at the last bar every voice reaches on it, and the music runs on from opening to opening.
+- **Sections:** the edition's double and final barlines mark sections (Kyrie I, Christe, …), each ending with a double bar, named from the edition or from their first words. Under **Sections** each can run on (the default), start a new line with its own initial and name, or start a new page (a new opening in a choirbook). A voice silent through a section that starts a new line or page gets a direction such as "Benedictus tacet", as in Morales's *Liber primus missarum* (Rome, 1544).
+- **Several pieces:** a book can hold several pieces. Each partbook holds its voice of every piece that has it (a piece without that voice is left out, as with a Quintus book); in printed partbooks a piece follows on below the last, or on a new page if you prefer. In a choirbook each piece starts a new opening, with the piece's title and composer as running heads.
+- **Numbering, title page and index:** as in the sources, partbooks are numbered by page in the outer corner (as Gardano numbered his) and choirbooks by leaf, on each right-hand page; in Arabic or Roman numerals, or not at all. An optional title page gives each partbook its own, headed by its voice, as the Venetian printers did, with your imprint at the foot; with several pieces, an index at the back lists them with their pages or folios.
+- **Voice names:** at the head of each voice, where a piece begins and on later pages or openings; either can be left off.
+- **Staff size:** automatic in a choirbook means the largest staff that keeps each piece (and each section set to start a new opening) on one opening, down to 40 px. A partbook keeps a comfortable size (56 px, text about 11 pt) and runs on to as many pages as it needs. Either can be set by hand.
 - **Ligature brackets:** optionally, ligature brackets marked in the edition (MusicXML brackets) are printed above the staff. Slurs have no place in mensural notation and are not drawn, but they guide the text given to a voice that has none of its own.
 - **Repeats** (with first and second endings) are written out in full by default, or kept as written with the dotted repeat sign.
 - **Choral scores** with two singers on a staff (S+A, T+B) are split into separate voices by pitch, so swapped layers and shared chords still come out right; a lower voice without its own words takes the text sung on its staff.
-- **"ij":** optionally, text sung again straight away is written as "ij" under the first note of the repeat, as in the sources (the longest repeated phrase, up to 8 words).
 
 ### Not yet
 
-Mensural ligatures, perfection and alteration beyond simple cases, multiple pieces per book, OMR.
+Mensural ligatures, perfection and alteration beyond simple cases, signatures (gathering marks), OMR.
 
 ## Feedback
 
@@ -52,6 +57,16 @@ If you have a GitHub account you can also [open an issue](https://github.com/tgh
 ## Release notes
 
 Versions are numbered 0.*feature*.*fix* while the tool is in beta: a release with new features raises the middle number, a release of fixes only raises the last.
+
+### 0.8.0 (2026-10-16)
+
+- **Several pieces in one book:** add files at any time, reorder or remove them; each keeps its own title, voices, sections, note values and transposition. Each partbook holds its voice of every piece that has it (a piece without that voice is left out, as with a Quintus book), the pieces following on below each other or on a new page; in a choirbook each piece starts a new opening.
+- **Sections in both formats:** each can run on, start a new line with its own initial and name, or start a new page or opening. A voice silent through such a section gets a direction such as "Benedictus tacet", as in Morales's *Liber primus missarum* (1544).
+- **Numbering, title page and index,** after the period books: partbooks numbered by page in the outer corner, choirbooks by leaf on the right-hand page, in Arabic or Roman numerals or not at all; an optional title page (one per partbook, headed by its voice) with an imprint; an index of the pieces at the back. Running heads give each piece's title and composer in a choirbook.
+- **Voice names** at the head of the music can be left off where a piece begins, on later pages, or both.
+- **Editor:** the settings are in groups that open and close; a light, dark or system theme (the pages stay paper-coloured).
+- The "ij" option is withdrawn until it has been tested further.
+- Fix: a long composer name no longer wraps under the title line.
 
 ### 0.7.0 (2026-10-15)
 

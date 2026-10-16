@@ -9,27 +9,29 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=IM+Fell+French+Canon&display=block" rel="stylesheet">
 <link rel="stylesheet" href="css/site.css">
+<script>/* the editor's theme, before anything is drawn: light, dark, or the system's */ try { const t = localStorage.getItem("sp-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) { }</script>
 </head>
 <body>
 <header class="sp-top">
-  <h1>Serenissima Press</h1><span class="beta" id="version" data-version="0.7.0">beta 0.7.0</span>
+  <h1>Serenissima Press</h1><span class="beta" id="version" data-version="0.8.0">beta 0.8.0</span>
   <p>MusicXML in, Renaissance partbooks and choirbooks out: mensural notation with text underlay.</p>
-  <nav><a href="cheatsheet.html">Font cheat sheet</a><a id="feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform" target="_blank" rel="noopener">Feedback</a><a href="https://github.com/tghamacher/serenissima-press" target="_blank" rel="noopener">GitHub</a><a href="#about">About</a></nav>
+  <nav><a href="cheatsheet.html">Font cheat sheet</a><a id="feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform" target="_blank" rel="noopener">Feedback</a><a href="https://github.com/tghamacher/serenissima-press" target="_blank" rel="noopener">GitHub</a><a href="#about">About</a><select id="theme" class="sp-theme" aria-label="Colour theme"><option value="system">System theme</option><option value="light">Light</option><option value="dark">Dark</option></select></nav>
 </header>
 
 <main class="sp-main">
   <aside class="sp-controls" aria-label="Settings">
-    <h2>1 · Score</h2>
+    <details class="sp-group" data-group="music" open><summary>1 · Music</summary>
     <label class="sp-drop" id="drop" tabindex="0">
-      <strong>Choose a MusicXML file</strong>
-      <small>.musicxml, .xml or .mxl — or drop it here</small>
-      <input type="file" id="file" accept=".musicxml,.xml,.mxl" hidden>
+      <strong id="dropTitle">Choose MusicXML files</strong>
+      <small>.musicxml, .xml or .mxl — one piece or several — or drop them here</small>
+      <input type="file" id="file" accept=".musicxml,.xml,.mxl" multiple hidden>
     </label>
-    <div class="sp-file" id="fileName"></div>
-    <p class="sp-hint" style="margin-top:8px">No file handy? <button class="sp-link" id="sample" type="button">Try the sample</button></p>
+    <ol class="sp-pieces" id="pieces"></ol>
+    <p class="sp-hint" style="margin-top:8px" id="sampleHint">No file handy? <button class="sp-link" id="sample" type="button">Try the sample</button></p>
+    </details>
 
     <div id="settings" hidden>
-      <h2>2 · Book</h2>
+      <details class="sp-group" data-group="book" open><summary>2 · Book</summary>
       <div class="sp-seg" role="group" aria-label="Format">
         <button type="button" data-format="partbook" aria-pressed="true">Partbook</button>
         <button type="button" data-format="choirbook" aria-pressed="false">Choirbook</button>
@@ -44,28 +46,46 @@
         <div class="sp-field"><label for="staffSize">Staff size</label>
           <div class="sp-combo"><select id="staffSize"></select><input type="number" id="staffCustom" min="16" max="160" step="1" aria-label="Staff size in pixels" hidden></div>
         </div>
+        <label class="sp-field"><span id="numberingLabel">Page numbers</span>
+          <select id="numbering"><option value="arabic">1, 2, 3</option><option value="roman">I, II, III</option><option value="none">None</option></select>
+        </label>
       </div>
-      <div id="sectionsBox" hidden>
-        <div class="sp-field"><span>Sections</span></div>
-        <table class="sp-parts sp-secs">
-          <thead><tr><th title="Start this section on a new opening">New</th><th>Name</th><th>Bar</th><th title="The opening it starts on">Opening</th></tr></thead>
-          <tbody id="sections"></tbody>
-        </table>
-        <p class="sp-hint">The music runs on from opening to opening, turning only at a bar every voice has reached. Tick a section to start it on a new opening, with its own initials.</p>
+      <p class="sp-hint" id="numberingHint"></p>
+      <div class="sp-sub">Voice names at the head of the music</div>
+      <div class="sp-row">
+        <label class="sp-check"><input type="checkbox" id="labelFirst" checked> Where a piece begins</label>
+        <label class="sp-check"><input type="checkbox" id="labelRest" checked> On later pages</label>
+      </div>
+      <label class="sp-check"><input type="checkbox" id="titlePage"> Title page</label>
+      <label class="sp-field" id="imprintRow" hidden><span>Imprint, at the foot of the title page</span><input type="text" id="imprint" placeholder="e.g. Edited by A. Singer · MMXXVI"></label>
+      <div id="manyPieces" hidden>
+        <label class="sp-check"><input type="checkbox" id="index" checked> Index of the pieces at the back</label>
+        <label class="sp-field" id="pieceStartRow"><span>Each piece after the first starts</span>
+          <select id="pieceStart"><option value="line">On a new line, below the last (as in printed partbooks)</option><option value="page">On a new page</option></select>
+        </label>
       </div>
 
-      <h2>3 · Voices</h2>
+      </details>
+
+      <details class="sp-group" data-group="voices"><summary>3 · <span id="pieceHeading">Voices and sections</span></summary>
+      <label class="sp-field" id="pieceSelRow" hidden><span>Settings for</span><select id="pieceSel"></select></label>
+      <div id="pieceNames" hidden>
+        <label class="sp-field"><span>Title of this piece</span><input type="text" id="pieceTitle"></label>
+        <label class="sp-field"><span>Its composer</span><input type="text" id="pieceComposer"></label>
+      </div>
       <table class="sp-parts">
         <thead><tr><th></th><th>Label</th><th>Clef</th><th class="sideCol">Page</th></tr></thead>
         <tbody id="parts"></tbody>
       </table>
       <p class="sp-hint" id="sideHint">Choirbook: “left”/“right” page, top to bottom in this order.</p>
-      <label class="sp-field"><span>Automatic clefs</span>
-        <select id="clefs"><option value="period">Period: keep every note on the staff</option><option value="modern">Modern: treble, treble an octave lower, bass</option></select>
-      </label>
-      <label class="sp-check"><input type="checkbox" id="ledgers" checked> Extra ledger lines where a note needs them</label>
-
-      <h2>4 · Notation</h2>
+      <div id="sectionsBox" hidden>
+        <div class="sp-field"><span>Sections</span></div>
+        <table class="sp-parts sp-secs">
+          <thead><tr><th>Starts</th><th>Name</th><th>Bar</th><th id="secWhere">Page</th></tr></thead>
+          <tbody id="sections"></tbody>
+        </table>
+        <p class="sp-hint" id="secHint"></p>
+      </div>
       <label class="sp-field"><span>Note values</span>
         <select id="reduction">
           <option value="4">Original: whole note = semibreve</option>
@@ -77,15 +97,24 @@
         <label class="sp-field"><span>Mensuration sign</span><select id="mens"></select></label>
         <label class="sp-field"><span>Transpose</span><select id="transpose"></select></label>
       </div>
+
+      </details>
+
+      <details class="sp-group" data-group="notation"><summary>4 · Notation</summary>
+      <label class="sp-field"><span>Automatic clefs</span>
+        <select id="clefs"><option value="period">Period: keep every note on the staff</option><option value="modern">Modern: treble, treble an octave lower, bass</option></select>
+      </label>
+      <label class="sp-check"><input type="checkbox" id="ledgers" checked> Extra ledger lines where a note needs them</label>
       <label class="sp-field"><span>Repeats</span>
         <select id="repeats"><option value="out">Write out in full</option><option value="signs">Repeat signs (as written)</option></select>
       </label>
       <label class="sp-check"><input type="checkbox" id="ficta"> Print editorial accidentals (ficta)</label>
       <label class="sp-check"><input type="checkbox" id="barlines"> Barlines at every bar</label>
-      <label class="sp-check"><input type="checkbox" id="ij"> Write repeated text as “ij”</label>
       <label class="sp-check"><input type="checkbox" id="brackets"> Ligature brackets from the edition</label>
 
-      <h2>5 · Initials</h2>
+      </details>
+
+      <details class="sp-group" data-group="initials"><summary>5 · Initials</summary>
       <div class="sp-row">
         <label class="sp-field"><span id="initialFor">Each voice</span>
           <select id="initial">
@@ -105,7 +134,7 @@
       </div>
       <div id="otherInitials">
         <div class="sp-row">
-          <label class="sp-field"><span>Other voices</span>
+          <label class="sp-field"><span id="initial2For">Other voices and sections</span>
             <select id="initial2">
               <option value="engraved">Engraved capital</option>
               <option value="capital">Plain capital</option>
@@ -120,14 +149,16 @@
             <select id="initialLines2"><option value="1">1 staff</option><option value="2">2 staves</option><option value="3">3 staves</option></select>
           </label>
         </div>
-        <label class="sp-check"><input type="checkbox" id="rubric"> Other voices’ initials in red</label>
+        <label class="sp-check"><input type="checkbox" id="rubric"> These initials in red</label>
       </div>
       <p class="sp-hint">The woodcut alphabet has only A D F G L N O Q T; other letters are set on a dotted ground.</p>
       <input type="file" id="initialFile" accept="image/*" hidden>
+      </details>
 
-      <h2>6 · Print</h2>
-      <button class="sp-btn primary" id="print" type="button">Print / save as PDF</button>
-      <p class="sp-hint" style="margin-top:6px">In the print dialog choose “Save as PDF”, set margins to “None”, and turn on “Background graphics” for the dotted initial.</p>
+      <div class="sp-printbar">
+        <button class="sp-btn primary" id="print" type="button">Print / save as PDF</button>
+        <p class="sp-hint" style="margin-top:6px">In the print dialog choose “Save as PDF”, set margins to “None”, and turn on “Background graphics” for the dotted initial.</p>
+      </div>
     </div>
   </aside>
 
@@ -142,7 +173,7 @@
   <p><strong>Serenissima Press</strong> (beta) converts modern MusicXML into mensural notation in the browser; nothing is uploaded anywhere. The result is a starting point: check ties, perfection, ficta and text underlay against your source.</p>
   <p>Music font: <a href="https://www.earlymusicsources.com/">EMS Serenissima</a> by Elam Rotem, Early Music Sources, licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Text fonts: EB Garamond and IM Fell French Canon (SIL Open Font License), via Google Fonts. Initials: EB Garamond Initials by Georg Duffner, after Conrad Berner’s 1592 specimen, and Libertinus Serif Initials (SIL Open Font License); Yinit by Yannis Haralambous (public domain).</p>
   <p>When you share a book, credit the editor of the MusicXML edition you used.</p>
-  <p>Version 0.7.0 · <a href="https://github.com/tghamacher/serenissima-press">Source code and release notes on GitHub</a> · <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform">Send feedback</a> (no account needed) or <a href="https://github.com/tghamacher/serenissima-press/issues/new/choose">open an issue on GitHub</a>.</p>
+  <p>Version 0.8.0 · <a href="https://github.com/tghamacher/serenissima-press">Source code and release notes on GitHub</a> · <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform">Send feedback</a> (no account needed) or <a href="https://github.com/tghamacher/serenissima-press/issues/new/choose">open an issue on GitHub</a>.</p>
 </footer>
 
 <script src="js/zip.js"></script>
