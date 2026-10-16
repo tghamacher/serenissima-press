@@ -77,7 +77,6 @@
   const INITIAL_FONTS = {
     woodcut: { family: '"EB Garamond Initials"', framed: true, letters: 'ADFGLNOQT', name: 'Woodcut' },
     gothic: { family: 'Yinit', framed: true },
-    engraved: { family: '"Libertinus Serif Initials", "IM Fell French Canon"' },
     capital: { family: '"IM Fell French Canon"' }
   };
   const inkCache = new Map();

@@ -1,6 +1,6 @@
 # Serenissima Press
 
-**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.8.0 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
+**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.8.1 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
 
 Turn a MusicXML score of Renaissance polyphony into **partbooks** (one voice per book) or a **choirbook** (voices spread across facing pages), in mensural notation with text underlay, set in the [EMS Serenissima](https://www.earlymusicsources.com/) font.
 
@@ -32,7 +32,7 @@ A link like `index.html?score=examples/o-quam-gloriosum.mxl&format=choirbook` op
 - **Notes and rests:** notes become mensural values (maxima to semifusa); ties merge, triplets become coloration, dotted notes get a dot of addition, and 3-semibreve breves under O are perfect.
 - **Accidentals:** worked out from pitch against the key signature; editorial accidentals (ficta) are left out unless you ask for them. Mensural notation has no sharp key signatures, so sharps are printed on their notes; transposing can help.
 - **Lines:** each line has a clef, signature and custos; staves are justified to full width.
-- **Initials:** in a choirbook, a large decorated initial opens the voice at the top left and smaller ones open the others (engraved or plain capitals, optionally in red); in partbooks each voice opens with the large one. Styles: woodcut (EB Garamond Initials, after Berner's 1592 specimen; it has only A D F G L N O Q T, other letters fall back to a dotted ground), flourished Gothic (Yinit), letter on dotted ground, engraved capital (Libertinus Serif Initials), plain capital, blank frame, your own image, or none.
+- **Initials:** in a choirbook, a large decorated initial opens the voice at the top left and smaller ones open the other voices and any sections set to start a new line or page (plain capitals by default, optionally in red); in partbooks each voice opens with the large one. Styles: woodcut (EB Garamond Initials, after Berner's 1592 specimen; it has only A D F G L N O Q T, other letters fall back to a dotted ground), flourished Gothic (Yinit), letter on dotted ground, plain capital, blank frame, your own image, or none.
 - **Clefs:** the font reaches one ledger line above and below the staff. With **period** clefs (the default), a part that goes further in the edition's clef gets the clef a scribe would have used: a common one (C1, C3, C4, F4, then G2, C2, F3) that keeps every note within reach. This is listed as a note, not a warning. **Modern** clefs, for singers learning the notation, set sopranos and altos in treble, tenors in treble an octave lower and basses in F4. A note past the font's reach is drawn from the font's own note, with only the extra ledger lines it needs, copied from the font's first one (the option can be turned off).
 - **Page turns:** in a choirbook the page is turned only where every singer has reached the same point: each opening ends at the last bar every voice reaches on it, and the music runs on from opening to opening.
 - **Sections:** the edition's double and final barlines mark sections (Kyrie I, Christe, …), each ending with a double bar, named from the edition or from their first words. Under **Sections** each can run on (the default), start a new line with its own initial and name, or start a new page (a new opening in a choirbook). A voice silent through a section that starts a new line or page gets a direction such as "Benedictus tacet", as in Morales's *Liber primus missarum* (Rome, 1544).
@@ -57,6 +57,10 @@ If you have a GitHub account you can also [open an issue](https://github.com/tgh
 ## Release notes
 
 Versions are numbered 0.*feature*.*fix* while the tool is in beta: a release with new features raises the middle number, a release of fixes only raises the last.
+
+### 0.8.1 (2026-10-16)
+
+- The engraved capital initials are withdrawn; the other voices' and sections' initials default to the plain capital. The Libertinus Serif Initials font is no longer shipped.
 
 ### 0.8.0 (2026-10-16)
 
@@ -128,5 +132,5 @@ Versions are numbered 0.*feature*.*fix* while the tool is in beta: a release wit
 
 - **Music font:** EMS Serenissima by Elam Rotem, Early Music Sources, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See `fonts/LICENSE-EMS_Serenissima.md`.
 - **Text fonts:** EB Garamond and IM Fell French Canon (SIL Open Font License), loaded from Google Fonts.
-- **Initials:** EB Garamond Initials by Georg Duffner and Libertinus Serif Initials by the Libertinus Project ([SIL Open Font License 1.1](https://openfontlicense.org), see `fonts/OFL-*.txt`); Yinit by Yannis Haralambous (public domain, see `fonts/LICENSE-Yinit.md`). Shipped unmodified from CTAN.
+- **Initials:** EB Garamond Initials by Georg Duffner ([SIL Open Font License 1.1](https://openfontlicense.org), see `fonts/OFL-EBGaramond-Initials.txt`); Yinit by Yannis Haralambous (public domain, see `fonts/LICENSE-Yinit.md`). Shipped unmodified from CTAN.
 - When you share a book, credit the editor of the MusicXML edition it was made from.

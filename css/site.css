@@ -1,9 +1,8 @@
 [hidden] { display: none !important; }
 /* EMS Serenissima by Elam Rotem, Early Music Sources, CC BY 4.0. See fonts/LICENSE-EMS_Serenissima.md */
 @font-face { font-family: "EMS Serenissima"; src: url("../fonts/EMS_Serenissima.otf") format("opentype"); font-display: block; }
-/* Initials: EB Garamond Initials (Georg Duffner) and Libertinus Serif Initials, SIL OFL 1.1; Yinit (Yannis Haralambous), public domain */
+/* Initials: EB Garamond Initials (Georg Duffner), SIL OFL 1.1; Yinit (Yannis Haralambous), public domain */
 @font-face { font-family: "EB Garamond Initials"; src: url("../fonts/EBGaramond-Initials.otf") format("opentype"); font-display: block; }
-@font-face { font-family: "Libertinus Serif Initials"; src: url("../fonts/LibertinusSerifInitials-Regular.otf") format("opentype"); font-display: block; }
 @font-face { font-family: "Yinit"; src: url("../fonts/Yinit.otf") format("opentype"); font-display: block; }
 
 :root {
