@@ -221,6 +221,8 @@
         if (b.tk.sd) marks.push([g, b]);
       }
       if (nk) staff.append(nlp !== undefined && geom ? farNote({ lp: nlp, v: 'U' }, 0, cW, F) : el('span', null, 'U' + nk));
+      // on a ruled page the staff of a short last line runs on, empty, to the margin
+      if (last && o.ruleEmpty) staff.append(fill(Math.max(0, width - used - cW - 0.5), F));
       sys.append(staff);
       pending.push({ sys, marks, F, drop: above + below });
       return sys;
