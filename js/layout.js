@@ -162,7 +162,8 @@
   //      (side: 'verso' or 'recto' in a choirbook; mode: 'run', 'line' or 'page', where a section starts)
   // o: { format, staffSize, initials: {first: {style, lines}, other: {style, lines}, src, red},
   //      partbookPage: [w,h], choirbookPage: [w,h], numbering: 'arabic'|'roman'|'none', titlePage, index,
-  //      pieceStart: 'line'|'page' (partbooks), labels: { first, rest } (voice names where a piece begins, and after) }
+  //      pieceStart: 'line'|'page' (partbooks), labels: { first, rest } (voice names where a piece begins, and after),
+  //      margins: { top, bottom, inside, outside } in inches }
   // In a choirbook the voice at the top of the left page gets the first initial; in partbooks every voice
   // does. Sections that start a new line or page get the other initials.
   async function render(book, D, o) {
@@ -290,10 +291,19 @@
     // "Pleni a 2 tacet" reads oddly: the number of voices goes
     const tacet = text => `${text.replace(/\s+a\s*\d+\s*$/i, '')} tacet`;
     const numeral = n => o.numbering === 'none' ? '' : o.numbering === 'roman' ? roman(n) : String(n);
-    const page = (Win, Hin, M) => { const pg = el('div', 'sp-page'); pg.style.cssText = `width:${Win * IN}px;height:${Hin * IN}px;padding:${M}px`; return pg; };
+    // margins in px: top, bottom, inside (at the fold or binding) and outside, mirrored on left- and right-hand pages
+    const MG = (() => { const m = o.margins || {}, v = k => (m[k] >= 0 ? m[k] : 0.6) * IN; return { t: v('top'), b: v('bottom'), i: v('inside'), o: v('outside') }; })();
+    const page = (Win, Hin, side) => {
+      const pg = el('div', 'sp-page'), l = side === 'verso' ? MG.o : MG.i, r = side === 'verso' ? MG.i : MG.o;
+      pg.style.cssText = `width:${Win * IN}px;height:${Hin * IN}px;padding:${MG.t}px ${r}px ${MG.b}px ${l}px`;
+      return pg;
+    };
+    const credit = () => { const c = el('div', 'sp-credit', CREDIT); c.style.bottom = Math.max(4, MG.b * 0.37) + 'px'; return c; };
     // title page, after the printed books: the voice (in partbooks), the title, the composer, the imprint
     function titlePage(Win, Hin, voice) {
-      const pg = page(Win, Hin, 0.9 * IN); pg.classList.add('sp-tp');
+      // a generous page: the chosen margins, but never less than 0.9 in
+      const pg = page(Win, Hin, 'recto'), w = x => Math.max(x, 0.9 * IN) + 'px'; pg.classList.add('sp-tp');
+      pg.style.padding = [MG.t, MG.o, MG.b, MG.i].map(w).join(' ');
       if (voice) pg.append(el('div', 'sp-tp-voice', voice));
       const mid = el('div', 'sp-tp-mid');
       mid.append(el('div', 'sp-tp-title', D.title || ''));
@@ -303,8 +313,8 @@
       return pg;
     }
     // the index at the back: each piece and the page (or folio) where it starts
-    function indexPage(Win, Hin, M, entries, voice) {
-      const pg = page(Win, Hin, M); pg.classList.add('sp-ix');
+    function indexPage(Win, Hin, entries, voice) {
+      const pg = page(Win, Hin, 'recto'); pg.classList.add('sp-ix');
       pg.append(el('div', 'sp-ix-head', voice ? `INDEX · ${voice}` : 'INDEX'));
       const ol = el('div', 'sp-ix-list');
       for (const [t, n] of entries) { const r = el('div', 'sp-ix-row'); r.append(el('span', 'sp-ix-t', t), el('span', 'sp-ix-dots'), el('span', 'sp-ix-n', numeral(n))); ol.append(r); }
@@ -317,12 +327,12 @@
     if (o.format === 'choirbook') {
       // The page is turned only where every singer has reached the same bar: the last bar every voice
       // reaches on the opening. Each piece, and each section the user sets to, starts a new opening.
-      const [Win, Hin] = o.choirbookPage, M = 0.6 * IN, W = Win * IN - 2 * M;
+      const [Win, Hin] = o.choirbookPage, W = Win * IN - MG.i - MG.o;
       const segs = [];
       D.pieces.forEach((pc, pi) => {
         const verso = pc.parts.filter(p => p.side !== 'recto'), recto = pc.parts.filter(p => p.side === 'recto');
         const all = verso.concat(recto), k = Math.max(verso.length, recto.length, 1);
-        const regionH = (Hin * IN - 2 * M - 34 - 10 - 16) / k, inner = regionH - 24 - 10;
+        const regionH = (Hin * IN - MG.t - MG.b - 34 - 10 - 16) / k, inner = regionH - 24 - 10;
         const cutAt = st => all.every(p => p.cuts && p.cuts[st] !== undefined);
         // the voice at the top of the left page gets the first initial
         const sp = all.map((p, q) => spans(pc, p, cutAt, q === 0 ? I.first : I.other));
@@ -399,7 +409,7 @@
         const { g, ci, rows } = op, spread = el('div', 'sp-spread');
         const sec = !ci && g.head ? g.head.name : '';
         for (const [side, list] of [['verso', g.verso], ['recto', g.recto]]) {
-          const pg = page(Win, Hin, M), head = el('div', 'sp-runhead ' + side, side === 'verso' ? g.pc.title : (g.pc.composer || ''));
+          const pg = page(Win, Hin, side), head = el('div', 'sp-runhead ' + side, side === 'verso' ? g.pc.title : (g.pc.composer || ''));
           if (side === 'recto' && numeral(folio(n + 1))) head.append(el('span', 'sp-num', numeral(folio(n + 1))));
           pg.append(head);
           for (const p of list) {
@@ -416,14 +426,14 @@
         }
         book.append(spread);
       });
-      if (o.index && D.pieces.length > 1) book.append(indexPage(Win, Hin, M, D.pieces.map((pc, i) => [pc.title, folio(starts[i] || 1)])));
+      if (o.index && D.pieces.length > 1) book.append(indexPage(Win, Hin, D.pieces.map((pc, i) => [pc.title, folio(starts[i] || 1)])));
       const pages = book.querySelectorAll('.sp-page');
-      if (pages.length) pages[pages.length - 1].append(el('div', 'sp-credit', CREDIT));
+      if (pages.length) pages[pages.length - 1].append(credit());
       size = [Win, Hin];
     } else {
       // Partbooks: a book for each voice, in the order the voices first appear, holding that voice of
       // every piece that has it. The music runs on from page to page at a size comfortable to sing from.
-      const [Win, Hin] = o.partbookPage, M = 0.6 * IN, W = Win * IN - 2 * M, avail = Hin * IN - 2 * M - 34 - 16;
+      const [Win, Hin] = o.partbookPage, W = Win * IN - MG.i - MG.o, avail = Hin * IN - MG.t - MG.b - 34 - 16;
       const F = o.staffSize > 0 ? o.staffSize : PARTBOOK; staff = F;
       const voices = [];
       D.pieces.forEach(pc => pc.parts.forEach(p => { if (!voices.includes(p.label)) voices.push(p.label); }));
@@ -458,7 +468,7 @@
         let last = null;
         pages.forEach((pgr, n) => {
           const begins = pgr.rows.some(r => r.kind === 'title'), shown = begins ? labels.first : labels.rest;
-          const pg = page(Win, Hin, M), head = el('div', 'sp-head', shown ? label : ''), num = numeral(n + 1);
+          const pg = page(Win, Hin, (n + 1) % 2 ? 'recto' : 'verso'), head = el('div', 'sp-head', shown ? label : ''), num = numeral(n + 1);
           // page numbers in the outer corner: right on a right-hand (odd) page, left on a left-hand one
           if (num) head.append(el('span', 'sp-num ' + ((n + 1) % 2 ? 'r' : 'l'), num));
           pg.append(head, block(pgr.rows, F, W, avail));
@@ -467,9 +477,9 @@
         if (o.index && D.pieces.length > 1) {
           const entries = [];
           pages.forEach((pgr, n) => pgr.rows.forEach(r => { if (r.kind === 'title') entries.push([r.title, n + 1]); }));
-          book.append(last = indexPage(Win, Hin, M, entries, label));
+          book.append(last = indexPage(Win, Hin, entries, label));
         }
-        if (last) last.append(el('div', 'sp-credit', CREDIT));
+        if (last) last.append(credit());
       }
       size = [Win, Hin];
     }

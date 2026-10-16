@@ -10,6 +10,34 @@
   const state = { format: 'partbook', page: { partbook: 'letter', choirbook: 'tabloid' }, orient: { partbook: 'portrait', choirbook: 'portrait' }, initialSrc: '', pieces: [], cur: 0, secKey: '' };
   const piece = () => state.pieces[state.cur];
 
+  // ---- margins, in inches: [top, bottom, inside, outside], for each format. "Book" follows the
+  // proportions of printed books: narrowest at the binding, then the head, the outside, and the deepest foot.
+  const MARGINS = { narrow: [0.4, 0.4, 0.4, 0.4], normal: [0.6, 0.6, 0.6, 0.6], wide: [1, 1, 1, 1], book: [0.7, 1.3, 0.5, 1] };
+  const MIDS = ['mTop', 'mBottom', 'mInside', 'mOutside'];
+  state.margins = { partbook: { preset: 'normal', custom: MARGINS.normal.slice() }, choirbook: { preset: 'normal', custom: MARGINS.normal.slice() } };
+  const metric = () => ['a4', 'a3'].includes(state.page[state.format]);
+  function margins() {
+    const m = state.margins[state.format], a = m.preset === 'custom' ? m.custom : MARGINS[m.preset];
+    return { top: a[0], bottom: a[1], inside: a[2], outside: a[3] };
+  }
+  // shown in the page size's own unit: millimetres for A4 and A3, inches otherwise
+  function showMargins() {
+    const m = state.margins[state.format], k = metric() ? 25.4 : 1, unit = metric() ? 'mm' : 'in';
+    const fmt = v => metric() ? String(Math.round(v * k)) : String(+v.toFixed(2));
+    for (const opt of $('margins').options) {
+      const a = MARGINS[opt.value]; if (!a) continue;
+      const base = { narrow: 'Narrow', normal: 'Normal', wide: 'Wide', book: 'Book: narrow inside, deep foot' }[opt.value];
+      opt.text = opt.value === 'book' ? base : `${base} (${fmt(a[0])} ${unit})`;
+    }
+    $('margins').value = m.preset;
+    $('marginBox').hidden = m.preset !== 'custom';
+    MIDS.forEach((id, i) => { $(id).value = fmt(m.custom[i]); $(id).step = metric() ? '1' : '0.05'; });
+    $('mUnit').textContent = unit;
+    const a = margins();
+    $('marginHint').textContent = (m.preset === 'book' ? `Top ${fmt(a.top)}, bottom ${fmt(a.bottom)}, inside ${fmt(a.inside)}, outside ${fmt(a.outside)} ${unit}. ` : '') +
+      (state.format === 'choirbook' ? 'Inside is the fold between the two pages of an opening.' : 'Inside is the edge at the binding, on the left of right-hand pages and the right of left-hand ones.');
+  }
+
   // ---- fixed option lists
   for (const [k, [name]] of Object.entries(PAGES)) $('page').append(new Option(name, k));
   $('staffSize').append(new Option('Automatic', '0'));
@@ -55,7 +83,7 @@
     const on = ids => ids.filter(id => $(id).checked).join(', ') || 'none';
     const lines = [
       `Version: ${$('version').dataset.version}`,
-      `Format: ${state.format}, ${sel('page')} ${state.orient[state.format]}, staff ${sel('staffSize')}${state.staffUsed ? ` (${Math.round(state.staffUsed)} px)` : ''}, numbering ${sel('numbering')}`,
+      `Format: ${state.format}, ${sel('page')} ${state.orient[state.format]}, staff ${sel('staffSize')}${state.staffUsed ? ` (${Math.round(state.staffUsed)} px)` : ''}, numbering ${sel('numbering')}, margins ${Object.values(margins()).join('/')} in`,
       `Clefs: ${sel('clefs')}; repeats: ${sel('repeats')}; options: ${on(['ledgers', 'ficta', 'barlines', 'brackets', 'titlePage', 'index', 'labelFirst', 'labelRest'])}`,
       ...state.pieces.map(pc => `Piece: ${pc.file} — note values ${pc.reduction}, mensuration ${pc.mens || 'auto'}, transpose ${pc.transpose}; voices: ${pc.parts.filter(p => p.include).map(p => `${p.label} ${p.clef || 'auto'}${state.format === 'choirbook' ? ' ' + p.side : ''}`).join(', ')}${Object.values(pc.secs).some(s => s.mode && s.mode !== 'run') ? '; sections: ' + Object.entries(pc.secs).filter(([, s]) => s.mode && s.mode !== 'run').map(([k, s]) => `${k}:${s.mode}`).join(' ') : ''}`),
       `Browser: ${navigator.userAgent}`
@@ -211,7 +239,7 @@
         },
         partbookPage: pg('partbook'), choirbookPage: pg('choirbook'),
         numbering: $('numbering').value, titlePage: $('titlePage').checked, index: $('index').checked, pieceStart: $('pieceStart').value,
-        labels: { first: $('labelFirst').checked, rest: $('labelRest').checked }
+        labels: { first: $('labelFirst').checked, rest: $('labelRest').checked }, margins: margins()
       });
     } catch (e) { $('book').classList.remove('sp-busy'); status(e.message); return; }
     $('book').classList.remove('sp-busy');
@@ -287,10 +315,20 @@
     document.querySelectorAll('[data-format]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
     $('page').value = state.page[state.format];
     $('orient').value = state.orient[state.format];
-    showFormat(); showSections(); typeset();
+    showFormat(); showMargins(); showSections(); typeset();
   });
   $('page').value = state.page.partbook;
-  $('page').onchange = () => { state.page[state.format] = $('page').value; typeset(); };
+  $('page').onchange = () => { state.page[state.format] = $('page').value; showMargins(); typeset(); };
+  $('margins').onchange = () => {
+    const m = state.margins[state.format], v = $('margins').value;
+    // custom starts from the margins in use
+    if (v === 'custom' && m.preset !== 'custom') m.custom = MARGINS[m.preset].slice();
+    m.preset = v; showMargins(); typeset();
+  };
+  MIDS.forEach((id, i) => $(id).oninput = () => {
+    const n = parseFloat($(id).value);
+    if (n >= 0) { state.margins[state.format].custom[i] = metric() ? n / 25.4 : n; typeset(); }
+  });
   $('orient').onchange = () => { state.orient[state.format] = $('orient').value; typeset(); };
   for (const id of ['title', 'composer', 'imprint']) $(id).oninput = typeset;
   $('titlePage').onchange = () => { $('imprintRow').hidden = !$('titlePage').checked; typeset(); };
@@ -316,7 +354,7 @@
     const r = new FileReader(); r.onload = () => { state.initialSrc = r.result; typeset(); }; r.readAsDataURL(f);
   };
   $('print').onclick = () => window.print();
-  showFormat();
+  showFormat(); showMargins();
 
   // the editor's theme (the pages stay paper): light, dark or the system's, remembered in this browser
   const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } } };

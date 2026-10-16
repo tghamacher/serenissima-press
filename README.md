@@ -1,6 +1,6 @@
 # Serenissima Press
 
-**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.8.1 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
+**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.9.0 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
 
 Turn a MusicXML score of Renaissance polyphony into **partbooks** (one voice per book) or a **choirbook** (voices spread across facing pages), in mensural notation with text underlay, set in the [EMS Serenissima](https://www.earlymusicsources.com/) font.
 
@@ -19,7 +19,7 @@ It is in **beta**: the result is a good starting point, but check ties, perfecti
 ## Using it
 
 1. Open the [site](https://tghamacher.github.io/serenissima-press/) and choose one or more `.musicxml`, `.xml` or `.mxl` files (one voice per part, lyrics included). Each file is a piece of the book; add more at any time and put them in order.
-2. Pick **Partbook** or **Choirbook**, page size and orientation (portrait or landscape), labels and clefs.
+2. Pick **Partbook** or **Choirbook**, page size, orientation (portrait or landscape) and margins, labels and clefs.
 3. Check **Note values**: editions in x/2 time usually keep the original values (whole note = semibreve); editions in x/4 usually halve them (half note = semibreve). The tool guesses; check it.
 4. **Print / save as PDF**: choose "Save as PDF", margins "None", and turn on "Background graphics".
 
@@ -40,6 +40,7 @@ A link like `index.html?score=examples/o-quam-gloriosum.mxl&format=choirbook` op
 - **Numbering, title page and index:** as in the sources, partbooks are numbered by page in the outer corner (as Gardano numbered his) and choirbooks by leaf, on each right-hand page; in Arabic or Roman numerals, or not at all. An optional title page gives each partbook its own, headed by its voice, as the Venetian printers did, with your imprint at the foot; with several pieces, an index at the back lists them with their pages or folios.
 - **Voice names:** at the head of each voice, where a piece begins and on later pages or openings; either can be left off.
 - **Staff size:** automatic in a choirbook means the largest staff that keeps each piece (and each section set to start a new opening) on one opening, down to 40 px. A partbook keeps a comfortable size (56 px, text about 11 pt) and runs on to as many pages as it needs. Either can be set by hand.
+- **Margins:** narrow, normal or wide, a "book" setting after the proportions of printed books (narrowest at the binding, deepest at the foot), or your own top, bottom, inside and outside margins, in inches or, for A4 and A3, millimetres. Inside and outside are mirrored on left- and right-hand pages; in a choirbook the inside is the fold of the opening.
 - **Ligature brackets:** optionally, ligature brackets marked in the edition (MusicXML brackets) are printed above the staff. Slurs have no place in mensural notation and are not drawn, but they guide the text given to a voice that has none of its own.
 - **Repeats** (with first and second endings) are written out in full by default, or kept as written with the dotted repeat sign.
 - **Choral scores** with two singers on a staff (S+A, T+B) are split into separate voices by pitch, so swapped layers and shared chords still come out right; a lower voice without its own words takes the text sung on its staff.
@@ -57,6 +58,10 @@ If you have a GitHub account you can also [open an issue](https://github.com/tgh
 ## Release notes
 
 Versions are numbered 0.*feature*.*fix* while the tool is in beta: a release with new features raises the middle number, a release of fixes only raises the last.
+
+### 0.9.0 (2026-10-16)
+
+- **Margins:** narrow, normal or wide presets, a "book" preset after the proportions of printed books (narrowest at the binding, deepest at the foot), or custom top, bottom, inside and outside margins, in inches or (for A4 and A3) millimetres. Inside and outside are mirrored on left- and right-hand pages; in a choirbook the inside is the fold of the opening. Each format keeps its own.
 
 ### 0.8.1 (2026-10-16)
 

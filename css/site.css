@@ -63,6 +63,10 @@ button, select, input { font: inherit; color: inherit; }
 .sp-group[open] { padding-bottom: 10px; }
 .sp-printbar { position: sticky; bottom: -40px; background: var(--panel); padding: 12px 0 40px; margin: 8px 0 -40px; }
 .sp-sub { font-size: 12px; color: var(--muted); margin: 2px 0 4px; }
+.sp-margins { display: flex; gap: 6px; align-items: flex-end; margin: -4px 0 8px; }
+.sp-margins label { display: grid; gap: 2px; flex: 1; font-size: 11px; color: var(--muted); }
+.sp-margins input { width: 100%; min-width: 0; padding: 4px 5px; border: 1px solid var(--rule); border-radius: 4px; background: var(--field); }
+.sp-unit { font-size: 12px; color: var(--muted); padding-bottom: 6px; }
 .sp-theme { margin-left: 14px; padding: 2px 4px; border: 1px solid var(--rule); border-radius: 4px; background: var(--field); font-size: 13px; }
 .sp-field { display: grid; gap: 3px; margin-bottom: 10px; }
 .sp-field > span, .sp-field > label { font-size: 12px; color: var(--muted); }
