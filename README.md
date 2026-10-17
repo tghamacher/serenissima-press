@@ -1,6 +1,6 @@
 # Serenissima Press
 
-**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.11.1 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
+**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.12.0 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
 
 Turn a MusicXML score of Renaissance polyphony into **partbooks** (one voice per book) or a **choirbook** (voices spread across facing pages), in mensural notation with text underlay, set in the [EMS Serenissima](https://www.earlymusicsources.com/) font.
 
@@ -33,6 +33,7 @@ A link like `index.html?score=examples/o-quam-gloriosum.mxl&format=choirbook` op
 - **Accidentals:** worked out from pitch against the key signature; editorial accidentals (ficta) are left out unless you ask for them. Mensural notation has no sharp key signatures, so sharps are printed on their notes; transposing can help.
 - **Lines:** each line has a clef, signature and custos; staves are justified to full width.
 - **Initials:** in a choirbook, a large decorated initial opens the voice at the top left and smaller ones open the other voices and any sections set to start a new line or page (plain capitals by default, optionally in red); in partbooks each voice opens with the large one. Styles: woodcut (EB Garamond Initials, after Berner's 1592 specimen; it has only A D F G L N O Q T, other letters fall back to a dotted ground), flourished Gothic (Yinit), letter on dotted ground, plain capital, blank frame, your own image, or none.
+- **Text type:** roman (EB Garamond), or gothic (Rotunda Pommerania), the rounded blackletter of the earliest music prints and of Spanish and German books. In gothic the text is set as the printers set it: long s within a word and round s at its end, the founts' ligatures (ch, ck, ff, fi, fl, ll, ſſ, ſt, tt …), voice names in lower case (Cantus, not CANTVS), and no spaced capitals, small capitals or italics. The font has no accented vowels, so accents are dropped.
 - **Clefs:** the font reaches one ledger line above and below the staff. With **period** clefs (the default), a part that goes further in the edition's clef gets the clef a scribe would have used: a common one (C1, C3, C4, F4, then G2, C2, F3) that keeps every note within reach. This is listed as a note, not a warning. **Modern** clefs, for singers learning the notation, set sopranos and altos in treble, tenors in treble an octave lower and basses in F4. A note past the font's reach is drawn from the font's own note, with only the extra ledger lines it needs, copied from the font's first one (the option can be turned off).
 - **Page turns:** in a choirbook the page is turned only where every singer has reached the same point: each opening ends at the last bar every voice reaches on it, and the music runs on from opening to opening.
 - **Choirbook pages are ruled alike:** at a given staff size every page has the same staves at the same places, as in a ruled choirbook. The voices on a page share them, a busier voice taking more, and when one page is full its lowest voice runs on at the foot of the facing page, below that page's lowest part, under its own name.
@@ -62,7 +63,11 @@ If you have a GitHub account you can also [open an issue](https://github.com/tgh
 
 Versions are numbered 0.*feature*.*fix* while the tool is in beta: a release with new features raises the middle number, a release of fixes only raises the last.
 
-### 0.11.1 (2026-10-16)- With **Rule the unused staves** on, a short last line runs on, empty, to the margin, as on a ruled page.
+### 0.12.0 (2026-10-17)- **Text type:** roman (EB Garamond) or gothic (Rotunda Pommerania), the rounded blackletter of the earliest music prints, set with long and round s and the printers' ligatures.- EB Garamond is now shipped with the site instead of loaded from Google Fonts.
+### 0.11.1 (2026-10-16)
+
+- With **Rule the unused staves** on, a short last line runs on, empty, to the margin, as on a ruled page.
+
 ### 0.11.0 (2026-10-16)
 
 - **Choirbook pages ruled alike:** at a given staff size every page has the same staves at the same places. The voices on a page share them, a busier voice taking more, and when a page is full its lowest voice runs on at the foot of the facing page, below that page's lowest part. Automatic staves are never smaller than 56 px; a part too long for that runs on to more openings.
@@ -144,13 +149,13 @@ Versions are numbered 0.*feature*.*fix* while the tool is in beta: a release wit
 
 - `index.html`, `css/`, `js/` — the web tool (`convert.js`: MusicXML to mensural tokens; `layout.js`: page layout; `app.js`: controls; `zip.js`: `.mxl` reader)
 - `cheatsheet.html` — keyboard map of the font
-- `fonts/` — EMS Serenissima and the initial fonts, with their licences
+- `fonts/` — EMS Serenissima, the text fonts and the initial fonts, with their licences
 - `tools/` — the original Windows PowerShell converter (`ConvertTo-Ems.ps1`), which writes HTML/PDF books locally
 - `examples/` — Victoria's *O quam gloriosum*, the sample score
 
 ## Credits
 
 - **Music font:** EMS Serenissima by Elam Rotem, Early Music Sources, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See `fonts/LICENSE-EMS_Serenissima.md`.
-- **Text fonts:** EB Garamond and IM Fell French Canon (SIL Open Font License), loaded from Google Fonts.
+- **Text fonts:** EB Garamond by Georg Duffner and Octavio Pardo and Rotunda Pommerania by Peter Wiegel ([SIL Open Font License 1.1](https://openfontlicense.org), see `fonts/OFL-EBGaramond.txt` and `fonts/OFL-RotundaPommerania.txt`), shipped unmodified; IM Fell French Canon (SIL Open Font License), loaded from Google Fonts.
 - **Initials:** EB Garamond Initials by Georg Duffner ([SIL Open Font License 1.1](https://openfontlicense.org), see `fonts/OFL-EBGaramond-Initials.txt`); Yinit by Yannis Haralambous (public domain, see `fonts/LICENSE-Yinit.md`). Shipped unmodified from CTAN.
 - When you share a book, credit the editor of the MusicXML edition it was made from.

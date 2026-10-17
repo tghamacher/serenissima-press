@@ -16,7 +16,7 @@
   const cache = new Map();
   let meas = null;
   function unit(str, cls) {
-    const key = cls + '|' + str; let v = cache.get(key);
+    const key = (gothic ? 'g|' : '') + cls + '|' + str; let v = cache.get(key);
     if (v === undefined) {
       const s = el('span', cls, str); s.style.fontSize = '100px'; meas.appendChild(s);
       v = s.getBoundingClientRect().width / 100; s.remove(); cache.set(key, v);
@@ -27,18 +27,36 @@
   const wE = (s, F) => s ? unit(s, 'sp-ems') * F : 0;
   const wT = (s, T) => s ? unit(s, 'sp-text') * T : 0;
 
-  // the decorated initial takes the first letter; the rest of the first word goes in capitals
+  // Gothic text type (Rotunda Pommerania) is set as the printers set it: long s within a word and round s
+  // at its end, and the founts' ligatures. The font has its own places for these: "$" is the round s and
+  // accented letters stand for ligatures, so true accents are dropped (but not umlauts, which it has).
+  let gothic = false;
+  const LIG = [['ssi', 'Î'], ['sst', 'ô'], ['sch', 'À'], ['ffl', 'â'], ['s$', 'Á'], ['ss', 'ó'], ['st', 'ù'], ['si', 'ò'], ['sk', 'Ê'],
+    ['ch', 'à'], ['ck', 'á'], ['ff', 'è'], ['fi', 'é'], ['fl', 'ì'], ['ft', 'í'], ['ll', 'î'], ['tt', 'û'], ['tz', 'ú']];
+  const LIGS = new Map(LIG), LIG_RE = new RegExp(LIG.map(([a]) => a.replace('$', '\\$')).join('|'), 'g');
+  // end: the string ends a word (a syllable followed by a hyphen does not)
+  function gothicText(s, end = true) {
+    if (!s) return s;
+    s = [...s.normalize('NFC')].map(c => 'äöüÄÖÜßæœÆŒ'.includes(c) ? c : c.normalize('NFD').replace(/[̀-ͯ]/g, '')).join('').replace(/\$/g, 'S');
+    s = s.replace(/s(?=[^\p{L}]|$)/gu, (m, at) => at === s.length - 1 && !end ? 's' : '$');
+    return s.replace(LIG_RE, m => LIGS.get(m));
+  }
+  // voice names in gothic are not in capitals: CANTVS is Cantus, ALTVS II Altus II
+  const gothicLabel = l => gothicText(l.split(' ').map((w, i) => i && /^[IVXLC]+$/.test(w) ? w : w.charAt(0) + w.slice(1).toLowerCase().replace(/v/g, 'u')).join(' '));
+
+  // the decorated initial takes the first letter; the rest of the first word goes in capitals (in roman type)
   function prepareText(p, mode, fallback) {
-    const caps = s => s.toUpperCase().replace(/U/g, 'V').replace(/J/g, 'I');
+    const caps = s => gothic ? s : s.toUpperCase().replace(/U/g, 'V').replace(/J/g, 'I');
     const toks = p.tokens, first = toks.findIndex(t => t.s);
     p.initialLetter = '';
     if (first >= 0) {
       const word = [];
       for (let i = first; i < toks.length; i++) { if (!toks[i].s) continue; word.push(toks[i]); if (toks[i].y === 'single' || toks[i].y === 'end') break; }
-      p.initialLetter = caps(word[0].s.charAt(0));
+      p.initialLetter = word[0].s.charAt(0).toUpperCase().replace(/U/g, 'V').replace(/J/g, 'I');
       if (mode !== 'none') word[0].s = word[0].s.slice(1);
       word.forEach(t => t.s = caps(t.s));
     }
+    if (gothic) toks.forEach(t => { if (t.s) t.s = gothicText(t.s, !(t.y === 'begin' || t.y === 'middle')); });
     toks.forEach(t => { if (t.s) t.sd = t.s + (t.y === 'begin' || t.y === 'middle' ? '-' : ''); });
     if (!p.initialLetter) p.initialLetter = fallback || p.label.charAt(0);
   }
@@ -163,21 +181,33 @@
   // o: { format, staffSize, initials: {first: {style, lines}, other: {style, lines}, src, red},
   //      partbookPage: [w,h], choirbookPage: [w,h], numbering: 'arabic'|'roman'|'none', titlePage, index,
   //      pieceStart: 'line'|'page' (partbooks), labels: { first, rest } (voice names where a piece begins, and after),
-  //      margins: { top, bottom, inside, outside } in inches, ruleEmpty (draw the staves the music leaves empty) }
+  //      margins: { top, bottom, inside, outside } in inches, ruleEmpty (draw the staves the music leaves empty),
+  //      textType: 'roman'|'gothic' }
   // In a choirbook the voice at the top of the left page gets the first initial; in partbooks every voice
   // does. Sections that start a new line or page get the other initials.
   async function render(book, D, o) {
     const I = o.initials, warnings = [], labels = o.labels || { first: true, rest: true };
-    const families = new Set(['"EMS Serenissima"', '"EB Garamond"', '"IM Fell French Canon"']);
+    gothic = o.textType === 'gothic';
+    const families = new Set(['"EMS Serenissima"', '"EB Garamond"', 'italic "EB Garamond"', '"IM Fell French Canon"']);
+    if (gothic) families.add('"Rotunda Pommerania"');
     for (const spec of [I.first, I.other]) { const f = INITIAL_FONTS[spec.style]; if (f) f.family.split(', ').forEach(x => families.add(x)); }
     // fonts only start loading when used, so ask for them before measuring anything
-    try { await Promise.all([...families].map(f => document.fonts.load('40px ' + f))); } catch (e) { }
+    try { await Promise.all([...families].map(f => document.fonts.load(f.replace(/^(italic )?/, '$140px ')))); } catch (e) { }
     await document.fonts.ready;
     if (!document.fonts.check('20px "EMS Serenissima"')) throw new Error('The EMS Serenissima music font could not be loaded.');
     geom = geom || measureGeom();
     meas = el('div'); meas.style.cssText = 'position:absolute;left:-20000px;top:0;visibility:hidden;white-space:pre';
+    book.dataset.type = meas.dataset.type = gothic ? 'gothic' : 'roman';
     document.body.appendChild(meas);
     D = JSON.parse(JSON.stringify(D));   // text preparation edits the tokens
+    if (gothic) {
+      D.title = gothicText(D.title); D.composer = gothicText(D.composer); D.imprint = gothicText(D.imprint);
+      for (const pc of D.pieces) {
+        pc.title = gothicText(pc.title); pc.composer = gothicText(pc.composer);
+        pc.parts.forEach(p => p.label = gothicLabel(p.label));
+        (pc.sections || []).forEach(s => s.name = gothicText(s.name));
+      }
+    }
     // a voice (or a section of it) gets its text ready and its initial
     function dress(p, spec) {
       let style = spec.style === 'image' && !I.src ? 'letter' : spec.style;
@@ -335,7 +365,7 @@
     // the index at the back: each piece and the page (or folio) where it starts
     function indexPage(Win, Hin, entries, voice) {
       const pg = page(Win, Hin, 'recto'); pg.classList.add('sp-ix');
-      pg.append(el('div', 'sp-ix-head', voice ? `INDEX · ${voice}` : 'INDEX'));
+      pg.append(el('div', 'sp-ix-head', (gothic ? 'Index' : 'INDEX') + (voice ? ` · ${voice}` : '')));
       const ol = el('div', 'sp-ix-list');
       for (const [t, n] of entries) { const r = el('div', 'sp-ix-row'); r.append(el('span', 'sp-ix-t', t), el('span', 'sp-ix-dots'), el('span', 'sp-ix-n', numeral(n))); ol.append(r); }
       pg.append(ol);

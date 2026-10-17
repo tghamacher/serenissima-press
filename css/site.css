@@ -4,6 +4,10 @@
 /* Initials: EB Garamond Initials (Georg Duffner), SIL OFL 1.1; Yinit (Yannis Haralambous), public domain */
 @font-face { font-family: "EB Garamond Initials"; src: url("../fonts/EBGaramond-Initials.otf") format("opentype"); font-display: block; }
 @font-face { font-family: "Yinit"; src: url("../fonts/Yinit.otf") format("opentype"); font-display: block; }
+/* Text: EB Garamond (Georg Duffner, Octavio Pardo), SIL OFL 1.1; Rotunda Pommerania (Peter Wiegel), SIL OFL 1.1 */
+@font-face { font-family: "EB Garamond"; src: url("../fonts/EBGaramond-VF.ttf") format("truetype"); font-weight: 400 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "EB Garamond"; src: url("../fonts/EBGaramond-Italic-VF.ttf") format("truetype"); font-weight: 400 800; font-style: italic; font-display: swap; }
+@font-face { font-family: "Rotunda Pommerania"; src: url("../fonts/RotundaPommerania.ttf") format("truetype"); font-display: block; }
 
 :root {
   color-scheme: light;
@@ -12,6 +16,7 @@
   --warn-bg: #fbf1df; --warn-rule: #e8cf9f; --err-bg: #fbe4df; --err-rule: #e6a99c; --over: #fbf3ea;
   --page-shadow: 0 2px 12px rgba(0,0,0,.22);
   --textfont: "EB Garamond", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --pagefont: var(--textfont);
   --ui: "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 /* the editor in the dark: chosen, or following the system unless light was chosen */
@@ -128,7 +133,7 @@ button, select, input { font: inherit; color: inherit; }
 /* ---------------------------------------------------------------- book pages */
 #book { display: flex; flex-direction: column; align-items: center; gap: 24px; width: max-content; margin: 0 auto; }
 .sp-spread { display: flex; gap: 2px; }
-.sp-page { position: relative; background: var(--paper); box-shadow: var(--page-shadow); overflow: hidden; font-family: var(--textfont); color: var(--ink); }
+.sp-page { position: relative; background: var(--paper); box-shadow: var(--page-shadow); overflow: hidden; font-family: var(--pagefont); color: var(--ink); }
 .sp-head { text-align: center; font-size: 19px; letter-spacing: .32em; padding-left: .32em; height: 34px; line-height: 34px; }
 .sp-runhead { text-align: center; font-size: 19px; height: 34px; line-height: 34px; margin-bottom: 10px; border-bottom: 0.75px solid var(--ink); }
 .sp-runhead.verso { font-style: italic; } .sp-runhead.recto { font-variant: small-caps; letter-spacing: .04em; }
@@ -142,12 +147,12 @@ button, select, input { font: inherit; color: inherit; }
 .sp-systems { position: relative; } .sp-piece { position: relative; }
 .sp-sys { position: relative; }
 .sp-ems { font-family: "EMS Serenissima"; font-variant-ligatures: common-ligatures; font-feature-settings: "liga" 1; white-space: pre; line-height: 1em; }
-.sp-text { font-family: var(--textfont); }
+.sp-text { font-family: var(--pagefont); }
 .sp-staff { position: absolute; left: 0; top: 0; }
 .sp-raw { display: inline-block; width: 0; position: relative; }   /* a sign moved past the font's range */
 .sp-ledger { display: inline-block; width: 0; height: 0; position: relative; } .sp-ledger b { position: absolute; height: 0; border-top: 0 solid currentColor; }
 .sp-ligf { position: relative; } .sp-lig { position: absolute; left: 0; top: -0.74em; }
-.sp-syl { position: absolute; transform: translateX(-50%); white-space: pre; line-height: 1; font-family: var(--textfont); }
+.sp-syl { position: absolute; transform: translateX(-50%); white-space: pre; line-height: 1; font-family: var(--pagefont); }
 .sp-credit { position: absolute; left: 0; right: 0; bottom: 22px; text-align: center; font-size: 9.5px; color: var(--muted); font-family: var(--textfont); }
 .sp-initial { position: absolute; left: 0; top: 0; border: 2.5px solid var(--ink); padding: 3px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .sp-in { width: 100%; height: 100%; border: 1px solid var(--ink); display: flex; align-items: center; justify-content: center; overflow: hidden;
@@ -196,3 +201,11 @@ button, select, input { font: inherit; color: inherit; }
 .sp-band { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 2px; white-space: nowrap; overflow: hidden; }
 .sp-band-l { letter-spacing: .28em; }
 .sp-band-r { font-style: italic; }
+
+/* Gothic text type, as in the early prints: a rotunda, without the roman's spaced capitals, small caps or italics */
+[data-type="gothic"] { --pagefont: "Rotunda Pommerania", var(--textfont); }
+[data-type="gothic"] .sp-head, [data-type="gothic"] .sp-label, [data-type="gothic"] .sp-band-l,
+[data-type="gothic"] .sp-tp-voice, [data-type="gothic"] .sp-ix-head { letter-spacing: .04em; padding-left: 0; }
+[data-type="gothic"] .sp-t, [data-type="gothic"] .sp-runhead.verso, [data-type="gothic"] .sp-sec, [data-type="gothic"] .sp-band-r { font-style: normal; }
+[data-type="gothic"] .sp-c, [data-type="gothic"] .sp-runhead.recto, [data-type="gothic"] .sp-tp-comp { font-variant: normal; letter-spacing: 0; }
+[data-type="gothic"] .sp-tp-title { font-family: var(--pagefont); text-transform: none; letter-spacing: 0; }
