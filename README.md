@@ -1,6 +1,6 @@
 # Serenissima Press
 
-**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.12.0 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
+**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.12.1 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
 
 Turn a MusicXML score of Renaissance polyphony into **partbooks** (one voice per book) or a **choirbook** (voices spread across facing pages), in mensural notation with text underlay, set in the [EMS Serenissima](https://www.earlymusicsources.com/) font.
 
@@ -63,7 +63,15 @@ If you have a GitHub account you can also [open an issue](https://github.com/tgh
 
 Versions are numbered 0.*feature*.*fix* while the tool is in beta: a release with new features raises the middle number, a release of fixes only raises the last.
 
-### 0.12.0 (2026-10-17)- **Text type:** roman (EB Garamond) or gothic (Rotunda Pommerania), the rounded blackletter of the earliest music prints, set with long and round s and the printers' ligatures.- EB Garamond is now shipped with the site instead of loaded from Google Fonts.
+### 0.12.1 (2026-10-17)
+
+- The release notes for 0.12.0 are laid out properly.
+
+### 0.12.0 (2026-10-17)
+
+- **Text type:** roman (EB Garamond) or gothic (Rotunda Pommerania), the rounded blackletter of the earliest music prints, set with long and round s and the printers' ligatures.
+- EB Garamond is now shipped with the site instead of loaded from Google Fonts.
+
 ### 0.11.1 (2026-10-16)
 
 - With **Rule the unused staves** on, a short last line runs on, empty, to the margin, as on a ruled page.
