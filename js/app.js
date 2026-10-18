@@ -206,7 +206,7 @@
     $('signRow').hidden = !cb;
     $('secWhere').textContent = cb ? 'Opening' : 'Page';
     $('secHint').textContent = cb
-      ? 'The music runs on from opening to opening, turning only at a bar every voice has reached. A section can start a new line, with its initials and name, or a new opening.'
+      ? 'The music runs on from opening to opening, turning only at a bar every voice has reached. A section can start a new line, under its name, or a new opening. Each voice has one initial on a page, where its part begins.'
       : 'The music runs on. A section can start a new line, with its initial and name, or a new page. A voice silent through such a section gets “tacet”.';
     state.secKey = '';
   }

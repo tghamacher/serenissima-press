@@ -380,7 +380,11 @@
         const end = n + 1 < starts.length ? starts[n + 1].at : p.tokens.length;
         const v = { label: p.label, clef: p.clef, sig: p.sig, tokens: p.tokens.slice(st.at, end), off: st.at, sec: st.sec, mode: st.mode };
         v.tacet = !v.tokens.some(t => t.t === 'n');
-        return dress(v, st.mode === 'piece' || (st.sec && st.sec.movement) ? spec : I.other);
+        // the same without an initial, its first word whole (in a choirbook, for a section after the first on a page)
+        const plain = { ...v, tokens: v.tokens.map(t => ({ ...t })) };
+        dress(v, st.mode === 'piece' || (st.sec && st.sec.movement) ? spec : I.other);
+        v.plain = dress(plain, { style: 'none', lines: 0 });
+        return v;
       });
     }
     const name = v => v.sec && v.sec.name ? v.sec.name : '';
@@ -457,11 +461,15 @@
         if (memo.has(mk)) return memo.get(mk);
         slot = slotOf(F);
         const ta = g.bounds[q][a], tb = g.bounds[q][b], end = g.bounds[q][g.last], rows = [], room = keep ? signRoom(F) : 0;
-        for (const v of g.sp[q]) {
+        let sung = false;
+        for (let v of g.sp[q]) {
           const vend = v.off + v.tokens.length;
           if (vend <= ta || v.off >= tb) continue;
           const from = Math.max(ta, v.off), to = Math.min(tb, vend), starts = from === v.off;
           if (v.tacet) { if (starts && name(v)) rows.push({ kind: 'tacet', text: tacet(name(v)) }); continue; }
+          // only the first section a voice sings on the opening has an initial, to mark the voice's place on the page
+          if (sung && starts) v = v.plain;
+          sung = true;
           const t = starts && to === vend ? v : { ...v, tokens: v.tokens.slice(from - v.off, to - v.off), init: starts ? v.init : { ...v.init, style: 'none', lines: 0 } };
           const wf = widthFn(t, W, F), short = keep - 1 - rows.length;
           const lines = breakLines(t, F, room ? n => wf(n) - (n === short || n === short + 1 ? room : 0) : wf);
