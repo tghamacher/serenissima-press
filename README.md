@@ -1,6 +1,6 @@
 # Serenissima Press
 
-**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.12.1 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
+**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.13.0 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
 
 Turn a MusicXML score of Renaissance polyphony into **partbooks** (one voice per book) or a **choirbook** (voices spread across facing pages), in mensural notation with text underlay, set in the [EMS Serenissima](https://www.earlymusicsources.com/) font.
 
@@ -36,8 +36,8 @@ A link like `index.html?score=examples/o-quam-gloriosum.mxl&format=choirbook` op
 - **Text type:** roman (EB Garamond), or gothic (Rotunda Pommerania), the rounded blackletter of the earliest music prints and of Spanish and German books. In gothic the text is set as the printers set it: long s within a word and round s at its end, the founts' ligatures (ch, ck, ff, fi, fl, ll, ſſ, ſt, tt …), voice names in lower case (Cantus, not CANTVS), and no spaced capitals, small capitals or italics. The font has no accented vowels, so accents are dropped.
 - **Clefs:** the font reaches one ledger line above and below the staff. With **period** clefs (the default), a part that goes further in the edition's clef gets the clef a scribe would have used: a common one (C1, C3, C4, F4, then G2, C2, F3) that keeps every note within reach. This is listed as a note, not a warning. **Modern** clefs, for singers learning the notation, set sopranos and altos in treble, tenors in treble an octave lower and basses in F4. A note past the font's reach is drawn from the font's own note, with only the extra ledger lines it needs, copied from the font's first one (the option can be turned off).
 - **Page turns:** in a choirbook the page is turned only where every singer has reached the same point: each opening ends at the last bar every voice reaches on it, and the music runs on from opening to opening.
-- **Choirbook pages are ruled alike:** at a given staff size every page has the same staves at the same places, as in a ruled choirbook. The voices on a page share them, a busier voice taking more, and when one page is full its lowest voice runs on at the foot of the facing page, below that page's lowest part, under its own name.
-- **Ruled staves, optionally:** the staves the music leaves empty (at the foot of a choirbook page, or after the end of a piece in a partbook), and the rest of a short last line, can be ruled all the same, as in a manuscript, whose pages were ruled before the music was copied. Printed books left the space blank.
+- **Choirbook pages are ruled alike:** at a given staff size every page has the same staves at the same places, as in a ruled choirbook. The voices on a page share them, a busier voice taking more, and when one page is full its lowest voice runs on at the foot of the facing page, below that page's lowest part, under its own name. A sign at the end of its last line on the one page, and the same sign before its next line on the other, shows the singer where it goes on, as in the printed choirbooks: a fleur-de-lis, a pointing hand or a leaf (hedera), or none.
+- **Ruled staves, optionally:** the staves the music leaves empty (at the foot of a choirbook page, or after the end of a piece in a partbook), and the rest of a short last line, can be ruled all the same, as in a manuscript, whose pages were ruled before the music was copied. Printed books left the space blank. In a ruled choirbook a voice's "tacet" is set in the middle of its staff, the lines running up to it on each side.
 - **Sections:** the edition's double and final barlines mark sections (Kyrie I, Christe, …), each ending with a double bar, named from the edition or from their first words. Under **Sections** each can run on (the default), start a new line with its own initial and name, or start a new page (a new opening in a choirbook). A voice silent through a section that starts a new line or page gets a direction such as "Benedictus tacet", as in Morales's *Liber primus missarum* (Rome, 1544).
 - **Several pieces:** a book can hold several pieces. Each partbook holds its voice of every piece that has it (a piece without that voice is left out, as with a Quintus book); in printed partbooks a piece follows on below the last, or on a new page if you prefer. In a choirbook each piece starts a new opening, with the piece's title and composer as running heads.
 - **Numbering, title page and index:** as in the sources, partbooks are numbered by page in the outer corner (as Gardano numbered his) and choirbooks by leaf, on each right-hand page; in Arabic or Roman numerals, or not at all. An optional title page gives each partbook its own, headed by its voice, as the Venetian printers did, with your imprint at the foot; with several pieces, an index at the back lists them with their pages or folios.
@@ -62,6 +62,12 @@ If you have a GitHub account you can also [open an issue](https://github.com/tgh
 ## Release notes
 
 Versions are numbered 0.*feature*.*fix* while the tool is in beta: a release with new features raises the middle number, a release of fixes only raises the last.
+
+### 0.13.0 (2026-10-18)
+
+- **Sign where a voice runs on:** in a choirbook, when a page is full and its lowest voice goes on at the foot of the facing page, a sign at the end of its last line and the same sign before its next line show the singer where to look, as in the printed choirbooks. Choose a fleur-de-lis, a pointing hand, a leaf (hedera) or none. The two lines are set shorter to leave room for it.
+- **Tacet in a ruled staff:** on a ruled choirbook page a voice's "tacet" is set in the middle of its staff, the lines running up to it on each side.
+- In gothic type the tacet, section names, index entries and imprint are upright (the rotunda has no italic, and was being slanted).
 
 ### 0.12.1 (2026-10-17)
 

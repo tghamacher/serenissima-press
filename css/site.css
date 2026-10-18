@@ -201,11 +201,18 @@ button, select, input { font: inherit; color: inherit; }
 .sp-band { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 2px; white-space: nowrap; overflow: hidden; }
 .sp-band-l { letter-spacing: .28em; }
 .sp-band-r { font-style: italic; }
+/* a "tacet" in a ruled staff, and the sign that shows where a voice goes on */
+.sp-tacetrule { display: flex; }
+.sp-tside { flex: 1 1 0; position: relative; overflow: hidden; height: 100%; }
+.sp-tacetrule .sp-tacet { flex: none; white-space: nowrap; }
+.sp-signum { position: absolute; color: var(--ink); }
+.sp-signum svg { display: block; width: 100%; height: 100%; overflow: visible; fill: currentColor; }
 
 /* Gothic text type, as in the early prints: a rotunda, without the roman's spaced capitals, small caps or italics */
 [data-type="gothic"] { --pagefont: "Rotunda Pommerania", var(--textfont); }
 [data-type="gothic"] .sp-head, [data-type="gothic"] .sp-label, [data-type="gothic"] .sp-band-l,
 [data-type="gothic"] .sp-tp-voice, [data-type="gothic"] .sp-ix-head { letter-spacing: .04em; padding-left: 0; }
-[data-type="gothic"] .sp-t, [data-type="gothic"] .sp-runhead.verso, [data-type="gothic"] .sp-sec, [data-type="gothic"] .sp-band-r { font-style: normal; }
+[data-type="gothic"] .sp-t, [data-type="gothic"] .sp-runhead.verso, [data-type="gothic"] .sp-sec, [data-type="gothic"] .sp-band-r,
+[data-type="gothic"] .sp-tacet, [data-type="gothic"] .sp-sechead, [data-type="gothic"] .sp-ix-t, [data-type="gothic"] .sp-tp-imprint { font-style: normal; }
 [data-type="gothic"] .sp-c, [data-type="gothic"] .sp-runhead.recto, [data-type="gothic"] .sp-tp-comp { font-variant: normal; letter-spacing: 0; }
 [data-type="gothic"] .sp-tp-title { font-family: var(--pagefont); text-transform: none; letter-spacing: 0; }

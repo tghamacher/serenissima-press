@@ -140,7 +140,10 @@
     const mid = b => (b[0] + b[1] + 1) / 2 - base, step = (mid(bands[4]) - mid(bands[0])) / 8;
     const y = p => mid(bands[4]) - (p - 3) * step;   // position -> height above (-) the baseline; the bottom line is 3
     const m = c.measureText('3'), ref = Math.round(3 + (y(3) - (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2) / step);
-    return { S, H, c, base, step, y, ref, ledgers: new Map() };
+    // the staff in a line 1em high: its top line below the top of the line, and its height (in em)
+    const fa = m.fontBoundingBoxAscent, fd = m.fontBoundingBoxDescent;
+    const lines = { top: ((S - fa - fd) / 2 + fa + y(11)) / S, h: 8 * step / S };
+    return { S, H, c, base, step, y, ref, lines, ledgers: new Map() };
   }
   // the font's ledger line for sign v, from v on position 1 (line through the head): left, width, thickness
   function ledgerOf(v) {
@@ -182,7 +185,7 @@
   //      partbookPage: [w,h], choirbookPage: [w,h], numbering: 'arabic'|'roman'|'none', titlePage, index,
   //      pieceStart: 'line'|'page' (partbooks), labels: { first, rest } (voice names where a piece begins, and after),
   //      margins: { top, bottom, inside, outside } in inches, ruleEmpty (draw the staves the music leaves empty),
-  //      textType: 'roman'|'gothic' }
+  //      textType: 'roman'|'gothic', signum: 'fleur'|'hand'|'hedera'|'none' (choirbooks: where a voice runs on) }
   // In a choirbook the voice at the top of the left page gets the first initial; in partbooks every voice
   // does. Sections that start a new line or page get the other initials.
   async function render(book, D, o) {
@@ -296,6 +299,52 @@
       st.append(fill(W, F)); sys.append(st);
       return sys;
     }
+    // the staff lines within a staff: top line and height, in px
+    const staffLines = F => geom ? { top: geom.lines.top * F, h: geom.lines.h * F } : { top: 0.2 * F, h: 0.56 * F };
+    // a "tacet" on a ruled page: the words in the middle of the staff, its lines running up to them on each side
+    function ruledTacet(text, W, F) {
+      const sys = el('div', 'sp-sys sp-tacetrule'), L = staffLines(F);
+      sys.style.cssText = `width:${W}px;height:${F * SYS}px`;
+      const side = () => { const s = el('div', 'sp-tside'), st = el('div', 'sp-staff sp-ems'); st.style.fontSize = F + 'px'; st.append(fill(W, F)); s.append(st); return s; };
+      const t = el('div', 'sp-tacet', text);
+      t.style.cssText = `margin-top:${L.top}px;height:${L.h}px;line-height:${L.h}px;font-size:${Math.max(11, 0.7 * L.h)}px;padding:0 ${0.25 * F}px`;
+      sys.append(side(), t, side());
+      return sys;
+    }
+    // the sign (signum congruentiae) at the end of a voice's last staff on one page and before its next
+    // staff on the other, to show the singer where to go on: a fleur-de-lis, or one from the text fount
+    const FLEUR = 'M50 0C61 16 66 38 57 60H43C34 38 39 16 50 0Z' +
+      'M55 59C60 38 76 26 89 32C99 37 99 53 89 58C92 50 89 43 82 44C72 46 65 53 62 63Z' +
+      'M45 59C40 38 24 26 11 32C1 37 1 53 11 58C8 50 11 43 18 44C28 46 35 53 38 63Z' +
+      'M29 61H71Q73 64.5 71 68H29Q27 64.5 29 61Z' +
+      'M44 68H56L54 81C53 88 47 88 46 81Z' +
+      'M43 69C35 71 27 76 24 86C31 81 38 79 45 76Z M57 69C65 71 73 76 76 86C69 81 62 79 55 76Z';
+    const SIGNS = { hand: '☞', hedera: '❦' };
+    // its size at staff size F: { w, h } of the sign, and the room it takes in a line (sign and a gap), or null
+    function signSize(F) {
+      const kind = o.signum || 'fleur';
+      if (kind === 'none') return null;
+      const L = staffLines(F);
+      let h = L.h * 1.15, w;
+      if (kind === 'fleur') w = h * 100 / 89;
+      else { const k = ink(SIGNS[kind], '"EB Garamond"'); if (kind === 'hand') h = L.h * 0.6; w = h * k.w / k.h; }
+      return { w, h, room: w + 0.2 * F };
+    }
+    const signRoom = F => { const z = signSize(F); return z ? z.room : 0; };
+    function signum(F) {
+      const z = signSize(F);
+      if (!z) return null;
+      const kind = o.signum || 'fleur', L = staffLines(F), NS = 'http://www.w3.org/2000/svg', { w, h } = z;
+      let svg;
+      if (kind === 'fleur') {
+        svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', '0 0 100 89'); svg.setAttribute('aria-hidden', 'true');
+        const p = document.createElementNS(NS, 'path'); p.setAttribute('d', FLEUR); svg.append(p);
+      } else { const ch = SIGNS[kind], k = ink(ch, '"EB Garamond"'); svg = glyph(ch, '"EB Garamond"', [-k.x, -k.y, k.w, k.h]); }
+      const box = el('div', 'sp-signum'); box.append(svg);
+      box.style.cssText = `width:${w}px;height:${h}px`;
+      // its place: centred on the staff lines, which are dy below the top of the slot
+      return { box, w: z.room, at: (x, dy) => { box.style.left = x + 'px'; box.style.top = dy + L.top - (h - L.h) / 2 + 'px'; return box; } };
+    }
     // rows down a block of the given height; a voice's systems are spaced out evenly to fill it, and
     // with o.ruleEmpty the room the music leaves at the foot is ruled with empty staves
     function block(rows, F, W, height) {
@@ -401,18 +450,21 @@
       });
       // a voice from bound a to bound b of its segment: one row for each staff it takes. A section that
       // starts a new line puts its name over its first staff; a silent one takes a staff for its "tacet".
-      function rowsOf(g, q, a, b, F) {
-        const key = `${F}|${a}|${b}`, memo = g.memo = g.memo || new Map(), mk = q + '|' + key;
+      // keep: if the voice runs on to the facing page, how many of its rows stay on its own page; the last of
+      // them, and the first on the facing page, are set shorter, to leave room for the sign that shows where it goes on
+      function rowsOf(g, q, a, b, F, keep) {
+        const key = `${F}|${a}|${b}|${keep || 0}`, memo = g.memo = g.memo || new Map(), mk = q + '|' + key;
         if (memo.has(mk)) return memo.get(mk);
         slot = slotOf(F);
-        const ta = g.bounds[q][a], tb = g.bounds[q][b], end = g.bounds[q][g.last], rows = [];
+        const ta = g.bounds[q][a], tb = g.bounds[q][b], end = g.bounds[q][g.last], rows = [], room = keep ? signRoom(F) : 0;
         for (const v of g.sp[q]) {
           const vend = v.off + v.tokens.length;
           if (vend <= ta || v.off >= tb) continue;
           const from = Math.max(ta, v.off), to = Math.min(tb, vend), starts = from === v.off;
           if (v.tacet) { if (starts && name(v)) rows.push({ kind: 'tacet', text: tacet(name(v)) }); continue; }
           const t = starts && to === vend ? v : { ...v, tokens: v.tokens.slice(from - v.off, to - v.off), init: starts ? v.init : { ...v.init, style: 'none', lines: 0 } };
-          const lines = breakLines(t, F, widthFn(t, W, F));
+          const wf = widthFn(t, W, F), short = keep - 1 - rows.length;
+          const lines = breakLines(t, F, room ? n => wf(n) - (n === short || n === short + 1 ? room : 0) : wf);
           // the custos at the end of the opening points to the first note on the next
           const after = to === tb && tb < end ? g.sp[q].flatMap(x => x.tokens.slice(Math.max(0, tb - x.off))).find(x => x.k) : null;
           const head = starts && v.mode === 'line' && name(v) ? name(v) : '';
@@ -430,10 +482,14 @@
         if (V <= n && R <= n) return { rows, move: null };
         if (V > n && R > n) return null;
         const [from, to, N, M] = V > n ? ['verso', 'recto', V, R] : ['recto', 'verso', R, V];
-        const list = g[from], q = g.all.indexOf(list[list.length - 1]), over = N - n;
+        const list = g[from], q = g.all.indexOf(list[list.length - 1]), stay = rows[q].length - (N - n);
         // the voice keeps at least its first staff, and the staves beside its initial, on its own page
         const keep = Math.max(1, ...rows[q].filter(r => r.kind === 'sys' && r.li === 0).map(r => r.v.init.lines || 1));
-        if (M + over > n || rows[q].length - over < Math.min(keep, rows[q].length)) return null;
+        if (stay < Math.min(keep, rows[q].length)) return null;
+        // set again with room for the sign at the end of its last staff here, which may push a note on
+        if (signRoom(F)) rows[q] = rowsOf(g, q, a, b, F, stay);
+        const over = rows[q].length - stay;
+        if (M + over > n) return null;
         return { rows, move: { q, over, to } };
       }
       const fits = (g, a, b, F) => place(g, a, b, F) !== null;
@@ -480,15 +536,26 @@
       }
       // one staff of a page: the band above it (voice name on the left, section name on the right), then
       // the music or a "tacet"; an initial hangs from the first staff over the ones beside it
-      function staffEl(r, top, left, right, F) {
+      // mark: 'end' where a voice breaks off to run on at the foot of the facing page, 'start' where it goes on
+      function staffEl(r, top, left, right, F, mark) {
         const box = el('div', 'sp-slot'); box.style.top = top + 'px'; box.style.height = S.h + 'px';
         const band = el('div', 'sp-band'); band.style.height = S.ann + 'px'; band.style.fontSize = Math.max(11, 0.26 * F) + 'px';
         band.append(el('span', 'sp-band-l', left || ''), el('span', 'sp-band-r', right || ''));
         box.append(band);
-        if (r.kind === 'tacet') { const t = el('div', 'sp-tacet', r.text); t.style.cssText = `height:${F * SYS}px;line-height:${F * SYS}px;font-size:${Math.max(11, 0.3 * F)}px`; box.append(t); return box; }
+        const sg = mark ? signum(F) : null, sw = sg ? sg.w : 0, at = mark === 'start' ? sw : 0;
+        if (r.kind === 'tacet') {
+          let t;
+          if (o.ruleEmpty) t = ruledTacet(r.text, W - sw, F);
+          else { t = el('div', 'sp-tacet', r.text); t.style.cssText = `width:${W - sw}px;height:${F * SYS}px;line-height:${F * SYS}px;font-size:${Math.max(11, 0.3 * F)}px`; }
+          t.style.marginLeft = at + 'px'; box.append(t);
+          if (sg) box.append(sg.at(mark === 'start' ? 0 : W - sw + 0.2 * F, S.ann));
+          return box;
+        }
         const iw = r.v.init.lines && r.li < r.v.init.lines ? initW(r.v, F) : 0;
-        if (iw && r.li === 0) { const ib = initialBox(r.v, F); ib.style.top = S.ann + 'px'; box.append(ib); }
-        box.append(system(r.v, r.lines, r.li, F, W - iw, iw, r.after));
+        if (iw && r.li === 0) { const ib = initialBox(r.v, F); ib.style.top = S.ann + 'px'; ib.style.left = at + 'px'; box.append(ib); }
+        const s = system(r.v, r.lines, r.li, F, W - iw - sw, iw + at, r.after);
+        box.append(s);
+        if (sg) box.append(sg.at(mark === 'start' ? 0 : W - sw + 0.2 * F, S.ann + parseFloat(s.firstChild.style.top)));
         return box;
       }
       function emptyStaff(top, F) {
@@ -508,13 +575,15 @@
           if (side === 'recto' && numeral(folio(n + 1))) head.append(el('span', 'sp-num', numeral(folio(n + 1))));
           const area = el('div', 'sp-staves'); area.style.height = usable + 'px';
           let i = 0;
-          const put = (rs, label, always) => rs.forEach((r, k) => area.append(staffEl(r, (i++) * S.h, !k && (always || shown) ? label : '', r.head || (!k && !always ? sec : ''), F)));
+          // mark: a sign at the end of the last of these staves (the voice goes on elsewhere) or before the first
+          const put = (rs, label, always, mark) => rs.forEach((r, k) => area.append(staffEl(r, (i++) * S.h, !k && (always || shown) ? label : '', r.head || (!k && !always ? sec : ''), F,
+            mark === 'end' && k === rs.length - 1 ? 'end' : mark === 'start' && !k ? 'start' : null)));
           for (const p of list) {
-            const q = g.all.indexOf(p);
-            put(move && move.q === q ? rows[q].slice(0, rows[q].length - move.over) : rows[q], p.label, false);
+            const q = g.all.indexOf(p), moved = move && move.q === q;
+            put(moved ? rows[q].slice(0, rows[q].length - move.over) : rows[q], p.label, false, moved ? 'end' : null);
           }
           // the lowest voice of the facing page, running on below this page's lowest part
-          if (move && move.to === side) put(rows[move.q].slice(rows[move.q].length - move.over), g.all[move.q].label, true);
+          if (move && move.to === side) put(rows[move.q].slice(rows[move.q].length - move.over), g.all[move.q].label, true, 'start');
           // as in a manuscript choirbook, whose pages were ruled before they were copied, the staves the
           // music leaves empty are drawn all the same (a printed book simply leaves the space)
           if (o.ruleEmpty) while (i < S.n) area.append(emptyStaff((i++) * S.h, F));

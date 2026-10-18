@@ -95,7 +95,7 @@
     const on = ids => ids.filter(id => $(id).checked).join(', ') || 'none';
     const lines = [
       `Version: ${$('version').dataset.version}`,
-      `Format: ${state.format}, ${sel('page')} ${state.orient[state.format]}, staff ${sel('staffSize')}${state.staffUsed ? ` (${Math.round(state.staffUsed)} px)` : ''}, numbering ${sel('numbering')}, text ${$('textType').value}, margins ${Object.values(margins()).join('/')} in`,
+      `Format: ${state.format}, ${sel('page')} ${state.orient[state.format]}, staff ${sel('staffSize')}${state.staffUsed ? ` (${Math.round(state.staffUsed)} px)` : ''}, numbering ${sel('numbering')}, text ${$('textType').value}, sign ${$('signum').value}, margins ${Object.values(margins()).join('/')} in`,
       `Clefs: ${sel('clefs')}; repeats: ${sel('repeats')}; options: ${on(['ledgers', 'ficta', 'barlines', 'brackets', 'titlePage', 'index', 'labelFirst', 'labelRest', 'ruleEmpty'])}`,
       ...state.pieces.map(pc => `Piece: ${pc.file} — note values ${pc.reduction}, mensuration ${pc.mens || 'auto'}, transpose ${pc.transpose}; voices: ${pc.parts.filter(p => p.include).map(p => `${p.label} ${p.clef || 'auto'}${state.format === 'choirbook' ? ' ' + p.side : ''}`).join(', ')}${Object.values(pc.secs).some(s => s.mode && s.mode !== 'run') ? '; sections: ' + Object.entries(pc.secs).filter(([, s]) => s.mode && s.mode !== 'run').map(([k, s]) => `${k}:${s.mode}`).join(' ') : ''}`),
       `Browser: ${navigator.userAgent}`
@@ -203,6 +203,7 @@
     $('numberingLabel').textContent = cb ? 'Folio numbers' : 'Page numbers';
     $('numberingHint').textContent = cb ? 'Choirbooks are numbered by leaf: one number on each right-hand page.' : 'Printed partbooks are numbered by page, in the outer corner; Roman numerals were common until about 1550.';
     $('pieceStartRow').hidden = cb;
+    $('signRow').hidden = !cb;
     $('secWhere').textContent = cb ? 'Opening' : 'Page';
     $('secHint').textContent = cb
       ? 'The music runs on from opening to opening, turning only at a bar every voice has reached. A section can start a new line, with its initials and name, or a new opening.'
@@ -251,7 +252,7 @@
         },
         partbookPage: pg('partbook'), choirbookPage: pg('choirbook'),
         numbering: $('numbering').value, titlePage: $('titlePage').checked, index: $('index').checked, pieceStart: $('pieceStart').value,
-        labels: { first: $('labelFirst').checked, rest: $('labelRest').checked }, margins: margins(), ruleEmpty: $('ruleEmpty').checked, textType: $('textType').value
+        labels: { first: $('labelFirst').checked, rest: $('labelRest').checked }, margins: margins(), ruleEmpty: $('ruleEmpty').checked, textType: $('textType').value, signum: $('signum').value
       });
     } catch (e) { $('book').classList.remove('sp-busy'); status(e.message); return; }
     $('book').classList.remove('sp-busy');
@@ -361,7 +362,7 @@
     typeset();
   };
   $('staffCustom').oninput = typeset;
-  for (const id of ['repeats', 'ficta', 'barlines', 'brackets', 'clefs', 'ledgers', 'numbering', 'index', 'pieceStart', 'labelFirst', 'labelRest', 'ruleEmpty', 'textType', 'initialLines', 'initial2', 'initialLines2', 'rubric']) $(id).onchange = typeset;
+  for (const id of ['repeats', 'ficta', 'barlines', 'brackets', 'clefs', 'ledgers', 'numbering', 'index', 'pieceStart', 'labelFirst', 'labelRest', 'ruleEmpty', 'textType', 'signum', 'initialLines', 'initial2', 'initialLines2', 'rubric']) $(id).onchange = typeset;
   $('initial').onchange = () => { if ($('initial').value === 'image' && !state.initialSrc) $('initialFile').click(); typeset(); };
   $('initialFile').onchange = e => {
     const f = e.target.files[0]; if (!f) return;
