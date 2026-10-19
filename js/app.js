@@ -95,7 +95,7 @@
     const on = ids => ids.filter(id => $(id).checked).join(', ') || 'none';
     const lines = [
       `Version: ${$('version').dataset.version}`,
-      `Format: ${state.format}, ${sel('page')} ${state.orient[state.format]}, staff ${sel('staffSize')}${state.staffUsed ? ` (${Math.round(state.staffUsed)} px)` : ''}, numbering ${sel('numbering')}, text ${$('textType').value}, sign ${$('signum').value}, margins ${Object.values(margins()).join('/')} in`,
+      `Format: ${state.format}, ${sel('page')} ${state.orient[state.format]}, staff ${sel('staffSize')}${state.staffUsed ? ` (${Math.round(state.staffUsed)} px)` : ''}, numbering ${sel('numbering')}, text ${$('textType').value}, sign ${$('signum').value}, spacing ${$('spacing').value}, margins ${Object.values(margins()).join('/')} in`,
       `Clefs: ${sel('clefs')}; repeats: ${sel('repeats')}; options: ${on(['ledgers', 'ficta', 'barlines', 'brackets', 'titlePage', 'index', 'labelFirst', 'labelRest', 'ruleEmpty'])}`,
       ...state.pieces.map(pc => `Piece: ${pc.file} — note values ${pc.reduction}, mensuration ${pc.mens || 'auto'}, transpose ${pc.transpose}; voices: ${pc.parts.filter(p => p.include).map(p => `${p.label} ${p.clef || 'auto'}${state.format === 'choirbook' ? ' ' + p.side : ''}`).join(', ')}${Object.values(pc.secs).some(s => s.mode && s.mode !== 'run') ? '; sections: ' + Object.entries(pc.secs).filter(([, s]) => s.mode && s.mode !== 'run').map(([k, s]) => `${k}:${s.mode}`).join(' ') : ''}`),
       `Browser: ${navigator.userAgent}`
@@ -193,6 +193,13 @@
     showFormat();
   }
   // what changes with the format: the page column, the initials, how pages are numbered, sections
+  // a choirbook's staves: after the period books, or roomier (with an automatic staff size)
+  const SPACING_HINTS = {
+    print: 'The staff about 4.4% of the page high (about 19 mm on 11 × 17), as in Moderne’s print of Morales’s masses (Lyon 1546: 42 cm, staff 18.6 mm): staves about two staff-heights apart, the words close under them. For a choir gathered round the book.',
+    manuscript: 'The staff about 4.1% of the page high (about 17.6 mm on 11 × 17), as in the Alamire workshop’s choirbooks: staves about two staff-heights apart, the words close under them. For a choir gathered round the book.',
+    modern: 'More room between the staves and for the words, as in a modern edition, with smaller staves (about 12 mm on 11 × 17), so more fits on an opening.'
+  };
+  function showSpacing() { $('spacingHint').textContent = SPACING_HINTS[$('spacing').value] + ($('staffSize').value === '0' ? '' : ' (A staff size is chosen above; Automatic follows this.)'); }
   function showFormat() {
     const cb = state.format === 'choirbook';
     document.querySelectorAll('.sideCol').forEach(e => e.style.display = cb ? '' : 'none');
@@ -204,6 +211,8 @@
     $('numberingHint').textContent = cb ? 'Choirbooks are numbered by leaf: one number on each right-hand page.' : 'Printed partbooks are numbered by page, in the outer corner; Roman numerals were common until about 1550.';
     $('pieceStartRow').hidden = cb;
     $('signRow').hidden = !cb;
+    $('spacingRow').hidden = !cb;
+    showSpacing();
     $('secWhere').textContent = cb ? 'Opening' : 'Page';
     $('secHint').textContent = cb
       ? 'The music runs on from opening to opening, turning only at a bar every voice has reached. A section can start a new line, under its name, or a new opening. Each voice has one initial on a page, where its part begins.'
@@ -252,7 +261,7 @@
         },
         partbookPage: pg('partbook'), choirbookPage: pg('choirbook'),
         numbering: $('numbering').value, titlePage: $('titlePage').checked, index: $('index').checked, pieceStart: $('pieceStart').value,
-        labels: { first: $('labelFirst').checked, rest: $('labelRest').checked }, margins: margins(), ruleEmpty: $('ruleEmpty').checked, textType: $('textType').value, signum: $('signum').value
+        labels: { first: $('labelFirst').checked, rest: $('labelRest').checked }, margins: margins(), ruleEmpty: $('ruleEmpty').checked, textType: $('textType').value, signum: $('signum').value, spacing: $('spacing').value
       });
     } catch (e) { $('book').classList.remove('sp-busy'); status(e.message); return; }
     $('book').classList.remove('sp-busy');
@@ -359,10 +368,11 @@
     const box = $('staffCustom'), on = $('staffSize').value === 'custom';
     box.hidden = !on;
     if (on) { if (!box.value) box.value = Math.round(state.staffUsed || 48); box.focus(); box.select(); }
-    typeset();
+    showSpacing(); typeset();
   };
   $('staffCustom').oninput = typeset;
   for (const id of ['repeats', 'ficta', 'barlines', 'brackets', 'clefs', 'ledgers', 'numbering', 'index', 'pieceStart', 'labelFirst', 'labelRest', 'ruleEmpty', 'textType', 'signum', 'initialLines', 'initial2', 'initialLines2', 'rubric']) $(id).onchange = typeset;
+  $('spacing').onchange = () => { showSpacing(); typeset(); };
   $('initial').onchange = () => { if ($('initial').value === 'image' && !state.initialSrc) $('initialFile').click(); typeset(); };
   $('initialFile').onchange = e => {
     const f = e.target.files[0]; if (!f) return;

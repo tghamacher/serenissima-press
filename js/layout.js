@@ -4,10 +4,15 @@
   'use strict';
 
   const IN = 96;                 // CSS px per inch
-  const TEXT = 0.27;             // syllable size, as a proportion of the staff font size F
+  // (the staff lines run from 0.24 F to 0.70 F of a staff 1 F high)
+  let TEXT = 0.27;               // syllable size, as a proportion of the staff font size F
   const GAP = 0.06;              // minimum staff between signs
-  const SYS = 1.30;              // height of one system (staff + text)
-  const TEXT_TOP = 0.89;         // top of the syllables
+  let SYS = 1.30;                // height of one system (staff + text)
+  let TEXT_TOP = 0.89;           // top of the syllables
+  // a choirbook spaced as the period books were (o.spacing 'print' or 'manuscript'): staves about two
+  // staff-heights apart, the syllables smaller and close under the staff, the voice's and section's names
+  // in the space above it; 'modern' spaces it as a partbook
+  const SPACING = { modern: { TEXT: 0.27, SYS: 1.30, TEXT_TOP: 0.89 }, period: { TEXT: 0.22, SYS: 0.95, TEXT_TOP: 0.72 } };
   const FMAX = 100;
   const PARTBOOK = 56;           // a partbook's staff, with its syllables about 11 pt
   const CREDIT = 'Music font: EMS Serenissima by Elam Rotem, Early Music Sources (CC BY 4.0) · Set with Serenissima Press';
@@ -142,7 +147,7 @@
     const m = c.measureText('3'), ref = Math.round(3 + (y(3) - (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2) / step);
     // the staff in a line 1em high: its top line below the top of the line, and its height (in em)
     const fa = m.fontBoundingBoxAscent, fd = m.fontBoundingBoxDescent;
-    const lines = { top: ((S - fa - fd) / 2 + fa + y(11)) / S, h: 8 * step / S };
+    const lines = { top: ((S - fa - fd) / 2 + fa + y(11)) / S, h: 8 * step / S, base: ((S - fa - fd) / 2 + fa) / S };
     return { S, H, c, base, step, y, ref, lines, ledgers: new Map() };
   }
   // the font's ledger line for sign v, from v on position 1 (line through the head): left, width, thickness
@@ -185,12 +190,15 @@
   //      partbookPage: [w,h], choirbookPage: [w,h], numbering: 'arabic'|'roman'|'none', titlePage, index,
   //      pieceStart: 'line'|'page' (partbooks), labels: { first, rest } (voice names where a piece begins, and after),
   //      margins: { top, bottom, inside, outside } in inches, ruleEmpty (draw the staves the music leaves empty),
-  //      textType: 'roman'|'gothic', signum: 'fleur'|'hand'|'hedera'|'none' (choirbooks: where a voice runs on) }
+  //      textType: 'roman'|'gothic', signum: 'fleur'|'hand'|'hedera'|'none' (choirbooks: where a voice runs on),
+  //      spacing: 'print'|'manuscript'|'modern' (choirbooks: staff size and spacing after the period books, or roomier) }
   // In a choirbook the voice at the top of the left page gets the first initial; in partbooks every voice
   // does. Sections that start a new line or page get the other initials.
   async function render(book, D, o) {
     const I = o.initials, warnings = [], labels = o.labels || { first: true, rest: true };
     gothic = o.textType === 'gothic';
+    const period = o.format === 'choirbook' && o.spacing !== 'modern';
+    ({ TEXT, SYS, TEXT_TOP } = SPACING[period ? 'period' : 'modern']);
     const families = new Set(['"EMS Serenissima"', '"EB Garamond"', 'italic "EB Garamond"', '"IM Fell French Canon"']);
     if (gothic) families.add('"Rotunda Pommerania"');
     for (const spec of [I.first, I.other]) { const f = INITIAL_FONTS[spec.style]; if (f) f.family.split(', ').forEach(x => families.add(x)); }
@@ -238,6 +246,13 @@
       // room for notes past the font's range: the staff moves down for high ones, the text for low ones
       const lps = geom ? line.map(b => b.tk.lp).concat(nlp).filter(p => p !== undefined) : [], stepF = geom ? geom.step / geom.S * F : 0;
       const above = Math.max(0, ...lps.map(p => p - 14)) * stepF, below = Math.max(0, ...lps.map(p => -p)) * stepF;
+      // with the syllables close under the staff (period spacing), a note whose ink reaches them (a low note,
+      // a stem down) moves the line's syllables down, as far as the room above the next staff allows
+      let low = 0;
+      if (period && geom) for (const s of line.filter(b => b.tk.t === 'n' && b.tk.lp === undefined).map(b => b.tk.g).concat(nk && nlp === undefined ? ['U' + nk] : [])) {
+        const k = ink(s, '"EMS Serenissima"'); low = Math.max(low, geom.lines.base + (k.h - k.y) / 100);
+      }
+      const lift = Math.min(0.22 * F, Math.max(0, (low + 0.01 - TEXT_TOP) * F));
       const sys = el('div', 'sp-sys'); sys.style.cssText = `width:${width}px;height:${F * SYS + above + below}px;margin-left:${indent}px`;
       const staff = el('div', 'sp-staff sp-ems'); staff.style.fontSize = F + 'px'; staff.style.top = above + 'px';
       staff.append(el('span', null, p.clef), fill(pre.gap, F));
@@ -257,7 +272,7 @@
       // on a ruled page the staff of a short last line runs on, empty, to the margin
       if (last && o.ruleEmpty) staff.append(fill(Math.max(0, width - used - cW - 0.5), F));
       sys.append(staff);
-      pending.push({ sys, marks, F, drop: above + below });
+      pending.push({ sys, marks, F, drop: above + below + lift });
       return sys;
     }
     // size of a voice's initial: framed boxes are square, glyph initials as wide as their letter
@@ -265,7 +280,7 @@
     let slot = null;
     function initialDims(p, F) {
       const { style, lines } = p.init, f = INITIAL_FONTS[style];
-      const h = slot ? lines * slot.h - slot.ann - 0.22 * F : lines * F * SYS - 0.22 * F;
+      const h = slot ? lines * slot.h - slot.ann - slot.lift - 0.22 * F : lines * F * SYS - 0.22 * F;
       if (style === 'none') return null;
       if (!f) return { h, w: h };
       const k = ink(p.initialLetter, f.family), top = f.framed ? k.y : ink('H', f.family).y, kh = f.framed ? k.h : top;
@@ -435,7 +450,9 @@
       const [Win, Hin] = o.choirbookPage, W = Win * IN - MG.i - MG.o;
       const usable = Hin * IN - MG.t - MG.b - 34 - 10 - 16;
       // the staves of a page at staff size F: n of them, h apart, each with a band above (ann) for names
-      const slotOf = F => { const ann = Math.max(16, 0.32 * F), n = Math.max(1, Math.floor(usable / (ann + F * SYS))); return { n, h: usable / n, ann }; };
+      // (period spacing: no band of its own, the names going in the space above the staff lines)
+      // lift: where an initial starts below the top of its staff's slot (under the voice's name, in period spacing)
+      const slotOf = F => { const ann = period ? 0 : Math.max(16, 0.32 * F), n = Math.max(1, Math.floor(usable / (ann + F * SYS))); return { n, h: usable / n, ann, lift: period ? 0.2 * F : 0 }; };
       const segs = [];
       D.pieces.forEach((pc, pi) => {
         const verso = pc.parts.filter(p => p.side !== 'recto'), recto = pc.parts.filter(p => p.side === 'recto');
@@ -483,14 +500,23 @@
       }
       // how bars a to b sit on an opening, or null if they don't fit: each page's voices in its staves,
       // the lowest voice of a full page running on at the foot of the facing page if there is room
+      // where the voices of a page start, so each singer finds their part at its place on the page: of k voices
+      // with music there, the j-th starts no higher than j/k of the way down (the staves above it left empty).
+      // at: staff of each voice (by index in g.all); end: the staff after the last; last: the lowest voice
+      function startsOf(g, list, rows, n) {
+        const live = list.map(p => g.all.indexOf(p)).filter(q => rows[q].length), at = new Map();
+        let i = 0;
+        live.forEach((q, j) => { i = Math.max(i, Math.ceil(j * n / live.length - 1e-9)); at.set(q, i); i += rows[q].length; });
+        return { at, end: i, last: live[live.length - 1] };
+      }
       function place(g, a, b, F) {
         const n = slotOf(F).n, rows = g.all.map((p, q) => rowsOf(g, q, a, b, F));
-        const need = list => list.reduce((s, p) => s + rows[g.all.indexOf(p)].length, 0);
-        const V = need(g.verso), R = need(g.recto);
-        if (V <= n && R <= n) return { rows, move: null };
-        if (V > n && R > n) return null;
-        const [from, to, N, M] = V > n ? ['verso', 'recto', V, R] : ['recto', 'verso', R, V];
-        const list = g[from], q = g.all.indexOf(list[list.length - 1]), stay = rows[q].length - (N - n);
+        const V = startsOf(g, g.verso, rows, n), R = startsOf(g, g.recto, rows, n);
+        if (V.end <= n && R.end <= n) return { rows, move: null };
+        if (V.end > n && R.end > n) return null;
+        // the run-on below the facing page's lowest voice is not held to these places
+        const [to, N, M, q] = V.end > n ? ['recto', V.end, R.end, V.last] : ['verso', R.end, V.end, R.last];
+        const stay = rows[q].length - (N - n);
         // the voice keeps at least its first staff, and the staves beside its initial, on its own page
         const keep = Math.max(1, ...rows[q].filter(r => r.kind === 'sys' && r.li === 0).map(r => r.v.init.lines || 1));
         if (stay < Math.min(keep, rows[q].length)) return null;
@@ -514,12 +540,18 @@
         }
         return out;
       }
-      // automatic: the largest staff with each piece (or each part set to start a new opening) on one
-      // opening, but never smaller than a comfortable size for a choir at a lectern; a part too long for
-      // that runs on to more openings rather than shrinking the whole book
-      const COMFORT = 56, whole = F => segs.every(g => fits(g, 0, g.last, F));
+      // automatic: a choirbook is sung from by a whole choir gathered round it. With period spacing the staff
+      // is as high, for the page's height, as in the books: 4.4% in Moderne's print of Morales's masses (Lyon
+      // 1546, after Dorico's Rome 1544: 42 cm, staff 18.6 mm), 4.1% in the Alamire workshop's manuscripts
+      // (Montserrat 773: 56.5 cm, 23 mm; Royal 8 G. vii: 37 cm, 15 mm). That is about 18 mm on 11 × 17 in.
+      // With modern spacing, the largest staff with each piece (or each part set to start a new opening) on
+      // one opening, but at least about 12 mm on 11 × 17 in (in proportion on a smaller page, never less than
+      // a partbook's); a part too long for that runs on to more openings rather than shrinking the whole book.
+      const RULED = { print: 0.0443, manuscript: 0.0407 };
+      const COMFORT = Math.max(PARTBOOK, Math.round(FMAX * Hin / 17)), whole = F => segs.every(g => fits(g, 0, g.last, F));
       let F = o.staffSize;
-      if (!(F > 0)) {
+      if (!(F > 0) && period) F = Math.round(RULED[o.spacing === 'manuscript' ? 'manuscript' : 'print'] * Hin * IN / (geom ? geom.lines.h : 0.45) * 2) / 2;
+      else if (!(F > 0)) {
         F = COMFORT;
         for (let f = FMAX; f > COMFORT; f -= 2) if (whole(f)) { F = f; while (F + 0.5 < f + 2 && F + 0.5 <= FMAX && whole(F + 0.5)) F += 0.5; break; }
       }
@@ -548,6 +580,7 @@
       function staffEl(r, top, left, right, F, mark) {
         const box = el('div', 'sp-slot'); box.style.top = top + 'px'; box.style.height = S.h + 'px';
         const band = el('div', 'sp-band'); band.style.height = S.ann + 'px'; band.style.fontSize = Math.max(11, 0.26 * F) + 'px';
+        if (period) band.style.cssText = `position:absolute;left:0;right:0;top:0;height:${0.21 * F}px;font-size:${Math.max(11, 0.15 * F)}px;z-index:1`;
         band.append(el('span', 'sp-band-l', left || ''), el('span', 'sp-band-r', right || ''));
         box.append(band);
         const sg = mark ? signum(F) : null, sw = sg ? sg.w : 0, at = mark === 'start' ? sw : 0;
@@ -560,7 +593,7 @@
           return box;
         }
         const iw = r.v.init.lines && r.li < r.v.init.lines ? initW(r.v, F) : 0;
-        if (iw && r.li === 0) { const ib = initialBox(r.v, F); ib.style.top = S.ann + 'px'; ib.style.left = at + 'px'; box.append(ib); }
+        if (iw && r.li === 0) { const ib = initialBox(r.v, F); ib.style.top = S.ann + S.lift + 'px'; ib.style.left = at + 'px'; box.append(ib); }
         const s = system(r.v, r.lines, r.li, F, W - iw - sw, iw + at, r.after);
         box.append(s);
         if (sg) box.append(sg.at(mark === 'start' ? 0 : W - sw + 0.2 * F, S.ann + parseFloat(s.firstChild.style.top)));
@@ -586,8 +619,12 @@
           // mark: a sign at the end of the last of these staves (the voice goes on elsewhere) or before the first
           const put = (rs, label, always, mark) => rs.forEach((r, k) => area.append(staffEl(r, (i++) * S.h, !k && (always || shown) ? label : '', r.head || (!k && !always ? sec : ''), F,
             mark === 'end' && k === rs.length - 1 ? 'end' : mark === 'start' && !k ? 'start' : null)));
+          // each voice at its place on the page, the staves left above it empty (ruled, if chosen)
+          const { at } = startsOf(g, list, rows, S.n);
           for (const p of list) {
             const q = g.all.indexOf(p), moved = move && move.q === q;
+            if (!at.has(q)) continue;
+            for (; i < at.get(q); i++) if (o.ruleEmpty) area.append(emptyStaff(i * S.h, F));
             put(moved ? rows[q].slice(0, rows[q].length - move.over) : rows[q], p.label, false, moved ? 'end' : null);
           }
           // the lowest voice of the facing page, running on below this page's lowest part
