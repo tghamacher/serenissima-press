@@ -346,6 +346,9 @@
       return { w, h, room: w + 0.2 * F };
     }
     const signRoom = F => { const z = signSize(F); return z ? z.room : 0; };
+    // a voice that goes on from the opening before starts its first staff here a little in, so its singer
+    // finds at a glance where to pick up again
+    const goesOn = F => 0.6 * F;
     function signum(F) {
       const z = signSize(F);
       if (!z) return null;
@@ -488,12 +491,12 @@
           if (sung && starts) v = v.plain;
           sung = true;
           const t = starts && to === vend ? v : { ...v, tokens: v.tokens.slice(from - v.off, to - v.off), init: starts ? v.init : { ...v.init, style: 'none', lines: 0 } };
-          const wf = widthFn(t, W, F), short = keep - 1 - rows.length;
-          const lines = breakLines(t, F, room ? n => wf(n) - (n === short || n === short + 1 ? room : 0) : wf);
+          const wf = widthFn(t, W, F), short = keep - 1 - rows.length, cont = starts ? 0 : goesOn(F);
+          const lines = breakLines(t, F, n => wf(n) - (room && (n === short || n === short + 1) ? room : 0) - (n ? 0 : cont));
           // the custos at the end of the opening points to the first note on the next
           const after = to === tb && tb < end ? g.sp[q].flatMap(x => x.tokens.slice(Math.max(0, tb - x.off))).find(x => x.k) : null;
           const head = starts && v.mode === 'line' && name(v) ? name(v) : '';
-          lines.forEach((l, li) => rows.push({ kind: 'sys', v: t, lines, li, after: li === lines.length - 1 ? after : null, head: li ? '' : head }));
+          lines.forEach((l, li) => rows.push({ kind: 'sys', v: t, lines, li, after: li === lines.length - 1 ? after : null, head: li ? '' : head, cont: li ? 0 : cont }));
         }
         memo.set(mk, rows);
         return rows;
@@ -594,7 +597,7 @@
         }
         const iw = r.v.init.lines && r.li < r.v.init.lines ? initW(r.v, F) : 0;
         if (iw && r.li === 0) { const ib = initialBox(r.v, F); ib.style.top = S.ann + S.lift + 'px'; ib.style.left = at + 'px'; box.append(ib); }
-        const s = system(r.v, r.lines, r.li, F, W - iw - sw, iw + at, r.after);
+        const s = system(r.v, r.lines, r.li, F, W - iw - sw - (r.cont || 0), iw + at + (r.cont || 0), r.after);
         box.append(s);
         if (sg) box.append(sg.at(mark === 'start' ? 0 : W - sw + 0.2 * F, S.ann + parseFloat(s.firstChild.style.top)));
         return box;
