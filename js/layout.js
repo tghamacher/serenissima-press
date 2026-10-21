@@ -191,6 +191,7 @@
   //      pieceStart: 'line'|'page' (partbooks), labels: { first, rest } (voice names where a piece begins, and after),
   //      margins: { top, bottom, inside, outside } in inches, ruleEmpty (draw the staves the music leaves empty),
   //      textType: 'roman'|'gothic', signum: 'fleur'|'hand'|'hedera'|'none' (choirbooks: where a voice runs on),
+  //      style: 'print'|'manuscript' (choirbooks: a manuscript has "Residuum" where a voice goes on),
   //      spacing: 'print'|'manuscript'|'modern' (choirbooks: staff size and spacing after the period books, or roomier) }
   // In a choirbook the voice at the top of the left page gets the first initial; in partbooks every voice
   // does. Sections that start a new line or page get the other initials.
@@ -349,10 +350,11 @@
     // a voice that goes on from the opening before starts its first staff here a little in, so its singer
     // finds at a glance where to pick up again
     const goesOn = F => 0.6 * F;
-    // in gothic type the indent carries "Residuum" written down beside the staves, as in the manuscripts of
+    // in a manuscript choirbook the indent carries "Residuum" written down beside the staves, as in the books of
     // the Alamire workshop (in red if the initials are); as many staves are indented as the word is long
     const RESID = 'Residuum', residSize = F => 0.36 * F, residTop = F => period ? 0.22 * F : slot.ann;
-    const residLines = F => gothic ? Math.max(1, Math.ceil((residTop(F) + unit(gothicText(RESID), 'sp-text') * residSize(F)) / slot.h - 0.05)) : 1;
+    const manuscript = o.style === 'manuscript', residWord = () => gothic ? gothicText(RESID) : RESID;
+    const residLines = F => manuscript ? Math.max(1, Math.ceil((residTop(F) + unit(residWord(), 'sp-text') * residSize(F)) / slot.h - 0.05)) : 1;
     function signum(F) {
       const z = signSize(F);
       if (!z) return null;
@@ -467,12 +469,16 @@
         const cutAt = st => all.every(p => p.cuts && p.cuts[st] !== undefined);
         // the voice at the top of the left page gets the first initial
         const sp = all.map((p, q) => spans(pc, p, cutAt, q === 0 ? I.first : I.other));
-        const bars = all.length ? Object.keys(all[0].cuts || {}).map(Number).filter(cutAt).sort((a, b) => a - b) : [];
+        // the page may be turned at any bar every voice has reached, best where nothing runs across it (clean); at
+        // another, a voice holding a note across it ends its line with that note, and the page is turned while it is held
+        const loose = p => p.loose || p.cuts, turnAt = st => all.every(p => p.cuts && loose(p)[st] !== undefined);
+        const bars = all.length ? Object.keys(loose(all[0]) || {}).map(Number).filter(turnAt).sort((a, b) => a - b) : [];
         const opens = [0, ...(pc.sections || []).filter((s, n) => n && s.mode === 'page' && cutAt(s.step)).map(s => s.step)];
         opens.forEach((st, n) => {
           const next = opens[n + 1], inside = bars.filter(b => b > st && (next === undefined || b < next));
-          const bounds = all.map(p => [n ? p.cuts[st] : 0, ...inside.map(b => p.cuts[b]), next === undefined ? p.tokens.length : p.cuts[next]]);
-          segs.push({ pc, pi, all, verso, recto, sp, bounds, steps: [st, ...inside], last: inside.length + 1, begins: n === 0 });
+          const bounds = all.map(p => [n ? p.cuts[st] : 0, ...inside.map(b => loose(p)[b]), next === undefined ? p.tokens.length : p.cuts[next]]);
+          const clean = [true, ...inside.map(cutAt), true];
+          segs.push({ pc, pi, all, verso, recto, sp, bounds, clean, steps: [st, ...inside], last: inside.length + 1, begins: n === 0 });
         });
       });
       // a voice from bound a to bound b of its segment: one row for each staff it takes. A section that
@@ -498,7 +504,7 @@
           const lines = breakLines(t, F, n => wf(n) - (room && (n === short || n === short + 1) ? room : 0) - (n < ind ? cont : 0));
           // the custos at the end of the opening points to the first note on the next
           const after = to === tb && tb < end ? g.sp[q].flatMap(x => x.tokens.slice(Math.max(0, tb - x.off))).find(x => x.k) : null;
-          lines.forEach((l, li) => rows.push({ kind: 'sys', v: t, lines, li, after: li === lines.length - 1 ? after : null, cont: li < ind ? cont : 0, resid: !li && cont && gothic }));
+          lines.forEach((l, li) => rows.push({ kind: 'sys', v: t, lines, li, after: li === lines.length - 1 ? after : null, cont: li < ind ? cont : 0, resid: !li && cont && manuscript }));
         }
         memo.set(mk, rows);
         return rows;
@@ -508,10 +514,12 @@
       // where the voices of a page start, so each singer finds their part at its place on the page: of k voices
       // with music there, the j-th starts no higher than j/k of the way down (the staves above it left empty).
       // at: staff of each voice (by index in g.all); end: the staff after the last; last: the lowest voice
-      function startsOf(g, list, rows, n) {
+      // But never so low that the voices below it (and extra staves at the foot: a run-on from the facing page)
+      // would fall off the page: then the voices close up, as tight as need be.
+      function startsOf(g, list, rows, n, extra = 0) {
         const live = list.map(p => g.all.indexOf(p)).filter(q => rows[q].length), at = new Map();
-        let i = 0;
-        live.forEach((q, j) => { i = Math.max(i, Math.ceil(j * n / live.length - 1e-9)); at.set(q, i); i += rows[q].length; });
+        let i = 0, below = extra + live.reduce((s, q) => s + rows[q].length, 0);
+        live.forEach((q, j) => { i = Math.max(i, Math.min(Math.ceil(j * n / live.length - 1e-9), n - below)); at.set(q, i); i += rows[q].length; below -= rows[q].length; });
         return { at, end: i, last: live[live.length - 1] };
       }
       function place(g, a, b, F) {
@@ -520,7 +528,7 @@
         if (V.end <= n && R.end <= n) return { rows, move: null };
         if (V.end > n && R.end > n) return null;
         // the run-on below the facing page's lowest voice is not held to these places
-        const [to, N, M, q] = V.end > n ? ['recto', V.end, R.end, V.last] : ['verso', R.end, V.end, R.last];
+        const [to, N, q] = V.end > n ? ['recto', V.end, V.last] : ['verso', R.end, R.last];
         const stay = rows[q].length - (N - n);
         // the voice keeps at least its first staff, and the staves beside its initial, on its own page
         const keep = Math.max(1, rows[q].filter(r => r.cont).length, ...rows[q].filter(r => r.kind === 'sys' && r.li === 0).map(r => r.v.init.lines || 1));
@@ -528,7 +536,7 @@
         // set again with room for the sign at the end of its last staff here, which may push a note on
         if (signRoom(F)) rows[q] = rowsOf(g, q, a, b, F, stay);
         const over = rows[q].length - stay;
-        if (M + over > n) return null;
+        if (startsOf(g, to === 'recto' ? g.recto : g.verso, rows, n, over).end + over > n) return null;
         return { rows, move: { q, over, to } };
       }
       const fits = (g, a, b, F) => place(g, a, b, F) !== null;
@@ -540,6 +548,8 @@
           if (!fits(g, a, b, F)) {
             let lo = a + 2, hi = g.last - 1; b = a + 1;
             while (lo <= hi) { const mid = (lo + hi) >> 1; if (fits(g, a, mid, F)) { b = mid; lo = mid + 1; } else hi = mid - 1; }
+            // turned rather at a clean bar, if one fits that leaves no more than a third of the opening's bars over
+            if (!g.clean[b]) for (let c = b - 1; c > a && c - a >= (b - a) * 2 / 3; c--) if (g.clean[c] && fits(g, a, c, F)) { b = c; break; }
           }
           out.push([a, b]); a = b;
         }
@@ -600,7 +610,7 @@
         const iw = r.v.init.lines && r.li < r.v.init.lines ? initW(r.v, F) : 0;
         if (iw && r.li === 0) { const ib = initialBox(r.v, F); ib.style.top = S.ann + S.lift + 'px'; ib.style.left = at + 'px'; box.append(ib); }
         if (r.resid) {
-          const z = residSize(F), rd = el('div', 'sp-residuum' + (o.initials && o.initials.red ? ' sp-red' : ''), gothicText(RESID));
+          const z = residSize(F), rd = el('div', 'sp-residuum' + (o.initials && o.initials.red ? ' sp-red' : ''), residWord());
           rd.style.cssText = `top:${residTop(F)}px;left:${at + (r.cont - 1.2 * z) / 2}px;font-size:${z}px;width:${1.2 * z}px`;
           box.append(rd);
         }
@@ -630,7 +640,7 @@
           const put = (rs, label, always, mark) => rs.forEach((r, k) => area.append(staffEl(r, (i++) * S.h, !k && (always || shown) ? label : '', F,
             mark === 'end' && k === rs.length - 1 ? 'end' : mark === 'start' && !k ? 'start' : null)));
           // each voice at its place on the page, the staves left above it empty (ruled, if chosen)
-          const { at } = startsOf(g, list, rows, S.n);
+          const { at } = startsOf(g, list, rows, S.n, move && move.to === side ? move.over : 0);
           for (const p of list) {
             const q = g.all.indexOf(p), moved = move && move.q === q;
             if (!at.has(q)) continue;

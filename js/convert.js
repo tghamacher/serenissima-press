@@ -471,9 +471,10 @@
       if (notes.filter(e => e.syl).length < track.length / 2) { notes.forEach(e => e.syl = null); borrowText(notes, track, name, warn); }
       else fillText(notes, track);
     }
-    // bars where the music can be cut: nothing (a rest, a tied note) runs across them
+    // bars where the music can be cut cleanly: nothing (a rest, a tied note) runs across them; and every bar,
+    // where a note or rest that runs across it may end the line (a page turned while it is held)
     const clean = bars.filter(b => events[b.ev] && near(events[b.ev].t0, b.t));
-    return { events, clefInfo, editionClef, fifths: shown, bars: clean };
+    return { events, clefInfo, editionClef, fifths: shown, bars: clean, every: bars.filter(b => events[b.ev]) };
   }
 
   // ---------------------------------------------------------------- clefs
@@ -548,10 +549,11 @@
       }
     }
     out.push({ t: 'b', g: 'E' });
-    // step -> the token that starts that bar, where the layout may cut
-    const cuts = {};
+    // step -> the token that starts that bar, where the layout may cut (cuts: cleanly; loose: after whatever runs across it)
+    const cuts = {}, loose = {};
     for (const b of parsed.bars) cuts[b.step] = at[b.ev];
-    return { clef: glyph, sig, tokens: out, cuts };
+    for (const b of parsed.every) loose[b.step] = at[b.ev];
+    return { clef: glyph, sig, tokens: out, cuts, loose };
   }
 
   // ---------------------------------------------------------------- "ij" repeat signs

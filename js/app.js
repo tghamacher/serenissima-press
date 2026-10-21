@@ -95,7 +95,7 @@
     const on = ids => ids.filter(id => $(id).checked).join(', ') || 'none';
     const lines = [
       `Version: ${$('version').dataset.version}`,
-      `Format: ${state.format}, ${sel('page')} ${state.orient[state.format]}, staff ${sel('staffSize')}${state.staffUsed ? ` (${Math.round(state.staffUsed)} px)` : ''}, numbering ${sel('numbering')}, text ${$('textType').value}, sign ${$('signum').value}, spacing ${$('spacing').value}, margins ${Object.values(margins()).join('/')} in`,
+      `Format: ${state.format}, ${sel('page')} ${state.orient[state.format]}, staff ${sel('staffSize')}${state.staffUsed ? ` (${Math.round(state.staffUsed)} px)` : ''}, numbering ${sel('numbering')}, text ${$('textType').value}, sign ${$('signum').value}, spacing ${$('spacing').value}, style ${style()}, margins ${Object.values(margins()).join('/')} in`,
       `Clefs: ${sel('clefs')}; repeats: ${sel('repeats')}; options: ${on(['ledgers', 'ficta', 'barlines', 'brackets', 'titlePage', 'index', 'labelFirst', 'labelRest', 'ruleEmpty'])}`,
       ...state.pieces.map(pc => `Piece: ${pc.file} — note values ${pc.reduction}, mensuration ${pc.mens || 'auto'}, transpose ${pc.transpose}; voices: ${pc.parts.filter(p => p.include).map(p => `${p.label} ${p.clef || 'auto'}${state.format === 'choirbook' ? ' ' + p.side : ''}`).join(', ')}${Object.values(pc.secs).some(s => s.mode && s.mode !== 'run') ? '; sections: ' + Object.entries(pc.secs).filter(([, s]) => s.mode && s.mode !== 'run').map(([k, s]) => `${k}:${s.mode}`).join(' ') : ''}`),
       `Browser: ${navigator.userAgent}`
@@ -199,7 +199,48 @@
     manuscript: 'The staff about 4.1% of the page high (about 17.6 mm on 11 × 17), as in the Alamire workshop’s choirbooks: staves about two staff-heights apart, the words close under them. For a choir gathered round the book.',
     modern: 'More room between the staves and for the words, as in a modern edition, with smaller staves (about 12 mm on 11 × 17), so more fits on an opening.'
   };
-  function showSpacing() { $('spacingHint').textContent = SPACING_HINTS[$('spacing').value] + ($('staffSize').value === '0' ? '' : ' (A staff size is chosen above; Automatic follows this.)'); }
+  function showSpacing() {
+    $('spacingPeriod').text = style() === 'manuscript' ? 'Period, as in the manuscript choirbooks' : 'Period, as in the printed choirbooks';
+    const k = $('spacing').value === 'modern' ? 'modern' : style();
+    $('spacingHint').textContent = SPACING_HINTS[k] + ($('staffSize').value === '0' ? '' : ' (A staff size is chosen above; Automatic follows this.)');
+  }
+
+  // ---- a book, partbook or choirbook, is printed or a manuscript. The style sets the type, the initials,
+  // the ruling and a choirbook's staff (see SPACING_HINTS); each can still be changed, and each format and
+  // style keeps its own choices. A printed book is black and white; a manuscript may have its initials (and a
+  // choirbook its "Residuum") in red.
+  const LOOK_IDS = ['textType', 'initial', 'initial2', 'rubric', 'ruleEmpty'];
+  const LOOKS = {
+    print: { textType: 'roman', initial: 'woodcut', initial2: 'capital', rubric: false, ruleEmpty: false },
+    manuscript: { textType: 'gothic', initial: 'gothic', initial2: 'gothic', rubric: true, ruleEmpty: true }
+  };
+  const STYLE_HINTS = {
+    choirbook: {
+      print: 'After the printed choirbooks of Dorico (Rome) and Moderne (Lyon): roman type, woodcut initials, black and white, the spaces the music leaves blank.',
+      manuscript: 'After the manuscript choirbooks of the Alamire workshop: gothic script, flourished initials in red, ruled pages, and "Residuum" down the margin where a voice goes on from the opening before.'
+    },
+    partbook: {
+      print: 'After the printed partbooks of Venice and Paris (Gardano, Scotto, Le Roy & Ballard): roman type, woodcut initials, black and white, the spaces the music leaves blank.',
+      manuscript: 'After the manuscript partbooks of the time: gothic script, flourished initials in red, ruled pages.'
+    }
+  };
+  state.styles = { partbook: 'print', choirbook: 'print' };
+  const style = () => state.styles[state.format];
+  state.looks = {};
+  for (const f of ['partbook', 'choirbook']) for (const s of ['print', 'manuscript']) state.looks[f + '|' + s] = { ...LOOKS[s] };
+  const printed = () => style() === 'print';
+  const lookKey = () => state.format + '|' + style();
+  const saveLook = () => { state.looks[lookKey()] = Object.fromEntries(LOOK_IDS.map(id => [id, $(id).type === 'checkbox' ? $(id).checked : $(id).value])); };
+  function loadLook() {
+    const l = state.looks[lookKey()];
+    for (const id of LOOK_IDS) if ($(id).type === 'checkbox') $(id).checked = l[id]; else $(id).value = l[id];
+  }
+  function showStyle() {
+    document.querySelectorAll('[data-style]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.style === style())));
+    $('styleHint').textContent = STYLE_HINTS[state.format][style()];
+    $('rubricRow').hidden = printed();
+    showSpacing();
+  }
   function showFormat() {
     const cb = state.format === 'choirbook';
     document.querySelectorAll('.sideCol').forEach(e => e.style.display = cb ? '' : 'none');
@@ -212,7 +253,7 @@
     $('pieceStartRow').hidden = cb;
     $('signRow').hidden = !cb;
     $('spacingRow').hidden = !cb;
-    showSpacing();
+    showStyle();
     $('secWhere').textContent = cb ? 'Opening' : 'Page';
     $('secHint').textContent = cb
       ? 'The music runs on from opening to opening, turning only at a bar every voice has reached. A section can start a new line or a new opening; its name is not printed in a choirbook (only in a "tacet" and the index). Each voice has one initial on a page, where its part begins.'
@@ -257,11 +298,12 @@
         initials: {
           first: { style: $('initial').value, lines: +$('initialLines').value },
           other: { style: $('initial2').value, lines: +$('initialLines2').value },
-          src: state.initialSrc, red: $('rubric').checked
+          src: state.initialSrc, red: $('rubric').checked && !printed()
         },
         partbookPage: pg('partbook'), choirbookPage: pg('choirbook'),
         numbering: $('numbering').value, titlePage: $('titlePage').checked, index: $('index').checked, pieceStart: $('pieceStart').value,
-        labels: { first: $('labelFirst').checked, rest: $('labelRest').checked }, margins: margins(), ruleEmpty: $('ruleEmpty').checked, textType: $('textType').value, signum: $('signum').value, spacing: $('spacing').value
+        labels: { first: $('labelFirst').checked, rest: $('labelRest').checked }, margins: margins(), ruleEmpty: $('ruleEmpty').checked, textType: $('textType').value, signum: $('signum').value, style: style(),
+        spacing: $('spacing').value === 'modern' ? 'modern' : style()
       });
     } catch (e) { $('book').classList.remove('sp-busy'); status(e.message); return; }
     $('book').classList.remove('sp-busy');
@@ -336,11 +378,18 @@
     catch { status('Could not load the sample.'); }
   };
   document.querySelectorAll('[data-format]').forEach(b => b.onclick = () => {
+    saveLook();
     state.format = b.dataset.format;
+    loadLook();
     document.querySelectorAll('[data-format]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
     $('page').value = state.page[state.format];
     $('orient').value = state.orient[state.format];
     showFormat(); showMargins(); showPageHint(); showSections(); typeset();
+  });
+  document.querySelectorAll('[data-style]').forEach(b => b.onclick = () => {
+    if (style() === b.dataset.style) return;
+    saveLook(); state.styles[state.format] = b.dataset.style; loadLook();
+    showStyle(); typeset();
   });
   $('page').value = state.page.partbook;
   $('page').onchange = () => { state.page[state.format] = $('page').value; showMargins(); showPageHint(); typeset(); };
@@ -402,6 +451,7 @@
   // links like ?score=examples/o-quam-gloriosum.mxl&format=choirbook open a score directly (several: score=a.mxl&score=b.mxl)
   const q = new URLSearchParams(location.search);
   if (q.get('format') === 'choirbook') document.querySelector('[data-format=choirbook]').click();
+  if (q.get('style') === 'manuscript') document.querySelector('[data-style=manuscript]').click();
   if (q.get('score')) (async () => {
     try {
       const files = [];
