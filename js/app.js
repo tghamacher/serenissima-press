@@ -215,7 +215,7 @@
     showSpacing();
     $('secWhere').textContent = cb ? 'Opening' : 'Page';
     $('secHint').textContent = cb
-      ? 'The music runs on from opening to opening, turning only at a bar every voice has reached. A section can start a new line, under its name, or a new opening. Each voice has one initial on a page, where its part begins.'
+      ? 'The music runs on from opening to opening, turning only at a bar every voice has reached. A section can start a new line or a new opening; its name is not printed in a choirbook (only in a "tacet" and the index). Each voice has one initial on a page, where its part begins.'
       : 'The music runs on. A section can start a new line, with its initial and name, or a new page. A voice silent through such a section gets “tacet”.';
     state.secKey = '';
   }
@@ -322,6 +322,9 @@
   window.addEventListener('resize', () => { if (state.pieces.length) fitPreview(); });
 
   // ---- controls
+  // iOS knows no file type for .mxl or .musicxml, so its picker greys them out: there, offer every file
+  // (a score is told by its contents, not its name). iPadOS calls itself a Mac, but one with a touch screen
+  if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1)) $('file').removeAttribute('accept');
   $('file').onchange = e => { if (e.target.files.length) loadFiles([...e.target.files]); e.target.value = ''; };
   const drop = $('drop');
   drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('file').click(); } });

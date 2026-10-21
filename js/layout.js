@@ -349,6 +349,10 @@
     // a voice that goes on from the opening before starts its first staff here a little in, so its singer
     // finds at a glance where to pick up again
     const goesOn = F => 0.6 * F;
+    // in gothic type the indent carries "Residuum" written down beside the staves, as in the manuscripts of
+    // the Alamire workshop (in red if the initials are); as many staves are indented as the word is long
+    const RESID = 'Residuum', residSize = F => 0.36 * F, residTop = F => period ? 0.22 * F : slot.ann;
+    const residLines = F => gothic ? Math.max(1, Math.ceil((residTop(F) + unit(gothicText(RESID), 'sp-text') * residSize(F)) / slot.h - 0.05)) : 1;
     function signum(F) {
       const z = signSize(F);
       if (!z) return null;
@@ -468,12 +472,11 @@
         opens.forEach((st, n) => {
           const next = opens[n + 1], inside = bars.filter(b => b > st && (next === undefined || b < next));
           const bounds = all.map(p => [n ? p.cuts[st] : 0, ...inside.map(b => p.cuts[b]), next === undefined ? p.tokens.length : p.cuts[next]]);
-          const first = sp.map(list => list.find(v => v.off === bounds[0][0]) || list[0]);
-          segs.push({ pc, pi, all, verso, recto, sp, bounds, steps: [st, ...inside], last: inside.length + 1, head: first[0].sec, begins: n === 0 });
+          segs.push({ pc, pi, all, verso, recto, sp, bounds, steps: [st, ...inside], last: inside.length + 1, begins: n === 0 });
         });
       });
       // a voice from bound a to bound b of its segment: one row for each staff it takes. A section that
-      // starts a new line puts its name over its first staff; a silent one takes a staff for its "tacet".
+      // starts a new line starts a new staff (its name is not printed); a silent one takes a staff for its "tacet".
       // keep: if the voice runs on to the facing page, how many of its rows stay on its own page; the last of
       // them, and the first on the facing page, are set shorter, to leave room for the sign that shows where it goes on
       function rowsOf(g, q, a, b, F, keep) {
@@ -491,12 +494,11 @@
           if (sung && starts) v = v.plain;
           sung = true;
           const t = starts && to === vend ? v : { ...v, tokens: v.tokens.slice(from - v.off, to - v.off), init: starts ? v.init : { ...v.init, style: 'none', lines: 0 } };
-          const wf = widthFn(t, W, F), short = keep - 1 - rows.length, cont = starts ? 0 : goesOn(F);
-          const lines = breakLines(t, F, n => wf(n) - (room && (n === short || n === short + 1) ? room : 0) - (n ? 0 : cont));
+          const wf = widthFn(t, W, F), short = keep - 1 - rows.length, cont = starts ? 0 : goesOn(F), ind = cont ? residLines(F) : 0;
+          const lines = breakLines(t, F, n => wf(n) - (room && (n === short || n === short + 1) ? room : 0) - (n < ind ? cont : 0));
           // the custos at the end of the opening points to the first note on the next
           const after = to === tb && tb < end ? g.sp[q].flatMap(x => x.tokens.slice(Math.max(0, tb - x.off))).find(x => x.k) : null;
-          const head = starts && v.mode === 'line' && name(v) ? name(v) : '';
-          lines.forEach((l, li) => rows.push({ kind: 'sys', v: t, lines, li, after: li === lines.length - 1 ? after : null, head: li ? '' : head, cont: li ? 0 : cont }));
+          lines.forEach((l, li) => rows.push({ kind: 'sys', v: t, lines, li, after: li === lines.length - 1 ? after : null, cont: li < ind ? cont : 0, resid: !li && cont && gothic }));
         }
         memo.set(mk, rows);
         return rows;
@@ -521,7 +523,7 @@
         const [to, N, M, q] = V.end > n ? ['recto', V.end, R.end, V.last] : ['verso', R.end, V.end, R.last];
         const stay = rows[q].length - (N - n);
         // the voice keeps at least its first staff, and the staves beside its initial, on its own page
-        const keep = Math.max(1, ...rows[q].filter(r => r.kind === 'sys' && r.li === 0).map(r => r.v.init.lines || 1));
+        const keep = Math.max(1, rows[q].filter(r => r.cont).length, ...rows[q].filter(r => r.kind === 'sys' && r.li === 0).map(r => r.v.init.lines || 1));
         if (stay < Math.min(keep, rows[q].length)) return null;
         // set again with room for the sign at the end of its last staff here, which may push a note on
         if (signRoom(F)) rows[q] = rowsOf(g, q, a, b, F, stay);
@@ -577,14 +579,14 @@
         const at = j => base + chunks.findIndex(([a, b]) => j >= a && j < b) + 1;
         for (const s of g.pc.sections || []) { const j = g.steps.indexOf(s.step); if (j >= 0) where.push([g.pi, s.step, at(j)]); }
       }
-      // one staff of a page: the band above it (voice name on the left, section name on the right), then
+      // one staff of a page: the band above it (the voice name, on the left), then
       // the music or a "tacet"; an initial hangs from the first staff over the ones beside it
       // mark: 'end' where a voice breaks off to run on at the foot of the facing page, 'start' where it goes on
-      function staffEl(r, top, left, right, F, mark) {
+      function staffEl(r, top, left, F, mark) {
         const box = el('div', 'sp-slot'); box.style.top = top + 'px'; box.style.height = S.h + 'px';
         const band = el('div', 'sp-band'); band.style.height = S.ann + 'px'; band.style.fontSize = Math.max(11, 0.26 * F) + 'px';
         if (period) band.style.cssText = `position:absolute;left:0;right:0;top:0;height:${0.21 * F}px;font-size:${Math.max(11, 0.15 * F)}px;z-index:1`;
-        band.append(el('span', 'sp-band-l', left || ''), el('span', 'sp-band-r', right || ''));
+        band.append(el('span', 'sp-band-l', left || ''));
         box.append(band);
         const sg = mark ? signum(F) : null, sw = sg ? sg.w : 0, at = mark === 'start' ? sw : 0;
         if (r.kind === 'tacet') {
@@ -597,6 +599,11 @@
         }
         const iw = r.v.init.lines && r.li < r.v.init.lines ? initW(r.v, F) : 0;
         if (iw && r.li === 0) { const ib = initialBox(r.v, F); ib.style.top = S.ann + S.lift + 'px'; ib.style.left = at + 'px'; box.append(ib); }
+        if (r.resid) {
+          const z = residSize(F), rd = el('div', 'sp-residuum' + (o.initials && o.initials.red ? ' sp-red' : ''), gothicText(RESID));
+          rd.style.cssText = `top:${residTop(F)}px;left:${at + (r.cont - 1.2 * z) / 2}px;font-size:${z}px;width:${1.2 * z}px`;
+          box.append(rd);
+        }
         const s = system(r.v, r.lines, r.li, F, W - iw - sw - (r.cont || 0), iw + at + (r.cont || 0), r.after);
         box.append(s);
         if (sg) box.append(sg.at(mark === 'start' ? 0 : W - sw + 0.2 * F, S.ann + parseFloat(s.firstChild.style.top)));
@@ -613,14 +620,14 @@
       if (o.titlePage) addTitlePage(Win, Hin);
       openings.forEach((op, n) => {
         const { g, ci, rows, move } = op, spread = el('div', 'sp-spread');
-        const sec = !ci && g.head ? g.head.name : '', shown = !ci && g.begins ? labels.first : labels.rest;
+        const shown = !ci && g.begins ? labels.first : labels.rest;
         for (const [side, list] of [['verso', g.verso], ['recto', g.recto]]) {
           const pg = page(Win, Hin, side), head = el('div', 'sp-runhead ' + side, side === 'verso' ? g.pc.title : (g.pc.composer || ''));
           if (side === 'recto' && numeral(folio(n + 1))) head.append(el('span', 'sp-num', numeral(folio(n + 1))));
           const area = el('div', 'sp-staves'); area.style.height = usable + 'px';
           let i = 0;
           // mark: a sign at the end of the last of these staves (the voice goes on elsewhere) or before the first
-          const put = (rs, label, always, mark) => rs.forEach((r, k) => area.append(staffEl(r, (i++) * S.h, !k && (always || shown) ? label : '', r.head || (!k && !always ? sec : ''), F,
+          const put = (rs, label, always, mark) => rs.forEach((r, k) => area.append(staffEl(r, (i++) * S.h, !k && (always || shown) ? label : '', F,
             mark === 'end' && k === rs.length - 1 ? 'end' : mark === 'start' && !k ? 'start' : null)));
           // each voice at its place on the page, the staves left above it empty (ruled, if chosen)
           const { at } = startsOf(g, list, rows, S.n);

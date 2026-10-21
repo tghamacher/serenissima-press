@@ -162,7 +162,10 @@ button, select, input { font: inherit; color: inherit; }
 .sp-initial.sp-blank { border-width: 1px; border-style: dashed; padding: 0; } .sp-blank .sp-in { border: 0; background: none; }
 .sp-in img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .sp-initial.sp-glyph { border: 0; padding: 0; color: var(--ink); }
-.sp-initial.sp-red { color: var(--rubric); } .sp-red .sp-in span { color: var(--rubric); }
+.sp-initial.sp-red { color: var(--rubric); }
+/* "Residuum" written down the indent where a voice goes on from the opening before (gothic type) */
+.sp-residuum { position: absolute; font-family: var(--pagefont); writing-mode: vertical-rl; line-height: 1.2; white-space: nowrap; text-align: start; color: var(--ink); z-index: 1; }
+.sp-residuum.sp-red { color: var(--rubric); } .sp-red .sp-in span { color: var(--rubric); }
 .sp-glyph svg { display: block; width: 100%; height: 100%; overflow: visible; fill: currentColor; }
 
 @media print {
