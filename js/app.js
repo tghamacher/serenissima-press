@@ -209,19 +209,19 @@
   // the ruling and a choirbook's staff (see SPACING_HINTS); each can still be changed, and each format and
   // style keeps its own choices. A printed book is black and white; a manuscript may have its initials (and a
   // choirbook its "Residuum") in red.
-  const LOOK_IDS = ['textType', 'initial', 'initial2', 'rubric', 'ruleEmpty'];
+  const LOOK_IDS = ['textType', 'initial', 'initial2', 'rubric', 'ruleEmpty', 'numbering'];
   const LOOKS = {
-    print: { textType: 'roman', initial: 'woodcut', initial2: 'capital', rubric: false, ruleEmpty: false },
-    manuscript: { textType: 'gothic', initial: 'gothic', initial2: 'gothic', rubric: true, ruleEmpty: true }
+    print: { textType: 'roman', initial: 'woodcut', initial2: 'capital', rubric: false, ruleEmpty: false, numbering: 'arabic' },
+    manuscript: { textType: 'gothic', initial: 'gothic', initial2: 'gothic', rubric: true, ruleEmpty: true, numbering: 'roman' }
   };
   const STYLE_HINTS = {
     choirbook: {
-      print: 'After the printed choirbooks of Dorico (Rome) and Moderne (Lyon): roman type, woodcut initials, black and white, the spaces the music leaves blank.',
-      manuscript: 'After the manuscript choirbooks of the Alamire workshop: gothic script, flourished initials in red, ruled pages, and "Residuum" down the margin where a voice goes on from the opening before.'
+      print: 'After the printed choirbooks of Dorico (Rome) and Moderne (Lyon): roman type, woodcut initials, arabic folio numbers, black and white, the spaces the music leaves blank.',
+      manuscript: 'After the manuscript choirbooks of the Alamire workshop: gothic script, flourished initials in red, roman folio numbers, ruled pages, and "Residuum" down the margin where a voice goes on from the opening before.'
     },
     partbook: {
-      print: 'After the printed partbooks of Venice and Paris (Gardano, Scotto, Le Roy & Ballard): roman type, woodcut initials, black and white, the spaces the music leaves blank.',
-      manuscript: 'After the manuscript partbooks of the time: gothic script, flourished initials in red, ruled pages.'
+      print: 'After the printed partbooks of Venice and Paris (Gardano, Scotto, Le Roy & Ballard): roman type, woodcut initials, arabic page numbers, black and white, the spaces the music leaves blank.',
+      manuscript: 'After the manuscript partbooks of the time: gothic script, flourished initials in red, roman page numbers, ruled pages.'
     }
   };
   state.styles = { partbook: 'print', choirbook: 'print' };

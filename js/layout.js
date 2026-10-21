@@ -47,7 +47,9 @@
     return s.replace(LIG_RE, m => LIGS.get(m));
   }
   // voice names in gothic are not in capitals: CANTVS is Cantus, ALTVS II Altus II
-  const gothicLabel = l => gothicText(l.split(' ').map((w, i) => i && /^[IVXLC]+$/.test(w) ? w : w.charAt(0) + w.slice(1).toLowerCase().replace(/v/g, 'u')).join(' '));
+  const gothicLabel = l => gothicText(l.split(' ').map((w, i) => i && /^[ivxlc]+$/i.test(w) ? w : w.charAt(0) + w.slice(1).toLowerCase().replace(/v/g, 'u')).join(' '));
+  // a roman numeral (1 to 39) after the first word, in lower case: BASSVS II is BASSVS ii
+  const lowNumerals = s => s && s.replace(/(\s)(X{0,3}(?:IX|IV|V?I{0,3}))(?=[\s.,;:)]|$)/g, (m, sp, r) => r ? sp + r.toLowerCase() : m);
 
   // the decorated initial takes the first letter; the rest of the first word goes in capitals (in roman type)
   function prepareText(p, mode, fallback) {
@@ -212,6 +214,13 @@
     book.dataset.type = meas.dataset.type = gothic ? 'gothic' : 'roman';
     document.body.appendChild(meas);
     D = JSON.parse(JSON.stringify(D));   // text preparation edits the tokens
+    // roman numerals after the first word of a voice's, section's or piece's name are set in lower case, as
+    // the books set them (Bassus ii, Agnus Dei ii), and so are page and folio numbers
+    for (const pc of D.pieces) {
+      pc.title = lowNumerals(pc.title);
+      pc.parts.forEach(p => p.label = lowNumerals(p.label));
+      (pc.sections || []).forEach(s => s.name = lowNumerals(s.name));
+    }
     if (gothic) {
       D.title = gothicText(D.title); D.composer = gothicText(D.composer); D.imprint = gothicText(D.imprint);
       for (const pc of D.pieces) {
@@ -414,7 +423,7 @@
     const name = v => v.sec && v.sec.name ? v.sec.name : '';
     // "Pleni a 2 tacet" reads oddly: the number of voices goes
     const tacet = text => `${text.replace(/\s+a\s*\d+\s*$/i, '')} tacet`;
-    const numeral = n => o.numbering === 'none' ? '' : o.numbering === 'roman' ? roman(n) : String(n);
+    const numeral = n => o.numbering === 'none' ? '' : o.numbering === 'roman' ? roman(n).toLowerCase() : String(n);
     // margins in px: top, bottom, inside (at the fold or binding) and outside, mirrored on left- and right-hand pages
     const MG = (() => { const m = o.margins || {}, v = k => (m[k] >= 0 ? m[k] : 0.6) * IN; return { t: v('top'), b: v('bottom'), i: v('inside'), o: v('outside') }; })();
     const page = (Win, Hin, side) => {
