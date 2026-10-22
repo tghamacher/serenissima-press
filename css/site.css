@@ -98,6 +98,7 @@ button, select, input { font: inherit; color: inherit; }
 .sp-pieces .mv:disabled { opacity: .35; cursor: default; }
 .sp-btn { display: inline-block; border: 1px solid var(--rule); background: var(--field); border-radius: 5px; padding: 7px 12px; cursor: pointer; }
 .sp-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; width: 100%; padding: 10px; }
+.sp-btn.wide { width: 100%; margin-top: 10px; }
 .sp-btn:disabled { opacity: .45; cursor: default; }
 .sp-link { background: none; border: 0; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }

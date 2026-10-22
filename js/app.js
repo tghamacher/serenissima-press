@@ -13,7 +13,7 @@
     letter: ['US Letter', 8.5, 11, 'Standard'], legal: ['US Legal', 8.5, 14, 'Standard'], a4: ['A4', 8.27, 11.69, 'Standard'],
     tabloid: ['Tabloid 11×17', 11, 17, 'Large'], a3: ['A3', 11.69, 16.54, 'Large']
   };
-  // pieces: [{ file, doc, info, title, composer, reduction, mens, transpose, parts: [{index, name, include, label, clef, side}],
+  // pieces: [{ file, xml (as read, for saving), doc, info, title, composer, reduction, mens, transpose, parts: [{index, name, include, label, clef, side}],
   //   secs: {step: {name, mode}}, sections (as last converted) }]; cur: the piece whose settings are shown
   const state = { format: 'partbook', page: { partbook: 'letter', choirbook: 'tabloid' }, orient: { partbook: 'portrait', choirbook: 'portrait' }, initialSrc: '', pieces: [], cur: 0, secKey: '' };
   const piece = () => state.pieces[state.cur];
@@ -110,6 +110,11 @@
       try {
         const buf = await file.arrayBuffer();
         const isZip = new Uint8Array(buf, 0, 2).join() === '80,75';   // "PK"
+        // a saved project, told by its contents (iOS may offer it under any name)
+        if (!isZip && /^\s*\{\s*"serenissima"/.test(new TextDecoder().decode(buf.slice(0, 64)))) {
+          if (state.pieces.length && !confirm('Opening a project replaces the book you have open. Open it?')) return;
+          openProject(JSON.parse(new TextDecoder().decode(buf))); return;
+        }
         const xml = isZip ? await window.SPZip.readMxl(buf) : new TextDecoder().decode(buf);
         addPiece(xml, file.name);
       } catch (e) { status(`${file.name}: ${e.message}`); return; }
@@ -120,7 +125,7 @@
     const doc = C.parseScore(xml), info = C.inspect(doc);
     let side = 0;
     const pc = {
-      file, doc, info, title: info.title || file.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '), composer: info.composer,
+      file, xml, doc, info, title: info.title || file.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '), composer: info.composer,
       reduction: info.reduction, mens: '', transpose: 0, secs: {}, sections: [], chants: [],
       parts: info.parts.map(p => ({ index: p.index, name: p.name, include: !p.keyboard, label: p.label, clef: '', side: p.keyboard ? 'verso' : (side++ % 2 ? 'recto' : 'verso') }))
     };
@@ -144,13 +149,14 @@
       if (n > 1) li.append(btn('↑', 'Move up', move(-1), i === 0), btn('↓', 'Move down', move(1), i === n - 1));
       li.append(btn('×', 'Remove', () => {
         state.pieces.splice(i, 1); state.cur = Math.min(state.cur, state.pieces.length - 1);
-        if (!state.pieces.length) { $('settings').hidden = true; $('empty').hidden = false; $('book').innerHTML = ''; status(); }
+        if (!state.pieces.length) { $('settings').hidden = true; $('empty').hidden = false; $('book').innerHTML = ''; status(); keep(); }
         showPieces(); if (state.pieces.length) { showPiece(); typeset(); }
       }, false));
       ol.append(li);
     });
     $('dropTitle').textContent = n ? 'Add another piece' : 'Choose MusicXML files';
     $('sampleHint').hidden = n > 0;
+    if (n) $('resumeHint').hidden = true;
     $('settings').hidden = !n; $('empty').hidden = n > 0;
     // with several pieces, each has its own title and settings, and the book can have an index
     $('pieceSelRow').hidden = $('pieceNames').hidden = n < 2; $('manyPieces').hidden = n < 2;
@@ -318,6 +324,7 @@
     fitPreview();
     status(null, warnings.concat(out.warnings), notes);
     document.title = `${$('title').value || 'Serenissima Press'} – ${state.format}`;
+    keep();
   }
   // the sections of the piece shown: rebuilt only when they change, so typing a name keeps its focus
   // ---- chant verses: each read from GABC and set between the piece's sections, in the voices that sing it
@@ -520,6 +527,79 @@
     r.onload = () => { c.gabc = String(r.result); state.chantKey = ''; showChants(); typeset(); };
     r.readAsText(f);
   };
+  // ---- projects: the book's settings and its scores in one file (JSON), to open again here or elsewhere; the
+  // last one is also kept in this browser, to pick up after a reload
+  const PROJECT_IDS = ['title', 'composer', 'imprint', 'staffSize', 'staffCustom', 'numbering', 'spacing', 'textType', 'labelFirst', 'labelRest', 'ruleEmpty', 'signum',
+    'titlePage', 'index', 'pieceStart', 'clefs', 'ledgers', 'repeats', 'ficta', 'barlines', 'brackets', 'initial', 'initialLines', 'initial2', 'initialLines2', 'rubric'];
+  function project() {
+    saveLook();
+    return {
+      serenissima: 1, version: $('version').dataset.version, saved: new Date().toISOString(),
+      book: {
+        controls: Object.fromEntries(PROJECT_IDS.map(id => [id, $(id).type === 'checkbox' ? $(id).checked : $(id).value])),
+        format: state.format, styles: state.styles, looks: state.looks, page: state.page, orient: state.orient, margins: state.margins, initialSrc: state.initialSrc, cur: state.cur
+      },
+      pieces: state.pieces.map(pc => ({
+        file: pc.file, xml: pc.xml, title: pc.title, composer: pc.composer, reduction: pc.reduction, mens: pc.mens, transpose: pc.transpose, secs: pc.secs, chants: pc.chants,
+        parts: pc.parts.map(({ index, include, label, clef, side }) => ({ index, include, label, clef, side }))
+      }))
+    };
+  }
+  function openProject(pj) {
+    if (!pj || pj.serenissima !== 1 || !Array.isArray(pj.pieces)) throw new Error('This is not a Serenissima Press project, or one from a later version.');
+    const b = pj.book || {};
+    state.chantKey = '';
+    state.pieces = [];
+    for (const s of pj.pieces) {
+      addPiece(s.xml, s.file);
+      const pc = state.pieces[state.pieces.length - 1];
+      for (const k of ['title', 'composer', 'reduction', 'mens', 'transpose']) if (s[k] !== undefined) pc[k] = s[k];
+      pc.secs = s.secs || {}; pc.chants = s.chants || [];
+      for (const p of s.parts || []) { const q = pc.parts.find(x => x.index === p.index); if (q) Object.assign(q, p); }
+    }
+    // the book: what each format and style keeps, then the controls (the look of the format in use among them)
+    for (const k of ['format', 'initialSrc']) if (b[k] !== undefined) state[k] = b[k];
+    for (const k of ['styles', 'page', 'orient', 'margins']) if (b[k]) Object.assign(state[k], b[k]);
+    if (b.looks) Object.assign(state.looks, b.looks);
+    for (const [id, v] of Object.entries(b.controls || {})) if ($(id)) { if ($(id).type === 'checkbox') $(id).checked = !!v; else $(id).value = v; }
+    state.cur = Math.min(Math.max(0, b.cur || 0), state.pieces.length - 1);
+    document.querySelectorAll('[data-format]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.format === state.format)));
+    $('page').value = state.page[state.format]; $('orient').value = state.orient[state.format];
+    $('staffCustom').hidden = $('staffSize').value !== 'custom';
+    $('imprintRow').hidden = !$('titlePage').checked;
+    showFormat(); showMargins(); showPageHint();
+    showPieces(); showPiece(); typeset();
+  }
+  // a file name from the book's title
+  const projectName = () => ($('title').value || state.pieces[0].title || 'book').replace(/[\\/:*?"<>|]+/g, '').trim().slice(0, 80) + '.serenissima';
+  $('saveProject').onclick = () => {
+    if (!state.pieces.length) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(project())], { type: 'application/json' }));
+    a.download = projectName(); document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  };
+  // kept in this browser (IndexedDB: a book's scores can outgrow localStorage), a second after each change
+  const kept = {
+    db: () => new Promise((res, rej) => { const r = indexedDB.open('serenissima', 1); r.onupgradeneeded = () => r.result.createObjectStore('projects'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }),
+    async op(mode, fn) { const db = await this.db(); return new Promise((res, rej) => { const t = db.transaction('projects', mode), r = fn(t.objectStore('projects')); t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error); }); },
+    get() { return this.op('readonly', s => s.get('last')).catch(() => null); },
+    set(v) { return this.op('readwrite', s => v ? s.put(v, 'last') : s.delete('last')).catch(() => { }); }
+  };
+  let keepTimer = null;
+  function keep() { clearTimeout(keepTimer); keepTimer = setTimeout(() => kept.set(state.pieces.length ? project() : null), 1000); }
+  // on an empty page, the book last open here, to pick up
+  async function offerKept() {
+    const pj = await kept.get();
+    if (!pj || !pj.pieces || !pj.pieces.length || state.pieces.length) return;
+    const t = (pj.book && pj.book.controls && pj.book.controls.title) || pj.pieces[0].title || pj.pieces[0].file;
+    const when = new Date(pj.saved), n = pj.pieces.length;
+    $('resume').textContent = `${t}${n > 1 ? ` (${n} pieces)` : ''}`;
+    $('resume').title = `Last changed ${when.toLocaleString()}`;
+    $('resume').onclick = () => { try { openProject(pj); } catch (e) { status(e.message); } };
+    $('resumeHint').hidden = false;
+  }
+
   $('print').onclick = () => window.print();
   showFormat(); showMargins();
 
@@ -542,6 +622,7 @@
   const q = new URLSearchParams(location.search);
   if (q.get('format') === 'choirbook') document.querySelector('[data-format=choirbook]').click();
   if (q.get('style') === 'manuscript') document.querySelector('[data-style=manuscript]').click();
+  if (!q.get('score')) offerKept();
   if (q.get('score')) (async () => {
     try {
       const files = [];
