@@ -8,6 +8,18 @@
   const GLORIA = "name: Gloria Patri;\n%%\n(c4) GLó(f)ri(gh)a(h) Pa(h)tri,(h.) (:) et(h) Fí(h)li(g)o,(f.) (;) et(f) Spi(gh)rí(h)tu(h)i(h) San(g)cto.(f.) (::)";
   const text = d => d.getElementById('book').textContent;
   const pagesWith = (pages, sel) => pages.filter(p => p.querySelector(sel)).length;
+  const pageSize = (d, page, orient) => { for (const [id, v] of [['page', page], ['orient', orient]]) { const s = d.getElementById(id); s.value = v; s.dispatchEvent(new Event('change')); } };
+  // every "Residuum" clear of the staves, clefs and words around it (some must be there to check)
+  const residuumClear = d => {
+    const words = [...d.querySelectorAll('.sp-residuum')], bad = [];
+    if (!words.length) return ['No "Residuum" to check'];
+    for (const r of words) {
+      const a = r.getBoundingClientRect(), page = r.closest('.sp-page');
+      const hit = [...page.querySelectorAll('.sp-sys, .sp-ems, .sp-syl, .sp-tacet')].find(s => { const b = s.getBoundingClientRect(); return b.top < a.bottom - 1 && b.bottom > a.top + 1 && b.left < a.right - 1 && b.right > a.left + 1; });
+      if (hit) bad.push(`"Residuum" on page ${[...d.querySelectorAll('.sp-page')].indexOf(page) + 1} runs into ${hit.className.baseVal !== undefined ? hit.className.baseVal : hit.className}`);
+    }
+    return bad.slice(0, 3);
+  };
 
   // what parsing GABC must give
   const gabc = (src, want) => () => {
@@ -41,13 +53,16 @@
       check: d => /\bi\b|\bii\b/.test(text(d)) || d.querySelector('.sp-ruled') ? [] : ['No roman numbering or ruling in the manuscript style'] },
     { name: 'sample: choirbook, printed', score: SAMPLE, format: 'choirbook', expect: { warnings: 0, pages: [2, 8] },
       check: d => d.querySelector('.sp-residuum') ? ['Residuum in the printed style'] : [] },
-    { name: 'sample: choirbook, manuscript', score: SAMPLE, format: 'choirbook', style: 'manuscript', expect: { warnings: 0, pages: [2, 8] } },
+    { name: 'sample: choirbook, manuscript', score: SAMPLE, format: 'choirbook', style: 'manuscript', expect: { warnings: 0, pages: [2, 8] }, check: residuumClear },
+    // where a voice goes on for only one staff, its "Residuum" is written smaller rather than run into the next
+    { name: 'residuum: letter landscape', score: SAMPLE, format: 'choirbook', style: 'manuscript', setup: d => pageSize(d, 'letter', 'landscape'), check: residuumClear },
+    { name: 'residuum: A5 portrait', score: SAMPLE, format: 'choirbook', style: 'manuscript', setup: d => pageSize(d, 'a5', 'portrait'), check: residuumClear },
 
     // ---- Non Papa's Ego flos campi, a 7: a score converted from PDF, its faults corrected by hand (the woodcut
     // alphabet has no E, so the printed books say so)
     { name: 'ego flos campi: partbook', score: 'test/scores/ego-flos-campi.mxl', expect: { warnings: 1, warn: /Woodcut initials have no E/ } },
     { name: 'ego flos campi: choirbook, printed', score: 'test/scores/ego-flos-campi.mxl', format: 'choirbook', expect: { warnings: 1, warn: /Woodcut initials have no E/ } },
-    { name: 'ego flos campi: choirbook, manuscript', score: 'test/scores/ego-flos-campi.mxl', format: 'choirbook', style: 'manuscript', expect: { warnings: 0 } },
+    { name: 'ego flos campi: choirbook, manuscript', score: 'test/scores/ego-flos-campi.mxl', format: 'choirbook', style: 'manuscript', expect: { warnings: 0 }, check: residuumClear },
 
     // ---- the voices in step: one bar short in one voice
     { name: 'voices in step: a short bar is found', score: 'test/scores/out-of-step.musicxml', check: (d, { warnings }) => warnings.filter(w => /out of step/.test(w)).length === 1 ? [] : ['Expected one voice out of step'], expect: { warn: /^ALTVS is out of step with the other voices in one bar: m\. 2 \(a \w+ short\)/ } },

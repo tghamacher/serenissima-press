@@ -518,7 +518,8 @@
           const lines = breakLines(t, F, n => wf(n) - (room && (n === short || n === short + 1) ? room : 0) - (n < ind ? cont : 0));
           // the custos at the end of the opening points to the first note on the next
           const after = to === tb && tb < end ? g.sp[q].flatMap(x => x.tokens.slice(Math.max(0, tb - x.off))).find(x => x.k) : null;
-          lines.forEach((l, li) => rows.push({ kind: 'sys', v: t, lines, li, after: li === lines.length - 1 ? after : null, cont: li < ind ? cont : 0, resid: !li && cont && manuscript }));
+          // resid: the staves beside "Residuum" (fewer than it wants where the voice has fewer lines: it is then written smaller)
+          lines.forEach((l, li) => rows.push({ kind: 'sys', v: t, lines, li, after: li === lines.length - 1 ? after : null, cont: li < ind ? cont : 0, resid: !li && cont && manuscript ? Math.min(ind, lines.length) : 0 }));
         }
         memo.set(mk, rows);
         return rows;
@@ -624,7 +625,9 @@
         const iw = r.v.init.lines && r.li < r.v.init.lines ? initW(r.v, F) : 0;
         if (iw && r.li === 0) { const ib = initialBox(r.v, F); ib.style.top = S.ann + S.lift + 'px'; ib.style.left = at + 'px'; box.append(ib); }
         if (r.resid) {
-          const z = residSize(F), rd = el('div', 'sp-residuum' + (o.initials && o.initials.red ? ' sp-red' : ''), residWord());
+          // as large as it is meant to be, or as fits beside the staves it has (down the slot, less a little at the foot)
+          const room = r.resid * S.h - residTop(F) - 0.12 * F, z = Math.min(residSize(F), room / unit(residWord(), 'sp-text'));
+          const rd = el('div', 'sp-residuum' + (o.initials && o.initials.red ? ' sp-red' : ''), residWord());
           rd.style.cssText = `top:${residTop(F)}px;left:${at + (r.cont - 1.2 * z) / 2}px;font-size:${z}px;width:${1.2 * z}px`;
           box.append(rd);
         }
