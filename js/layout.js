@@ -68,27 +68,48 @@
     if (!p.initialLetter) p.initialLetter = fallback || p.label.charAt(0);
   }
 
-  // token boxes: [staff L][sign][staff R], wide enough for the syllable centred under the note head
+  // token boxes: [staff L][sign][staff R], wide enough for the syllable centred under the note head.
+  // tight (the manuscript style): as the scribes wrote, notes close together and the words fitted under them, a
+  // syllable spreading under the notes beside it; a note moves on only to keep its syllable clear of the one
+  // before. own: what a syllable needs on the left at a line's start; tail: how far it hangs past its box.
+  // Each of the font's notes carries its own piece of staff, wider than its head; so the notes can come closer,
+  // their pieces overlap (the lines lie on each other), trim off each side. Not where the sign reaches the edge
+  // of its piece: ledger lines, the longa's and maxima's tails, fusas' flags, an accidental or a dot.
+  let tight = false;
+  const TIGHT_GAP = 0.025, TRIM = 0.03;
+  const trimmable = tk => (tk.t === 'n' || tk.t === 'r') && !tk.a && !tk.d && tk.lp === undefined && !/^[1qr68]|[zsk,]$/.test(tk.g);
   function boxes(p, F) {
-    const T = F * TEXT, gap = GAP * F, tg = 0.5 * T;
+    const T = F * TEXT, gap = (tight ? TIGHT_GAP : GAP) * F, tg = (tight ? 0.35 : 0.5) * T;
+    let x = 0, prev = -Infinity;
     return p.tokens.map(tk => {
-      const aW = wE(tk.a, F), gW = wE(tk.g, F), dW = wE(tk.d, F), glyph = aW + gW + dW, center = aW + gW / 2;
-      let L = 0, R = gap;
-      if (tk.sd) { const half = (wT(tk.sd, T) + tg) / 2; L = Math.max(0, half - center); R = Math.max(gap, half - (glyph - center)); }
+      const trim = tight && trimmable(tk) ? TRIM * F : 0;
+      const aW = wE(tk.a, F), gW = wE(tk.g, F), dW = wE(tk.d, F), glyph = aW + gW + dW - 2 * trim, center = aW + gW / 2 - trim;
+      let L = 0, R = gap, own = 0, tail = 0;
+      if (tk.sd) {
+        const half = (wT(tk.sd, T) + tg) / 2;
+        own = Math.max(0, half - center);
+        if (tight) { L = Math.max(0, prev - (x + center - half)); prev = x + L + center + half; tail = Math.max(0, half - (glyph - center) - R); }
+        else { L = own; R = Math.max(gap, half - (glyph - center)); }
+      }
       if (tk.g === 'E') R = 0;
-      return { tk, aW, gW, w: L + glyph + R, L, R };
+      x += L + glyph + R;
+      return { tk, aW, gW, w: L + glyph + R, L, R, own, tail, trim };
     });
   }
+  // a box that starts a line: in tight spacing, only the room its own syllable needs (not what the line before wanted)
+  function startLine(b) { if (tight && b && b.L !== b.own && b.tk.sd) { b.w += b.own - b.L; b.L = b.own; } }
   function prefix(p, F) { const gap = GAP * F * 1.5; return { gap, w: wE(p.clef, F) + gap + (p.sig ? wE(p.sig, F) + gap : 0) }; }
   function breakLines(p, F, widthFor) {
     const bx = boxes(p, F), pre = prefix(p, F), cW = wE('Ug', F) + GAP * F;
     const lines = []; let cur = [], used = 0;
     for (const b of bx) {
       const avail = widthFor(lines.length) - pre.w - cW;
-      if (cur.length && b.tk.g !== 'E' && used + b.w > avail) {
+      // (a syllable hanging past its note must still end within the line)
+      if (cur.length && b.tk.g !== 'E' && used + b.w + b.tail > avail) {
         const carry = [];
         while (cur.length > 1 && cur[cur.length - 1].tk.t === 'm') carry.unshift(cur.pop());   // no sign stranded at a line end
-        lines.push(cur); cur = carry; used = carry.reduce((s, c) => s + c.w, 0);
+        lines.push(cur); cur = carry;
+        startLine(cur[0] || b); used = carry.reduce((s, c) => s + c.w, 0);
       }
       cur.push(b); used += b.w;
     }
@@ -194,12 +215,14 @@
   //      margins: { top, bottom, inside, outside } in inches, ruleEmpty (draw the staves the music leaves empty),
   //      textType: 'roman'|'gothic', signum: 'fleur'|'hand'|'hedera'|'none' (choirbooks: where a voice runs on),
   //      style: 'print'|'manuscript' (choirbooks: a manuscript has "Residuum" where a voice goes on),
+  //      tight: notes close together, as the scribes wrote them (an option of the manuscript style),
   //      spacing: 'print'|'manuscript'|'modern' (choirbooks: staff size and spacing after the period books, or roomier) }
   // In a choirbook the voice at the top of the left page gets the first initial; in partbooks every voice
   // does. Sections that start a new line or page get the other initials.
   async function render(book, D, o) {
     const I = o.initials, warnings = [], labels = o.labels || { first: true, rest: true };
     gothic = o.textType === 'gothic';
+    tight = !!o.tight;
     const period = o.format === 'choirbook' && o.spacing !== 'modern';
     ({ TEXT, SYS, TEXT_TOP } = SPACING[period ? 'period' : 'modern']);
     const families = new Set(['"EMS Serenissima"', '"EB Garamond"', 'italic "EB Garamond"', '"IM Fell French Canon"']);
@@ -274,6 +297,7 @@
         if (b.tk.t === 'x') { g = fill(b.gW, F); g.classList.add('sp-ligf'); g.append(el('span', 'sp-lig', b.tk.g)); }   // ligature bracket: staff, with the bracket above it
         else if (b.tk.lp !== undefined && geom) g = farNote(b.tk, b.aW, b.gW, F);
         else g = el('span', null, (b.tk.a || '') + b.tk.g + (b.tk.d || ''));
+        if (b.trim) g.style.margin = `0 ${-b.trim}px`;
         staff.append(g);
         staff.append(fill(b.R + per, F));
         if (b.tk.sd) marks.push([g, b]);
@@ -356,14 +380,20 @@
       return { w, h, room: w + 0.2 * F };
     }
     const signRoom = F => { const z = signSize(F); return z ? z.room : 0; };
-    // a voice that goes on from the opening before starts its first staff here a little in, so its singer
-    // finds at a glance where to pick up again
-    const goesOn = F => 0.6 * F;
     // in a manuscript choirbook the indent carries "Residuum" written down beside the staves, as in the books of
-    // the Alamire workshop (in red if the initials are); as many staves are indented as the word is long
-    const RESID = 'Residuum', residSize = F => 0.36 * F, residTop = F => period ? 0.22 * F : slot.ann;
-    const manuscript = o.style === 'manuscript', residWord = () => gothic ? gothicText(RESID) : RESID;
-    const residLines = F => manuscript ? Math.max(1, Math.ceil((residTop(F) + unit(residWord(), 'sp-text') * residSize(F)) / slot.h - 0.05)) : 1;
+    // the Alamire workshop (in red if the initials are): the indent no wider than the word, close against the
+    // staves, and the word drawn out down the staves beside it, as the scribes wrote it. Drawn from its letters' ink
+    // (residInk, at 100 px: w its length, h its breadth), so it can be fitted exactly. As many staves are indented
+    // as the word, at its natural length, needs.
+    const manuscript = o.style === 'manuscript';
+    const RESID = 'Residuum', residSize = F => 0.3 * F, residTop = F => period ? 0.22 * F : slot.ann;
+    const RESID_PAD = 0.04, RESID_GAP = 0.1, RESID_FOOT = 0.12, RESID_DRAW = 1.45;   // in F; the most it is drawn out
+    const residWord = () => gothic ? gothicText(RESID) : RESID;
+    const residInk = () => ink(residWord(), gothic ? '"Rotunda Pommerania"' : '"EB Garamond"');
+    const residLines = F => manuscript ? Math.max(1, Math.ceil((residTop(F) + residInk().w / 100 * residSize(F)) / slot.h - 0.05)) : 1;
+    // a voice that goes on from the opening before starts its first staff here a little in, so its singer
+    // finds at a glance where to pick up again (in a manuscript, by the width of "Residuum")
+    const goesOn = F => manuscript ? (RESID_PAD + RESID_GAP) * F + residInk().h / 100 * residSize(F) : 0.6 * F;
     function signum(F) {
       const z = signSize(F);
       if (!z) return null;
@@ -625,11 +655,19 @@
         const iw = r.v.init.lines && r.li < r.v.init.lines ? initW(r.v, F) : 0;
         if (iw && r.li === 0) { const ib = initialBox(r.v, F); ib.style.top = S.ann + S.lift + 'px'; ib.style.left = at + 'px'; box.append(ib); }
         if (r.resid) {
-          // as large as it is meant to be, or as fits beside the staves it has (down the slot, less a little at the foot)
-          const room = r.resid * S.h - residTop(F) - 0.12 * F, z = Math.min(residSize(F), room / unit(residWord(), 'sp-text'));
-          const rd = el('div', 'sp-residuum' + (o.initials && o.initials.red ? ' sp-red' : ''), residWord());
-          rd.style.cssText = `top:${residTop(F)}px;left:${at + (r.cont - 1.2 * z) / 2}px;font-size:${z}px;width:${1.2 * z}px`;
-          box.append(rd);
+          // down the staves beside it (less a little at the foot): drawn out to fill them, up to a point, or, beside
+          // fewer staves than it wants, made smaller to fit. Turned to read downwards, the tops of its letters to the staff.
+          const k = residInk(), room = r.resid * S.h - residTop(F) - RESID_FOOT * F, len = k.w / 100 * residSize(F);
+          const z = Math.min(residSize(F), residSize(F) * room / len), u = z / 100, s = Math.min(RESID_DRAW, Math.max(1, room / len));
+          const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg'), t = document.createElementNS(NS, 'text');
+          svg.setAttribute('viewBox', [k.y - k.h, -s * k.x, k.h, s * k.w].join(' ')); svg.setAttribute('aria-label', RESID);
+          svg.style.cssText = `display:block;width:${k.h * u}px;height:${s * k.w * u}px;overflow:visible`;
+          t.setAttribute('font-size', '100'); t.setAttribute('fill', 'currentColor'); t.setAttribute('transform', `rotate(90) scale(${s} 1)`);
+          t.style.fontFamily = gothic ? '"Rotunda Pommerania"' : '"EB Garamond"'; t.textContent = residWord();
+          svg.append(t);
+          const rd = el('div', 'sp-residuum' + (o.initials && o.initials.red ? ' sp-red' : ''));
+          rd.style.cssText = `top:${residTop(F)}px;left:${at + RESID_PAD * F}px`;
+          rd.append(svg); box.append(rd);
         }
         const s = system(r.v, r.lines, r.li, F, W - iw - sw - (r.cont || 0), iw + at + (r.cont || 0), r.after);
         box.append(s);
@@ -740,7 +778,7 @@
       for (const [g, b] of marks) {
         const s = el('span', 'sp-syl', b.tk.sd);
         s.style.fontSize = F * TEXT + 'px'; s.style.top = F * TEXT_TOP + drop + 'px';
-        s.style.left = (g.getBoundingClientRect().left - left + b.aW + b.gW / 2) + 'px';
+        s.style.left = (g.getBoundingClientRect().left - left + b.aW + b.gW / 2) + 'px';   // (a trimmed note's box is still its whole piece)
         sys.append(s);
       }
     }

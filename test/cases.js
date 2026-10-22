@@ -8,6 +8,7 @@
   const GLORIA = "name: Gloria Patri;\n%%\n(c4) GLó(f)ri(gh)a(h) Pa(h)tri,(h.) (:) et(h) Fí(h)li(g)o,(f.) (;) et(f) Spi(gh)rí(h)tu(h)i(h) San(g)cto.(f.) (::)";
   const text = d => d.getElementById('book').textContent;
   const pagesWith = (pages, sel) => pages.filter(p => p.querySelector(sel)).length;
+  const spaced = (d, tight) => { const c = d.getElementById('tight'); c.checked = tight; c.dispatchEvent(new Event('change')); };
   const pageSize = (d, page, orient) => { for (const [id, v] of [['page', page], ['orient', orient]]) { const s = d.getElementById(id); s.value = v; s.dispatchEvent(new Event('change')); } };
   // every "Residuum" clear of the staves, clefs and words around it (some must be there to check)
   const residuumClear = d => {
@@ -55,7 +56,16 @@
       check: d => d.querySelector('.sp-residuum') ? ['Residuum in the printed style'] : [] },
     { name: 'sample: choirbook, manuscript', score: SAMPLE, format: 'choirbook', style: 'manuscript', expect: { warnings: 0, pages: [2, 8] }, check: residuumClear },
     // where a voice goes on for only one staff, its "Residuum" is written smaller rather than run into the next
-    { name: 'residuum: letter landscape', score: SAMPLE, format: 'choirbook', style: 'manuscript', setup: d => pageSize(d, 'letter', 'landscape'), check: residuumClear },
+    { name: 'residuum: letter landscape, notes spaced as printed', score: SAMPLE, format: 'choirbook', style: 'manuscript', setup: d => { pageSize(d, 'letter', 'landscape'); spaced(d, false); }, check: residuumClear },
+    // notes close together: the manuscript style's own option, on by default, and a shorter book than without it
+    { name: 'close spacing: only in the manuscript style', score: SAMPLE, format: 'choirbook', check: d => {
+        const bad = [], row = d.getElementById('tightRow');
+        if (!row.hidden) bad.push('Shown in the printed style');
+        d.querySelector('[data-style=manuscript]').click();
+        if (row.hidden) bad.push('Hidden in the manuscript style');
+        if (!d.getElementById('tight').checked) bad.push('Not on by default in the manuscript style');
+        return bad; } },
+    { name: 'close spacing: off, a longer book', score: SAMPLE, style: 'manuscript', setup: d => spaced(d, false), expect: { pages: [6, 12] } },
     { name: 'residuum: A5 portrait', score: SAMPLE, format: 'choirbook', style: 'manuscript', setup: d => pageSize(d, 'a5', 'portrait'), check: residuumClear },
 
     // ---- Non Papa's Ego flos campi, a 7: a score converted from PDF, its faults corrected by hand (the woodcut

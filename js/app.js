@@ -15,7 +15,7 @@
   };
   // pieces: [{ file, xml (as read, for saving), doc, info, title, composer, reduction, mens, transpose, parts: [{index, name, include, label, clef, side}],
   //   secs: {step: {name, mode}}, sections (as last converted) }]; cur: the piece whose settings are shown
-  const state = { format: 'partbook', page: { partbook: 'letter', choirbook: 'tabloid' }, orient: { partbook: 'portrait', choirbook: 'portrait' }, initialSrc: '', pieces: [], cur: 0, secKey: '' };
+  const state = { format: 'partbook', page: { partbook: 'quarto', choirbook: 'tabloid' }, orient: { partbook: 'landscape', choirbook: 'portrait' }, initialSrc: '', pieces: [], cur: 0, secKey: '' };
   const piece = () => state.pieces[state.cur];
 
   // ---- margins, in inches: [top, bottom, inside, outside], for each format. "Book" follows the
@@ -215,10 +215,10 @@
   // the ruling and a choirbook's staff (see SPACING_HINTS); each can still be changed, and each format and
   // style keeps its own choices. A printed book is black and white; a manuscript may have its initials (and a
   // choirbook its "Residuum") in red.
-  const LOOK_IDS = ['textType', 'initial', 'initial2', 'rubric', 'ruleEmpty', 'numbering'];
+  const LOOK_IDS = ['textType', 'initial', 'initial2', 'rubric', 'ruleEmpty', 'numbering', 'tight'];
   const LOOKS = {
-    print: { textType: 'roman', initial: 'woodcut', initial2: 'capital', rubric: false, ruleEmpty: false, numbering: 'arabic' },
-    manuscript: { textType: 'gothic', initial: 'gothic', initial2: 'gothic', rubric: true, ruleEmpty: true, numbering: 'roman' }
+    print: { textType: 'roman', initial: 'woodcut', initial2: 'capital', rubric: false, ruleEmpty: false, numbering: 'arabic', tight: false },
+    manuscript: { textType: 'gothic', initial: 'gothic', initial2: 'gothic', rubric: true, ruleEmpty: true, numbering: 'roman', tight: true }
   };
   const STYLE_HINTS = {
     choirbook: {
@@ -245,6 +245,7 @@
     document.querySelectorAll('[data-style]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.style === style())));
     $('styleHint').textContent = STYLE_HINTS[state.format][style()];
     $('rubricRow').hidden = printed();
+    $('tightRow').hidden = printed();   // close spacing is the scribes', so only for a manuscript
     showSpacing();
   }
   function showFormat() {
@@ -311,6 +312,7 @@
         partbookPage: pg('partbook'), choirbookPage: pg('choirbook'),
         numbering: $('numbering').value, titlePage: $('titlePage').checked, index: $('index').checked, pieceStart: $('pieceStart').value,
         labels: { first: $('labelFirst').checked, rest: $('labelRest').checked }, margins: margins(), ruleEmpty: $('ruleEmpty').checked, textType: $('textType').value, signum: $('signum').value, style: style(),
+        tight: !printed() && $('tight').checked,
         spacing: $('spacing').value === 'modern' ? 'modern' : style()
       });
     } catch (e) { $('book').classList.remove('sp-busy'); status(e.message); return; }
@@ -478,7 +480,8 @@
     saveLook(); state.styles[state.format] = b.dataset.style; loadLook();
     showStyle(); typeset();
   });
-  $('page').value = state.page.partbook;
+  // partbooks start as the Venetian ones were: an oblong quarto
+  $('page').value = state.page.partbook; $('orient').value = state.orient.partbook;
   $('page').onchange = () => { state.page[state.format] = $('page').value; showMargins(); showPageHint(); typeset(); };
   $('margins').onchange = () => {
     const m = state.margins[state.format], v = $('margins').value;
@@ -510,7 +513,7 @@
     showSpacing(); typeset();
   };
   $('staffCustom').oninput = typeset;
-  for (const id of ['repeats', 'ficta', 'barlines', 'brackets', 'clefs', 'ledgers', 'numbering', 'index', 'pieceStart', 'labelFirst', 'labelRest', 'ruleEmpty', 'textType', 'signum', 'initialLines', 'initial2', 'initialLines2', 'rubric']) $(id).onchange = typeset;
+  for (const id of ['repeats', 'ficta', 'barlines', 'brackets', 'clefs', 'ledgers', 'numbering', 'index', 'pieceStart', 'labelFirst', 'labelRest', 'ruleEmpty', 'textType', 'signum', 'initialLines', 'initial2', 'initialLines2', 'rubric', 'tight']) $(id).onchange = typeset;
   $('spacing').onchange = () => { showSpacing(); typeset(); };
   $('initial').onchange = () => { if ($('initial').value === 'image' && !state.initialSrc) $('initialFile').click(); typeset(); };
   $('initialFile').onchange = e => {
@@ -534,7 +537,7 @@
   // ---- projects: the book's settings and its scores in one file (JSON), to open again here or elsewhere; the
   // last one is also kept in this browser, to pick up after a reload
   const PROJECT_IDS = ['title', 'composer', 'imprint', 'staffSize', 'staffCustom', 'numbering', 'spacing', 'textType', 'labelFirst', 'labelRest', 'ruleEmpty', 'signum',
-    'titlePage', 'index', 'pieceStart', 'clefs', 'ledgers', 'repeats', 'ficta', 'barlines', 'brackets', 'initial', 'initialLines', 'initial2', 'initialLines2', 'rubric'];
+    'titlePage', 'index', 'pieceStart', 'clefs', 'ledgers', 'repeats', 'ficta', 'barlines', 'brackets', 'initial', 'initialLines', 'initial2', 'initialLines2', 'rubric', 'tight'];
   function project() {
     saveLook();
     return {
