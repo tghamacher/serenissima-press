@@ -112,6 +112,7 @@
     for (const s of [].concat(cs.score)) q.append('score', s);
     if (cs.format) q.set('format', cs.format);
     if (cs.style) q.set('style', cs.style);
+    if (cs.chants) q.set('chant', '1');   // chant is set aside unless asked for
     let win = await load('../index.html?' + q);
     await settled(win);
     for (const c of cs.chants || []) await addChant(win, c);

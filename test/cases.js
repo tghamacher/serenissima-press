@@ -52,14 +52,15 @@
     // ---- the voices in step: one bar short in one voice
     { name: 'voices in step: a short bar is found', score: 'test/scores/out-of-step.musicxml', check: (d, { warnings }) => warnings.filter(w => /out of step/.test(w)).length === 1 ? [] : ['Expected one voice out of step'], expect: { warn: /^ALTVS is out of step with the other voices in one bar: m\. 2 \(a \w+ short\)/ } },
 
-    // ---- chant between the polyphony
+    // ---- chant between the polyphony (set aside: on only with ?chant, which these cases ask for)
+    { name: 'chant: hidden unless asked for', score: SAMPLE, expect: { warnings: 0 }, check: d => d.getElementById('chantBox').hidden ? [] : ['The chant controls are showing'] },
     { name: 'chant: all voices, partbook', score: SAMPLE, chants: [{ after: 'start', gabc: GLORIA }], expect: { warnings: 0 },
       check: d => /Gloria Patri|Gló|Glo/.test(text(d)) ? [] : ['The chant\'s words are not in the book'] },
     { name: 'chant: one voice, the others tacet', score: SAMPLE, chants: [{ after: 'start', voice: 'TENOR', gabc: GLORIA }], expect: { warnings: 0 },
       check: (d, { pages }) => pagesWith(pages, '.sp-tacet') >= 3 ? [] : [`Only ${pagesWith(pages, '.sp-tacet')} page(s) with a tacet; the three voices that do not sing should have one`] },
     { name: 'chant: choirbook, manuscript', score: SAMPLE, format: 'choirbook', style: 'manuscript', chants: [{ after: 'start', gabc: GLORIA }], expect: { warnings: 0 } },
     // ---- projects: saved, then opened again (as a file, and from the browser) with every setting
-    { name: 'project: saved and opened again', score: SAMPLE, roundTrip: true, chants: [{ after: 'start', voice: 'TENOR', gabc: GLORIA }],
+    { name: 'project: saved and opened again', score: SAMPLE, roundTrip: true,
       setup: d => {
         const set = (el, v, ev) => { el.value = v; el.dispatchEvent(new Event(ev)); };
         d.querySelector('[data-format=choirbook]').click();
@@ -76,7 +77,6 @@
         if (d.querySelector('[data-style=manuscript]').getAttribute('aria-pressed') !== 'true') bad.push('Not reopened in the manuscript style');
         if (d.getElementById('title').value !== 'A test book') bad.push('Title lost');
         if (d.getElementById('transpose').value !== '-2') bad.push('Transposition lost');
-        if (!d.getElementById('chants').querySelector('textarea') || !/GLó/.test(d.getElementById('chants').querySelector('textarea').value)) bad.push('Chant lost');
         if (!pj.pieces[0].xml || pj.pieces[0].parts[0].label !== 'SVPERIVS') bad.push('The project lacks the score or the voice\'s label');
         return bad;
       } },

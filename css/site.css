@@ -50,7 +50,7 @@ button, select, input { font: inherit; color: inherit; }
 /* ---------------------------------------------------------------- tool */
 .sp-top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; padding: 14px 20px; background: var(--panel); border-bottom: 1px solid var(--rule); }
 .sp-top h1 { font: 600 22px/1.2 var(--textfont); margin: 0; letter-spacing: .02em; }
-.sp-top .beta { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); border: 1px solid var(--accent); border-radius: 3px; padding: 0 5px; }
+.sp-top .ver { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); border: 1px solid var(--accent); border-radius: 3px; padding: 0 5px; }
 .sp-top p { margin: 0; color: var(--muted); flex: 1 1 320px; }
 .sp-top nav a { margin-left: 14px; }
 

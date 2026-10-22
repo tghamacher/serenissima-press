@@ -331,8 +331,12 @@
   // (c.after: 'start', before the first section, or the step of the section it follows; c.voice: 'all' or a
   // part's index). Each goes in as a section of its own, its tokens spliced into those voices, the bars after
   // it moved on; a voice that does not sing it has the section empty, and so a "tacet".
+  // set aside for now (chant wants a four-line staff, not this five-line one): on only with ?chant in the address,
+  // as the tests use it; a project's verses are kept but not set
+  const CHANT = new URLSearchParams(location.search).has('chant');
+  $('chantBox').hidden = !CHANT;
   function addChants(pc, res, sel, warnings) {
-    const placed = {}, todo = pc.chants.filter(c => c.gabc.trim());
+    const placed = {}, todo = CHANT ? pc.chants.filter(c => c.gabc.trim()) : [];
     // a piece without sections is one, from its start
     if (todo.length && !res.sections.length) res.sections.push({ step: 0, mno: '', name: '', auto: true, movement: true });
     for (const c of todo) {
