@@ -1,6 +1,6 @@
 # Serenissima Press
 
-**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.19.0 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
+**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.20.0 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
 
 Turn a MusicXML score of Renaissance polyphony into **partbooks** (one voice per book) or a **choirbook** (voices spread across facing pages), in mensural notation with text underlay, set in the [EMS Serenissima](https://www.earlymusicsources.com/) font.
 
@@ -54,6 +54,7 @@ A link like `index.html?score=examples/o-quam-gloriosum.mxl&format=choirbook` op
 - **Ligature brackets:** optionally, ligature brackets marked in the edition (MusicXML brackets) are printed above the staff. Slurs have no place in mensural notation and are not drawn, but they guide the text given to a voice that has none of its own.
 - **Repeats** (with first and second endings) are written out in full by default, or kept as written with the dotted repeat sign.
 - **Choral scores** with two singers on a staff (S+A, T+B) are split into separate voices by pitch, so swapped layers and shared chords still come out right; a lower voice without its own words takes the text sung on its staff.
+- **Voices kept in step:** each bar is checked in every voice against the length most voices give it (or, where they are evenly split, the time signature's). A voice that makes a bar shorter or longer, the usual fault of scores scanned or converted from PDF (a dropped rest, a misread value, notes stacked that should follow one another), is named in the warnings with its bars and by how much, in note values: "Tenor is out of step with the other voices in one bar: m. 45 (a semibreve short)".
 
 ### Not yet
 
@@ -68,6 +69,11 @@ If you have a GitHub account you can also [open an issue](https://github.com/tgh
 ## Release notes
 
 Versions are numbered 0.*feature*.*fix* while the tool is in beta: a release with new features raises the middle number, a release of fixes only raises the last.
+
+### 0.20.0 (2026-10-21)
+
+- **Voices kept in step:** each bar is checked in every voice; a voice that makes a bar shorter or longer than the others (a dropped rest, a misread value, notes stacked that should follow one another) is named in the warnings with its bars and by how much, in note values.
+- **Tests:** Clemens non Papa's *Ego flos campi* a 7 (Allen Garvin's edition, converted from PDF and corrected) and a score with a deliberate fault join the test page.
 
 ### 0.19.0 (2026-10-21)
 
@@ -208,7 +214,7 @@ Versions are numbered 0.*feature*.*fix* while the tool is in beta: a release wit
 ## Files
 
 - `index.html`, `css/`, `js/` — the web tool (`convert.js`: MusicXML to mensural tokens; `layout.js`: page layout; `app.js`: controls; `zip.js`: `.mxl` reader; `gabc.js`: plainchant in GABC)
-- `test/` — the tests: serve the repository (any local web server) and open `/test/`. Each case loads the app with a score and settings and checks the book: no errors, the warnings expected, nothing beyond the page. Headless: `msedge --headless=new --virtual-time-budget=600000 --dump-dom http://localhost:PORT/test/` puts `PASS n/n` or `FAIL k/n` in the title and a report in `#report`. Add a case to `test/cases.js` for each score that has caused trouble.
+- `test/` — the tests, with their scores in `test/scores/` (among them Clemens non Papa's *Ego flos campi*, a 7, converted from Allen Garvin's edition, CC BY-NC 2.5): serve the repository (any local web server) and open `/test/`. Each case loads the app with a score and settings and checks the book: no errors, the warnings expected, nothing beyond the page. Headless: `msedge --headless=new --virtual-time-budget=600000 --dump-dom http://localhost:PORT/test/` puts `PASS n/n` or `FAIL k/n` in the title and a report in `#report`. Add a case to `test/cases.js` for each score that has caused trouble.
 - `cheatsheet.html` — keyboard map of the font
 - `fonts/` — EMS Serenissima, the text fonts and the initial fonts, with their licences
 - `tools/` — the original Windows PowerShell converter (`ConvertTo-Ems.ps1`), which writes HTML/PDF books locally

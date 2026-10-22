@@ -303,8 +303,8 @@
   // secs: the steps at which sections start; each gets a double bar, and rests never run across one.
   // Every event carries t0, its start time, so bars can be found where the layout may turn the page.
   function readPart(partEl, name, o, tr, warn, split, secs) {
-    const events = [], track = [], bars = [];
-    let divisions = 1, clefInfo = null, editionClef = null, fifths = 0, shown = Math.min(tr.fifths, 0), voice = null, tie = null, perfect = false, origSign = null, mstart = 0, pass = 1;
+    const events = [], track = [], bars = [], lens = [];   // lens: each bar's length as written, and as its time signature has it
+    let meter = 0, divisions = 1, clefInfo = null, editionClef = null, fifths = 0, shown = Math.min(tr.fifths, 0), voice = null, tie = null, perfect = false, origSign = null, mstart = 0, pass = 1;
     const slurs = new Map();   // open slurs: number -> voice that opened it
     const seen = new Set();   // measures already read (a repeat comes round again)
     // the verse for this pass through a repeat ("2", "verse2", "part1verse2"), else the first
@@ -388,6 +388,7 @@
               const opening = !events.length;
               const sign = (opening && o.mensuration) || (opening && origSign) || mensSign(t, o.reduction, warn);
               const beats = +(text(kid(t, 'beats')).split('+')[0]), type = +text(kid(t, 'beat-type'));
+              meter = text(kid(t, 'beats')).split('+').reduce((a, b) => a + +b, 0) * 4 / type;
               perfect = sign === 'T3' || sign === 'T4' || (beats === 3 && near(beats * 4 / type / o.reduction, 3));
               if (!revisit) events.push({ kind: 'mens', code: sign, t0: mstart });   // not restated when a repeat comes round again
             }
@@ -460,6 +461,7 @@
         const s = !it.rest && lyricOf(it.node), t = mstart + it.start;
         if (s && !track.some(x => near(x.t, t))) track.push({ t, syl: s, mno });
       }
+      lens.push({ mno, len: mlen, meter });
       mstart += mlen;
       if (step.close) events.push({ kind: 'repeat', t0: mstart });
       else if (o.barlines) events.push({ kind: 'bar', t0: mstart });
@@ -474,7 +476,7 @@
     // bars where the music can be cut cleanly: nothing (a rest, a tied note) runs across them; and every bar,
     // where a note or rest that runs across it may end the line (a page turned while it is held)
     const clean = bars.filter(b => events[b.ev] && near(events[b.ev].t0, b.t));
-    return { events, clefInfo, editionClef, fifths: shown, bars: clean, every: bars.filter(b => events[b.ev]) };
+    return { events, clefInfo, editionClef, fifths: shown, bars: clean, every: bars.filter(b => events[b.ev]), lens };
   }
 
   // ---------------------------------------------------------------- clefs
@@ -586,6 +588,45 @@
     return count;
   }
 
+  // ---------------------------------------------------------------- the voices in step
+  // A bar one voice makes shorter or longer than the others (a dropped rest, a misread value: the usual faults of
+  // scanned and converted scores) puts it out of step with them from there on. Each bar is checked against the
+  // length most voices give it, or, where they are evenly split, the time signature's.
+  const VALUE_NAMES = [[8, 'maxima', 'maximas'], [4, 'longa', 'longas'], [2, 'breve', 'breves'], [1, 'semibreve', 'semibreves'], [0.5, 'minim', 'minims'], [0.25, 'semiminim', 'semiminims'], [0.125, 'fusa', 'fusas']];
+  // a length in semibreves, named by its values ("a breve and a minim"); one that no values make exactly
+  // (the stray fractions of converted scores) is named by the nearest, as "about" it
+  function valueName(sb) {
+    const exact = Math.abs(sb * 8 - Math.round(sb * 8)) < 1e-6, near8 = Math.round(sb * 8) / 8;
+    if (!exact && !near8) return 'a fraction of a note';
+    const out = []; let left = exact ? sb : near8;
+    for (const [v, one, many] of VALUE_NAMES) {
+      const k = Math.floor((left + 1e-6) / v);
+      if (k) { out.push(k > 1 ? `${k} ${many}` : `a ${one}`); left -= k * v; }
+    }
+    return (exact ? '' : 'about ') + out.join(' and ');
+  }
+  function checkBars(voices, reduction, warn) {
+    if (voices.length < 2) return;
+    const n = Math.max(...voices.map(v => v.lens.length));
+    const short = voices.filter(v => v.lens.length < n);
+    if (short.length && short.length < voices.length) for (const v of short) warn(`${v.label} has ${v.lens.length} bars where the other voices have ${n}: check for a missing bar.`);
+    const off = new Map(voices.map(v => [v, []]));
+    for (let i = 0; i < n; i++) {
+      const here = voices.filter(v => v.lens[i]), count = new Map();
+      for (const v of here) { const k = Math.round(v.lens[i].len * 1e4); count.set(k, (count.get(k) || 0) + 1); }
+      const top = Math.max(...count.values()), most = [...count].filter(([, c]) => c === top).map(([k]) => k);
+      const meter = Math.round(here[0].lens[i].meter * 1e4);
+      const ref = most.length === 1 ? most[0] : most.includes(meter) ? meter : null;
+      if (ref === null) continue;
+      for (const v of here) {
+        const d = Math.round(v.lens[i].len * 1e4) - ref;
+        if (d) off.get(v).push(`m. ${v.lens[i].mno} (${valueName(Math.abs(d) / 1e4 / reduction)} ${d < 0 ? 'short' : 'long'})`);
+      }
+    }
+    for (const [v, bars] of off) if (bars.length)
+      warn(`${v.label} is out of step with the other voices in ${bars.length > 1 ? bars.length + ' bars' : 'one bar'}: ${bars.slice(0, 6).join(', ')}${bars.length > 6 ? `, and ${bars.length - 6} more` : ''}. A note or rest there is missing or has the wrong value.`);
+  }
+
   // ---------------------------------------------------------------- main
   // o: { reduction, transpose, mensuration, ficta, barlines, brackets, ij, parts: [{index, clef, label}] }
   function convert(doc, o) {
@@ -595,7 +636,7 @@
     const partEls = kids(doc.documentElement, 'part');
     const sections = findSections(o.parts.map(sel => partEls[info.parts[sel.index].part]), o.repeats);
     const secSteps = new Set(sections.map(s => s.step));
-    const parts = [], clefs = [];
+    const parts = [], clefs = [], lens = [];
     for (const sel of o.parts) {
       const entry = info.parts[sel.index], el = partEls[entry.part], name = entry.name, label = sel.label || partLabel(name);
       if (entry.split) warn(`${entry.split.staff}: two voices share this staff, so it was split by pitch into ${entry.split.pair.join(' and ')}. Check where they cross.`);
@@ -604,7 +645,9 @@
       const clefName = o.clefs === 'modern' && !sel.clef ? modernClef(name, parsed.editionClef, dias)
         : chooseClef(parsed.clefInfo, dias, sel.clef, name, (n, from, to) => clefs.push(`${label} ${to}${from ? ` (edition: ${from})` : ''}`));
       parts.push({ name, label, clefName, ...tokens(parsed, clefName, o, warn) });
+      lens.push({ label, lens: parsed.lens });
     }
+    checkBars(lens, o.reduction || 1, warn);
     // each section's tokens in a part (the first from the start, as an incipit has no bar of its own)
     const slice = (p, k) => p.tokens.slice(k ? p.cuts[sections[k].step] : 0, k + 1 < sections.length ? p.cuts[sections[k + 1].step] : undefined);
     sections.forEach((s, k) => {

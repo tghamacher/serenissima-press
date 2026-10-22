@@ -43,6 +43,15 @@
       check: d => d.querySelector('.sp-residuum') ? ['Residuum in the printed style'] : [] },
     { name: 'sample: choirbook, manuscript', score: SAMPLE, format: 'choirbook', style: 'manuscript', expect: { warnings: 0, pages: [2, 8] } },
 
+    // ---- Non Papa's Ego flos campi, a 7: a score converted from PDF, its faults corrected by hand (the woodcut
+    // alphabet has no E, so the printed books say so)
+    { name: 'ego flos campi: partbook', score: 'test/scores/ego-flos-campi.mxl', expect: { warnings: 1, warn: /Woodcut initials have no E/ } },
+    { name: 'ego flos campi: choirbook, printed', score: 'test/scores/ego-flos-campi.mxl', format: 'choirbook', expect: { warnings: 1, warn: /Woodcut initials have no E/ } },
+    { name: 'ego flos campi: choirbook, manuscript', score: 'test/scores/ego-flos-campi.mxl', format: 'choirbook', style: 'manuscript', expect: { warnings: 0 } },
+
+    // ---- the voices in step: one bar short in one voice
+    { name: 'voices in step: a short bar is found', score: 'test/scores/out-of-step.musicxml', check: (d, { warnings }) => warnings.filter(w => /out of step/.test(w)).length === 1 ? [] : ['Expected one voice out of step'], expect: { warn: /^ALTVS is out of step with the other voices in one bar: m\. 2 \(a \w+ short\)/ } },
+
     // ---- chant between the polyphony
     { name: 'chant: all voices, partbook', score: SAMPLE, chants: [{ after: 'start', gabc: GLORIA }], expect: { warnings: 0 },
       check: d => /Gloria Patri|Gló|Glo/.test(text(d)) ? [] : ['The chant\'s words are not in the book'] },
