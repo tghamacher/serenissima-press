@@ -219,3 +219,8 @@ button, select, input { font: inherit; color: inherit; }
 [data-type="gothic"] .sp-tacet, [data-type="gothic"] .sp-sechead, [data-type="gothic"] .sp-ix-t, [data-type="gothic"] .sp-tp-imprint { font-style: normal; }
 [data-type="gothic"] .sp-c, [data-type="gothic"] .sp-runhead.recto, [data-type="gothic"] .sp-tp-comp { font-variant: normal; letter-spacing: 0; }
 [data-type="gothic"] .sp-tp-title { font-family: var(--pagefont); text-transform: none; letter-spacing: 0; }
+/* chant verses (GABC) in the piece's settings */
+.sp-chant { border: 1px solid var(--rule); border-radius: 6px; padding: 8px; margin: 0 0 8px; }
+.sp-chant .sp-row { align-items: flex-end; }
+.sp-chant textarea { width: 100%; box-sizing: border-box; min-height: 6em; resize: vertical; padding: 5px 6px; border: 1px solid var(--rule); border-radius: 4px; background: var(--field); color: var(--ink); font: 12px/1.45 ui-monospace, Consolas, monospace; }
+.sp-chant .sp-x { flex: none; margin-bottom: 6px; }

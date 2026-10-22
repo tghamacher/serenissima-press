@@ -121,7 +121,7 @@
     let side = 0;
     const pc = {
       file, doc, info, title: info.title || file.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '), composer: info.composer,
-      reduction: info.reduction, mens: '', transpose: 0, secs: {}, sections: [],
+      reduction: info.reduction, mens: '', transpose: 0, secs: {}, sections: [], chants: [],
       parts: info.parts.map(p => ({ index: p.index, name: p.name, include: !p.keyboard, label: p.label, clef: '', side: p.keyboard ? 'verso' : (side++ % 2 ? 'recto' : 'verso') }))
     };
     // the book takes its title from its first piece, until you change it
@@ -282,7 +282,9 @@
       const tag = m => many ? `${pc.title}: ${m}` : m;
       warnings.push(...res.warnings.map(tag)); notes.push(...res.notes.map(tag));
       // the sections as found, with the user's names and where each starts (runs on unless chosen)
-      pc.sections = res.sections.map(s => ({ ...s, mode: 'run', ...pc.secs[s.step] }));
+      pc.base = res.sections.slice();
+      addChants(pc, res, sel, warnings);
+      pc.sections = res.sections.map(s => ({ ...s, mode: s.chant ? 'line' : 'run', ...pc.secs[s.step] }));
       res.parts.forEach((p, i) => p.side = sel[i].side);
       // with one piece, its title is the book's
       pieces.push({ title: many ? pc.title : $('title').value, composer: many ? pc.composer : $('composer').value, parts: res.parts, sections: pc.sections, at: pc });
@@ -318,7 +320,79 @@
     document.title = `${$('title').value || 'Serenissima Press'} – ${state.format}`;
   }
   // the sections of the piece shown: rebuilt only when they change, so typing a name keeps its focus
+  // ---- chant verses: each read from GABC and set between the piece's sections, in the voices that sing it
+  // (c.after: 'start', before the first section, or the step of the section it follows; c.voice: 'all' or a
+  // part's index). Each goes in as a section of its own, its tokens spliced into those voices, the bars after
+  // it moved on; a voice that does not sing it has the section empty, and so a "tacet".
+  function addChants(pc, res, sel, warnings) {
+    const placed = {}, todo = pc.chants.filter(c => c.gabc.trim());
+    // a piece without sections is one, from its start
+    if (todo.length && !res.sections.length) res.sections.push({ step: 0, mno: '', name: '', auto: true, movement: true });
+    for (const c of todo) {
+      let ch;
+      try { ch = window.SPGabc.parse(c.gabc); } catch (e) { warnings.push(`${pc.title}, chant: ${e.message}`); continue; }
+      ch.warnings.forEach(w => warnings.push(`${pc.title}, chant ${ch.name}: ${w}`));
+      const secs = res.sections, k = c.after === 'start' ? 0 : c.after === 'end' ? secs.length : secs.findIndex(s => s.step === +c.after && !s.chant) + 1;
+      if (k <= 0 && c.after !== 'start') continue;
+      // after the chant: the next section, or the end of the piece
+      const next = secs[k], lastStep = Math.max(0, ...res.parts.flatMap(p => Object.keys(p.cuts).map(Number)));
+      const base = next ? next.step : lastStep + 1, n = placed[base] = (placed[base] || 0) + 1, step = base - 0.5 + n / 100;
+      res.parts.forEach((p, i) => {
+        const sings = c.voice === 'all' || sel[i].index === +c.voice;
+        // (a piece that opens with a prefatory staff has no cut at its start)
+        const at = next ? (p.cuts[next.step] !== undefined ? p.cuts[next.step] : k === 0 ? 0 : undefined) : p.tokens.length;
+        if (at === undefined) return;
+        const toks = sings ? ch.tokens.map(t => ({ ...t })) : [];
+        p.tokens.splice(at, 0, ...toks);
+        for (const map of [p.cuts, p.loose]) {
+          if (!map) continue;
+          for (const st of Object.keys(map)) if (+st > step) map[st] += toks.length;
+          map[step] = at;
+          if (next && map[next.step] === undefined) map[next.step] = at + toks.length;
+        }
+      });
+      secs.splice(k, 0, { step, mno: 'chant', name: c.name || ch.name, auto: !c.name, chant: { clef: ch.clef, sig: ch.sig } });
+    }
+  }
+  function showChants() {
+    const pc = piece(), box = $('chants'); if (!pc) return;
+    const base = pc.base || [], parts = pc.parts.filter(p => p.include);
+    const key = state.cur + '|' + pc.chants.length + '|' + base.map(s => s.step + s.name).join() + '|' + parts.map(p => p.index).join();
+    if (key === state.chantKey) return;
+    state.chantKey = key; box.innerHTML = '';
+    pc.chants.forEach((c, n) => {
+      const d = document.createElement('div'); d.className = 'sp-chant';
+      const row = document.createElement('div'); row.className = 'sp-row';
+      const field = (label, ctl) => { const l = document.createElement('label'); l.className = 'sp-field'; const s = document.createElement('span'); s.textContent = label; l.append(s, ctl); return l; };
+      const after = document.createElement('select');
+      if (base.length) {
+        after.append(new Option('Before the first section', 'start'));
+        base.forEach(s => after.append(new Option(`After ${s.name || 'm. ' + s.mno}`, s.step)));
+      } else after.append(new Option('Before the piece', 'start'), new Option('After the piece', 'end'));
+      if (![...after.options].some(o => o.value === String(c.after))) c.after = base.length ? base[0].step : 'end';
+      after.value = c.after; after.onchange = () => { c.after = /^(start|end)$/.test(after.value) ? after.value : +after.value; typeset(); };
+      const who = document.createElement('select');
+      who.append(new Option('All voices', 'all'));
+      parts.forEach(p => who.append(new Option(p.label, p.index)));
+      if (![...who.options].some(o => o.value === String(c.voice))) c.voice = 'all';
+      who.value = c.voice; who.onchange = () => { c.voice = who.value === 'all' ? 'all' : +who.value; typeset(); };
+      const x = document.createElement('button'); x.type = 'button'; x.className = 'sp-x'; x.textContent = '×'; x.title = 'Remove this chant';
+      x.onclick = () => { pc.chants.splice(n, 1); state.chantKey = ''; showChants(); typeset(); };
+      row.append(field('Where', after), field('Sung by', who), x);
+      const nm = document.createElement('input'); nm.type = 'text'; nm.value = c.name || ''; nm.placeholder = 'Name (else its first words)';
+      nm.oninput = () => { c.name = nm.value; typeset(); };
+      const ta = document.createElement('textarea'); ta.value = c.gabc; ta.spellcheck = false;
+      ta.placeholder = 'name: Gloria Patri;\n%%\n(c4) GLó(f)ri(gh)a(h) Pa(h)tri,(h.) (:) et(h) Fí(h)li(g)o,(f.) (::)';
+      ta.oninput = () => { c.gabc = ta.value; typeset(); };
+      const load = document.createElement('button'); load.type = 'button'; load.className = 'sp-link'; load.textContent = 'Load a .gabc file';
+      load.onclick = () => { state.chantFor = c; $('chantFile').click(); };
+      const foot = document.createElement('p'); foot.className = 'sp-hint'; foot.append(load);
+      d.append(row, field('Name', nm), ta, foot);
+      box.append(d);
+    });
+  }
   function showSections() {
+    showChants();
     const pc = piece(), box = $('sectionsBox'), tb = $('sections');
     const sections = pc ? pc.sections : [];
     box.hidden = !sections.length;
@@ -334,14 +408,16 @@
         if (!n) { start = document.createElement('span'); start.className = 'nm'; start.textContent = 'Start'; }
         else {
           start = document.createElement('select'); start.setAttribute('aria-label', `Where ${s.name || 'this section'} starts`);
-          start.append(new Option('Runs on', 'run'), new Option('New line', 'line'), new Option(cb ? 'New opening' : 'New page', 'page'));
-          start.value = s.mode || 'run';
+          // a chant, in its own clef, cannot run on from the music before it
+          if (!s.chant) start.append(new Option('Runs on', 'run'));
+          start.append(new Option('New line', 'line'), new Option(cb ? 'New opening' : 'New page', 'page'));
+          start.value = s.mode === 'run' && s.chant ? 'line' : s.mode || 'run';
           start.onchange = () => { mine().mode = start.value; typeset(); };
         }
         const nm = document.createElement('input'); nm.type = 'text'; nm.value = s.name; nm.setAttribute('aria-label', `Name of the section at bar ${s.mno}`);
         nm.title = s.auto ? 'Not named in the edition: taken from its first words' : 'As named in the edition';
         nm.oninput = () => { mine().name = nm.value; typeset(); };
-        const cells = [[start], [nm], [`m. ${s.mno}`], ['']];
+        const cells = [[start], [nm], [s.chant ? 'chant' : s.mno ? `m. ${s.mno}` : ''], ['']];
         cells.forEach(els => { const td = document.createElement('td'); td.append(...els); tr.append(td); });
         tb.append(tr);
       });
@@ -429,6 +505,20 @@
   $('initialFile').onchange = e => {
     const f = e.target.files[0]; if (!f) return;
     const r = new FileReader(); r.onload = () => { state.initialSrc = r.result; typeset(); }; r.readAsDataURL(f);
+  };
+  $('addChant').onclick = () => {
+    const pc = piece(); if (!pc) return;
+    const base = pc.base || [];
+    pc.chants.push({ after: base.length ? base[0].step : 'end', voice: 'all', name: '', gabc: '' });
+    state.chantKey = ''; showChants();
+    const tas = $('chants').querySelectorAll('textarea'); if (tas.length) tas[tas.length - 1].focus();
+  };
+  $('chantFile').onchange = e => {
+    const f = e.target.files[0], c = state.chantFor; e.target.value = '';
+    if (!f || !c) return;
+    const r = new FileReader();
+    r.onload = () => { c.gabc = String(r.result); state.chantKey = ''; showChants(); typeset(); };
+    r.readAsText(f);
   };
   $('print').onclick = () => window.print();
   showFormat(); showMargins();

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Serenissima Press – tests</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 16px; background: #fff; color: #222; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  #summary { font-weight: 600; margin: 8px 0 12px; }
+  #summary.pass { color: #176c2c; } #summary.fail { color: #a11; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { text-align: left; padding: 4px 8px; border-bottom: 1px solid #ddd; vertical-align: top; }
+  td.ok { color: #176c2c; } td.bad { color: #a11; font-weight: 600; }
+  ul { margin: 0; padding-left: 18px; }
+  #frame { width: 1280px; height: 900px; border: 1px solid #ccc; margin-top: 16px; }
+</style>
+</head>
+<body>
+<h1>Serenissima Press – tests</h1>
+<p>Each case loads the app with a score and settings, waits for the book, and checks it. Serve the folder above this one and open <code>/test/</code>; <code>?only=name</code> runs the cases whose name contains it.</p>
+<div id="summary">Running…</div>
+<table><thead><tr><th>Case</th><th>Result</th><th>Details</th></tr></thead><tbody id="results"></tbody></table>
+<iframe id="frame" title="The app under test"></iframe>
+<script src="../js/gabc.js"></script>
+<script src="cases.js"></script>
+<script src="run.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # Serenissima Press
 
-**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.18.2 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
+**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 0.19.0 (beta) · [Release notes](#release-notes) · [Feedback](#feedback)
 
 Turn a MusicXML score of Renaissance polyphony into **partbooks** (one voice per book) or a **choirbook** (voices spread across facing pages), in mensural notation with text underlay, set in the [EMS Serenissima](https://www.earlymusicsources.com/) font.
 
@@ -40,6 +40,7 @@ A link like `index.html?score=examples/o-quam-gloriosum.mxl&format=choirbook` op
 - **Choirbook pages are ruled alike:** at a given staff size every page has the same staves at the same places, as in a ruled choirbook. The voices on a page share them, a busier voice taking more, but each at its own place so the singers can find their parts: of two voices on a page the second starts no higher than halfway down, of three the second no higher than a third of the way and the third no higher than two thirds, and so on (the staves left above a voice stay empty). Where keeping these places would push a voice off the foot of the page, the voices close up instead. When one page is full its lowest voice runs on at the foot of the facing page, below that page's lowest part, under its own name; a run-on is not held to these places. A sign at the end of its last line on the one page, and the same sign before its next line on the other, shows the singer where it goes on, as in the printed choirbooks: a fleur-de-lis, a pointing hand or a leaf (hedera), or none.
 - **Ruled staves, optionally:** the staves the music leaves empty (at the foot of a choirbook page, or after the end of a piece in a partbook), and the rest of a short last line, can be ruled all the same, as in a manuscript, whose pages were ruled before the music was copied. Printed books left the space blank. In a ruled choirbook a voice's "tacet" is set in the middle of its staff, the lines running up to it on each side.
 - **Sections:** the edition's double and final barlines mark sections (Kyrie I, Christe, …), each ending with a double bar, named from the edition or from their first words. Under **Sections** each can run on (the default), start a new line with its own initial and name (in a choirbook, an initial only if it is the first music of its voice on the page), or start a new page (a new opening in a choirbook). In a choirbook the names are not printed: they serve only to choose these settings, and for the "tacet" and the index. A voice silent through a section that starts a new line or page gets a direction such as "Benedictus tacet", as in Morales's *Liber primus missarum* (Rome, 1544).
+- **Plainchant between the polyphony:** for a setting sung in alternation with chant (a Magnificat, a hymn, a Mass), add chant verses in GABC, the notation of Gregorio and GregorioTeX: paste it or load a .gabc file, choose where each goes (before or after a section) and who sings it (all voices, or one). It is set as the books set chant beside polyphony, in black square notes on the staff in the same music font: a punctum as a black breve, a virga as a black longa, a punctum inclinatum as a black semibreve (the diamond), a mora as a dot, flats where GABC places them, the half and full bars as barlines. Each verse starts a new line in its own clef, as does the music after it; a voice that does not sing it has a "tacet". Quilisma, oriscus, liquescents and episemata are set as plain puncta.
 - **Several pieces:** a book can hold several pieces. Each partbook holds its voice of every piece that has it (a piece without that voice is left out, as with a Quintus book); in printed partbooks a piece follows on below the last, or on a new page if you prefer. In a choirbook each piece starts a new opening, with the piece's title and composer as running heads.
 - **Numbering, title page and index:** as in the sources, partbooks are numbered by page in the outer corner (as Gardano numbered his) and choirbooks by leaf, on each right-hand page; in arabic or roman numerals, or not at all. Roman numerals are set in lower case, as the books set them, in page and folio numbers and in names (Bassus ii, Agnus Dei ii). An optional title page gives each partbook its own, headed by its voice, as the Venetian printers did, with your imprint at the foot; with several pieces, an index at the back lists them with their pages or folios.
 - **Voice names:** at the head of each voice, where a piece begins and on later pages or openings; either can be left off.
@@ -67,6 +68,12 @@ If you have a GitHub account you can also [open an issue](https://github.com/tgh
 ## Release notes
 
 Versions are numbered 0.*feature*.*fix* while the tool is in beta: a release with new features raises the middle number, a release of fixes only raises the last.
+
+### 0.19.0 (2026-10-21)
+
+- **Plainchant between the polyphony:** add chant verses in GABC (the notation of Gregorio and GregorioTeX), typed in or loaded from a `.gabc` file, before the piece or after any section, sung by all voices or by one. They are set in square notation in the music font, in their own clef, each starting a new line; a voice that does not sing a verse gets a "tacet".
+- **First initials where a voice first sings:** a voice silent in an opening chant has its large initial on its first music, not on its "tacet".
+- **Tests:** a test page in `test/` loads the app with scores and settings and checks each book.
 
 ### 0.18.2 (2026-10-21)
 
@@ -200,7 +207,8 @@ Versions are numbered 0.*feature*.*fix* while the tool is in beta: a release wit
 
 ## Files
 
-- `index.html`, `css/`, `js/` — the web tool (`convert.js`: MusicXML to mensural tokens; `layout.js`: page layout; `app.js`: controls; `zip.js`: `.mxl` reader)
+- `index.html`, `css/`, `js/` — the web tool (`convert.js`: MusicXML to mensural tokens; `layout.js`: page layout; `app.js`: controls; `zip.js`: `.mxl` reader; `gabc.js`: plainchant in GABC)
+- `test/` — the tests: serve the repository (any local web server) and open `/test/`. Each case loads the app with a score and settings and checks the book: no errors, the warnings expected, nothing beyond the page. Headless: `msedge --headless=new --virtual-time-budget=600000 --dump-dom http://localhost:PORT/test/` puts `PASS n/n` or `FAIL k/n` in the title and a report in `#report`. Add a case to `test/cases.js` for each score that has caused trouble.
 - `cheatsheet.html` — keyboard map of the font
 - `fonts/` — EMS Serenissima, the text fonts and the initial fonts, with their licences
 - `tools/` — the original Windows PowerShell converter (`ConvertTo-Ems.ps1`), which writes HTML/PDF books locally

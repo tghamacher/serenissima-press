@@ -407,15 +407,20 @@
     // voice may be divided there.
     function spans(pc, p, ok, spec) {
       const secs = pc.sections || [];
-      const brk = secs.filter((s, n) => n && (s.mode === 'line' || s.mode === 'page') && p.cuts && p.cuts[s.step] !== undefined && ok(s.step));
-      const starts = [{ at: 0, sec: brk.length ? secs[0] : null, mode: 'piece' }, ...brk.map(s => ({ at: p.cuts[s.step], sec: s, mode: s.mode }))];
+      // a chant verse, in its own clef, starts a new line, and so does the music after it
+      const own = (s, n) => s.chant || (n && secs[n - 1].chant);
+      const brk = secs.filter((s, n) => n && (s.mode === 'line' || s.mode === 'page' || own(s, n)) && p.cuts && p.cuts[s.step] !== undefined && ok(s.step));
+      const starts = [{ at: 0, sec: secs.length && (brk.length || secs[0].chant) ? secs[0] : null, mode: 'piece' }, ...brk.map(s => ({ at: p.cuts[s.step], sec: s, mode: s.mode === 'page' ? 'page' : 'line' }))];
+      // the voice's first initial goes where it first sings (after a chant it is silent in, say); a tacet has none
+      let first = true;
       return starts.map((st, n) => {
-        const end = n + 1 < starts.length ? starts[n + 1].at : p.tokens.length;
-        const v = { label: p.label, clef: p.clef, sig: p.sig, tokens: p.tokens.slice(st.at, end), off: st.at, sec: st.sec, mode: st.mode };
+        const end = n + 1 < starts.length ? starts[n + 1].at : p.tokens.length, ch = st.sec && st.sec.chant;
+        const v = { label: p.label, clef: ch ? ch.clef : p.clef, sig: ch ? ch.sig : p.sig, tokens: p.tokens.slice(st.at, end), off: st.at, sec: st.sec, mode: st.mode };
         v.tacet = !v.tokens.some(t => t.t === 'n');
         // the same without an initial, its first word whole (in a choirbook, for a section after the first on a page)
         const plain = { ...v, tokens: v.tokens.map(t => ({ ...t })) };
-        dress(v, st.mode === 'piece' || (st.sec && st.sec.movement) ? spec : I.other);
+        dress(v, v.tacet ? { style: 'none', lines: 0 } : first || (st.sec && st.sec.movement) ? spec : I.other);
+        if (!v.tacet) first = false;
         v.plain = dress(plain, { style: 'none', lines: 0 });
         return v;
       });
