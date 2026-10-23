@@ -34,7 +34,7 @@
     const fmt = v => metric() ? String(Math.round(v * k)) : String(+v.toFixed(2));
     for (const opt of $('margins').options) {
       const a = MARGINS[opt.value]; if (!a) continue;
-      const base = { narrow: 'Narrow', normal: 'Normal', wide: 'Wide', book: 'Book: narrow inside, deep foot' }[opt.value];
+      const base = { narrow: 'Narrow', normal: 'Normal', wide: 'Wide', book: 'Book: narrow inside, wide bottom' }[opt.value];
       opt.text = opt.value === 'book' ? base : `${base} (${fmt(a[0])} ${unit})`;
     }
     $('margins').value = m.preset;
@@ -43,7 +43,7 @@
     $('mUnit').textContent = unit;
     const a = margins();
     $('marginHint').textContent = (m.preset === 'book' ? `Top ${fmt(a.top)}, bottom ${fmt(a.bottom)}, inside ${fmt(a.inside)}, outside ${fmt(a.outside)} ${unit}. ` : '') +
-      (state.format === 'choirbook' ? 'Inside is the fold between the two pages of an opening.' : 'Inside is the edge at the binding, on the left of right-hand pages and the right of left-hand ones.');
+      (state.format === 'choirbook' ? '“Inside” is the fold between the two facing pages.' : '“Inside” is the bound edge: the left side of a right-hand page, the right side of a left-hand one.');
   }
 
   // ---- fixed option lists
@@ -82,7 +82,7 @@
       const p = document.createElement('p'); p.className = 'sp-report';
       const b = document.createElement('button'); b.type = 'button'; b.className = 'sp-link'; b.textContent = 'Report a problem with this score';
       b.onclick = () => window.open(reportUrl(warnings), '_blank', 'noopener');
-      p.append(b, ' (opens the feedback form with your settings filled in)'); box.append(p);
+      p.append(b, ' (opens the feedback form with your settings already filled in)'); box.append(p);
     }
   }
   // the feedback form (no account needed), with the version and the settings in use filled in, to
@@ -112,7 +112,7 @@
         const isZip = new Uint8Array(buf, 0, 2).join() === '80,75';   // "PK"
         // a saved project, told by its contents (iOS may offer it under any name)
         if (!isZip && /^\s*\{\s*"serenissima"/.test(new TextDecoder().decode(buf.slice(0, 64)))) {
-          if (state.pieces.length && !confirm('Opening a project replaces the book you have open. Open it?')) return;
+          if (state.pieces.length && !confirm('Opening this project will replace the book you’re working on. Continue?')) return;
           openProject(JSON.parse(new TextDecoder().decode(buf))); return;
         }
         const xml = isZip ? await window.SPZip.readMxl(buf) : new TextDecoder().decode(buf);
@@ -182,7 +182,7 @@
       const inc = document.createElement('input'); inc.type = 'checkbox'; inc.checked = p.include; inc.title = `Include ${p.name}`; inc.setAttribute('aria-label', `Include ${p.name}`);
       inc.onchange = () => { p.include = inc.checked; typeset(); };
       const lab = document.createElement('input'); lab.type = 'text'; lab.value = p.label; lab.setAttribute('aria-label', `Label for ${p.name}`);
-      lab.title = 'In partbooks, voices with the same label go in the same book';
+      lab.title = 'Voices with the same label share a partbook';
       lab.oninput = () => { p.label = lab.value; typeset(); };
       const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = p.name; nm.title = p.name;
       const clef = document.createElement('select'); clef.setAttribute('aria-label', `Clef for ${p.name}`);
@@ -201,14 +201,14 @@
   // what changes with the format: the page column, the initials, how pages are numbered, sections
   // a choirbook's staves: after the period books, or roomier (with an automatic staff size)
   const SPACING_HINTS = {
-    print: 'The staff about 4.4% of the page high (about 19 mm on 11 × 17), as in Moderne’s print of Morales’s masses (Lyon 1546: 42 cm, staff 18.6 mm): staves about two staff-heights apart, the words close under them. For a choir gathered round the book.',
-    manuscript: 'The staff about 4.1% of the page high (about 17.6 mm on 11 × 17), as in the Alamire workshop’s choirbooks: staves about two staff-heights apart, the words close under them. For a choir gathered round the book.',
-    modern: 'More room between the staves and for the words, as in a modern edition, with smaller staves (about 12 mm on 11 × 17), so more fits on an opening.'
+    print: 'Big staves for a choir gathered around one book, modeled on Moderne’s 1546 print of Morales’s masses. Each staff is about 4.4% of the page height (about 19 mm on 11 × 17 paper), with staves two staff-heights apart and the words tucked close underneath.',
+    manuscript: 'Big staves for a choir gathered around one book, modeled on the Alamire workshop’s choirbooks. Each staff is about 4.1% of the page height (about 17.6 mm on 11 × 17 paper), with staves two staff-heights apart and the words tucked close underneath.',
+    modern: 'More space between the staves and for the words, as in a modern edition. The staves are smaller (about 12 mm on 11 × 17 paper), so more music fits on each opening.'
   };
   function showSpacing() {
-    $('spacingPeriod').text = style() === 'manuscript' ? 'Period, as in the manuscript choirbooks' : 'Period, as in the printed choirbooks';
+    $('spacingPeriod').text = style() === 'manuscript' ? 'Period: like the manuscript choirbooks' : 'Period: like the printed choirbooks';
     const k = $('spacing').value === 'modern' ? 'modern' : style();
-    $('spacingHint').textContent = SPACING_HINTS[k] + ($('staffSize').value === '0' ? '' : ' (A staff size is chosen above; Automatic follows this.)');
+    $('spacingHint').textContent = SPACING_HINTS[k] + ($('staffSize').value === '0' ? '' : ' Your staff size above overrides the size given here. Set it to Automatic to use this one.');
   }
 
   // ---- a book, partbook or choirbook, is printed or a manuscript. The style sets the type, the initials,
@@ -222,12 +222,12 @@
   };
   const STYLE_HINTS = {
     choirbook: {
-      print: 'After the printed choirbooks of Dorico (Rome) and Moderne (Lyon): roman type, woodcut initials, arabic folio numbers, black and white, the spaces the music leaves blank.',
-      manuscript: 'After the manuscript choirbooks of the Alamire workshop: gothic script, flourished initials in red, roman folio numbers, ruled pages, and "Residuum" down the margin where a voice goes on from the opening before.'
+      print: 'Modeled on the printed choirbooks of Dorico in Rome and Moderne in Lyon: roman type, woodcut initials, arabic folio numbers, black ink only, and blank space wherever there’s no music.',
+      manuscript: 'Modeled on the Alamire workshop’s manuscript choirbooks: gothic script, decorated red initials, roman folio numbers, ruled staves, and “Residuum” written down the margin where a voice continues from the previous opening.'
     },
     partbook: {
-      print: 'After the printed partbooks of Venice and Paris (Gardano, Scotto, Le Roy & Ballard): roman type, woodcut initials, arabic page numbers, black and white, the spaces the music leaves blank.',
-      manuscript: 'After the manuscript partbooks of the time: gothic script, flourished initials in red, roman page numbers, ruled pages.'
+      print: 'Modeled on the printed partbooks of Venice and Paris (Gardano, Scotto, Le Roy & Ballard): roman type, woodcut initials, arabic page numbers, black ink only, and blank space wherever there’s no music.',
+      manuscript: 'Modeled on manuscript partbooks of the period: gothic script, decorated red initials, roman page numbers and ruled staves.'
     }
   };
   state.styles = { partbook: 'print', choirbook: 'print' };
@@ -256,15 +256,15 @@
     $('initial2For').textContent = cb ? 'Other voices and sections' : 'Sections';
     // as in the sources: printed partbooks are numbered by page, choirbooks by leaf (on the right-hand page)
     $('numberingLabel').textContent = cb ? 'Folio numbers' : 'Page numbers';
-    $('numberingHint').textContent = cb ? 'Choirbooks are numbered by leaf: one number on each right-hand page.' : 'Printed partbooks are numbered by page, in the outer corner; Roman numerals were common until about 1550.';
+    $('numberingHint').textContent = cb ? 'Choirbooks are numbered by leaf, so only the right-hand pages get a number.' : 'Printed partbooks number every page in the outer corner. Roman numerals were common until about 1550.';
     $('pieceStartRow').hidden = cb;
     $('signRow').hidden = !cb;
     $('spacingRow').hidden = !cb;
     showStyle();
     $('secWhere').textContent = cb ? 'Opening' : 'Page';
     $('secHint').textContent = cb
-      ? 'The music runs on from opening to opening, turning only at a bar every voice has reached. A section can start a new line or a new opening; its name is not printed in a choirbook (only in a "tacet" and the index). Each voice has one initial on a page, where its part begins.'
-      : 'The music runs on. A section can start a new line, with its initial and name, or a new page. A voice silent through such a section gets “tacet”.';
+      ? 'The music flows from one opening to the next, turning the page only at a bar every voice has reached. A section can also start on a new line or a new opening. Choirbooks don’t print section names, except in a “tacet” and the index. Each voice gets one initial per page, where its part begins.'
+      : 'The music flows on without a break. A section can also start on a new line, with its own initial and name, or on a new page. A voice that’s silent for the whole section gets a “tacet”.';
     state.secKey = '';
   }
 
@@ -276,7 +276,7 @@
     const many = state.pieces.length > 1, warnings = [], notes = [], pieces = [];
     for (const pc of state.pieces) {
       const sel = pc.parts.filter(p => p.include);
-      if (!sel.length) { warnings.push(`${pc.title}: no voices selected, so it is left out.`); pc.sections = []; continue; }
+      if (!sel.length) { warnings.push(`${pc.title}: no voices are selected, so it’s left out of the book.`); pc.sections = []; continue; }
       let res;
       try {
         res = C.convert(pc.doc, {
@@ -422,13 +422,13 @@
         else {
           start = document.createElement('select'); start.setAttribute('aria-label', `Where ${s.name || 'this section'} starts`);
           // a chant, in its own clef, cannot run on from the music before it
-          if (!s.chant) start.append(new Option('Runs on', 'run'));
+          if (!s.chant) start.append(new Option('Continues', 'run'));
           start.append(new Option('New line', 'line'), new Option(cb ? 'New opening' : 'New page', 'page'));
           start.value = s.mode === 'run' && s.chant ? 'line' : s.mode || 'run';
           start.onchange = () => { mine().mode = start.value; typeset(); };
         }
         const nm = document.createElement('input'); nm.type = 'text'; nm.value = s.name; nm.setAttribute('aria-label', `Name of the section at bar ${s.mno}`);
-        nm.title = s.auto ? 'Not named in the edition: taken from its first words' : 'As named in the edition';
+        nm.title = s.auto ? 'The edition doesn’t name this section, so its first words are used' : 'As named in the edition';
         nm.oninput = () => { mine().name = nm.value; typeset(); };
         const cells = [[start], [nm], [s.chant ? 'chant' : s.mno ? `m. ${s.mno}` : ''], ['']];
         cells.forEach(els => { const td = document.createElement('td'); td.append(...els); tr.append(td); });
@@ -464,7 +464,7 @@
   drop.addEventListener('drop', e => { if (e.dataTransfer.files.length) loadFiles([...e.dataTransfer.files]); });
   $('sample').onclick = async () => {
     try { const r = await fetch('examples/o-quam-gloriosum.mxl'); if (!r.ok) throw new Error(); await loadFiles([new File([await r.arrayBuffer()], 'o-quam-gloriosum.mxl')]); }
-    catch { status('Could not load the sample.'); }
+    catch { status('Couldn’t load the sample. Check your connection and try again.'); }
   };
   document.querySelectorAll('[data-format]').forEach(b => b.onclick = () => {
     saveLook();
@@ -553,7 +553,7 @@
     };
   }
   function openProject(pj) {
-    if (!pj || pj.serenissima !== 1 || !Array.isArray(pj.pieces)) throw new Error('This is not a Serenissima Press project, or one from a later version.');
+    if (!pj || pj.serenissima !== 1 || !Array.isArray(pj.pieces)) throw new Error('This file isn’t a Serenissima Press project, or it was saved by a newer version.');
     const b = pj.book || {};
     state.chantKey = '';
     state.pieces = [];
@@ -602,7 +602,7 @@
     const t = (pj.book && pj.book.controls && pj.book.controls.title) || pj.pieces[0].title || pj.pieces[0].file;
     const when = new Date(pj.saved), n = pj.pieces.length;
     $('resume').textContent = `${t}${n > 1 ? ` (${n} pieces)` : ''}`;
-    $('resume').title = `Last changed ${when.toLocaleString()}`;
+    $('resume').title = `Last edited ${when.toLocaleString()}`;
     $('resume').onclick = () => { try { openProject(pj); } catch (e) { status(e.message); } };
     $('resumeHint').hidden = false;
   }
@@ -634,7 +634,7 @@
     try {
       const files = [];
       for (const s of q.getAll('score')) {
-        const r = await fetch(s); if (!r.ok) throw new Error(`Could not load ${s} (${r.status}).`);
+        const r = await fetch(s); if (!r.ok) throw new Error(`Couldn’t load ${s} (${r.status}).`);
         files.push(new File([await r.arrayBuffer()], s.split('/').pop()));
       }
       await loadFiles(files);

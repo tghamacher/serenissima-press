@@ -15,12 +15,12 @@
     for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--) {
       if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
     }
-    if (eocd < 0) throw new Error('Not a valid .mxl (zip) file.');
+    if (eocd < 0) throw new Error('This isn’t a valid .mxl file. An .mxl should be a zip archive.');
     const count = view.getUint16(eocd + 10, true);
     let p = view.getUint32(eocd + 16, true);
     const entries = new Map(), dec = new TextDecoder();
     for (let n = 0; n < count; n++) {
-      if (view.getUint32(p, true) !== 0x02014b50) throw new Error('Damaged .mxl file.');
+      if (view.getUint32(p, true) !== 0x02014b50) throw new Error('This .mxl file is damaged.');
       const method = view.getUint16(p + 10, true), size = view.getUint32(p + 20, true);
       const nameLen = view.getUint16(p + 28, true), extraLen = view.getUint16(p + 30, true), commentLen = view.getUint16(p + 32, true);
       const local = view.getUint32(p + 42, true), name = dec.decode(bytes.subarray(p + 46, p + 46 + nameLen));
@@ -29,7 +29,7 @@
         const data = bytes.subarray(start, start + size);
         if (method === 0) return data;
         if (method === 8) return inflateRaw(data);
-        throw new Error('Unsupported compression in .mxl file.');
+        throw new Error('This .mxl file uses a kind of compression that isn’t supported. Try exporting uncompressed .musicxml instead.');
       });
       p += 46 + nameLen + extraLen + commentLen;
     }
@@ -46,7 +46,7 @@
       if (rf) root = rf.getAttribute('full-path');
     }
     if (!root || !entries.has(root)) root = [...entries.keys()].find(k => !k.startsWith('META-INF/') && /\.(xml|musicxml)$/i.test(k));
-    if (!root) throw new Error('No MusicXML score found inside the .mxl file.');
+    if (!root) throw new Error('There’s no MusicXML score inside this .mxl file.');
     return dec.decode(await entries.get(root)());
   }
 

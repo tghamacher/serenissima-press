@@ -46,10 +46,10 @@
   // ---------------------------------------------------------------- loading
   function parseScore(xmlText) {
     const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
-    if (doc.getElementsByTagName('parsererror').length) throw new Error('This file is not valid XML.');
+    if (doc.getElementsByTagName('parsererror').length) throw new Error('This file isn’t valid XML. It may be damaged, or not a MusicXML file at all.');
     const root = doc.documentElement;
-    if (root.localName === 'score-timewise') throw new Error('Timewise MusicXML is not supported. Export as standard (partwise) MusicXML.');
-    if (root.localName !== 'score-partwise') throw new Error('This is not a MusicXML score.');
+    if (root.localName === 'score-timewise') throw new Error('This score is saved as timewise MusicXML, which isn’t supported. Export it again as standard (partwise) MusicXML.');
+    if (root.localName !== 'score-partwise') throw new Error('This file isn’t a MusicXML score.');
     return doc;
   }
 
@@ -107,8 +107,8 @@
     }
     const out = []; let left = sb;
     for (const [v, k] of table) while (left >= v - 1e-6) { out.push(['val', k]); left -= v; }
-    if (left > 1e-6) warn(`${where}: ${+sb.toFixed(4)} semibreves can't be written exactly; ${+left.toFixed(4)} dropped.`);
-    else if (out.length > 1 && !isRest) warn(`${where}: ${+sb.toFixed(4)} semibreves split into ${out.length} notes (tie or odd value). Check it.`);
+    if (left > 1e-6) warn(`${where}: a note or rest ${+sb.toFixed(4)} semibreves long can’t be written exactly, so the leftover ${+left.toFixed(4)} was dropped. Check it.`);
+    else if (out.length > 1 && !isRest) warn(`${where}: a note ${+sb.toFixed(4)} semibreves long (tied, or an unusual length) was written as ${out.length} notes. Check it.`);
     return out;
   }
 
@@ -120,9 +120,9 @@
     const measureSb = beats * 4 / type / reduction;
     if (beats === 3 && near(measureSb, 3)) return 'T3';
     if (beats === 3 && near(measureSb, 1.5)) return 'T5';
-    if (beats === 6) { warn(`Time ${beats}/${type}: the font has no prolatio major sign (C or O with a dot); used C.`); return 'T1'; }
+    if (beats === 6) { warn(`Time ${beats}/${type}: the font has no sign for prolatio major (C or O with a dot), so C is used instead.`); return 'T1'; }
     if ([1, 2, 4].includes(beats)) return 'T1';
-    warn(`Time ${beats}/${type} has no obvious mensuration sign; used C.`); return 'T1';
+    warn(`There’s no obvious mensuration sign for ${beats}/${type} time, so C is used. You can choose a different one under Mensuration sign.`); return 'T1';
   }
 
   // A prefatory staff (incipit): editions often open with a measure showing the original clef and
@@ -187,8 +187,8 @@
         if (near(n.start, prev.start) && n.p === prev.p) continue;   // the same note reached twice
         // usually a note misplaced by the exporting program: move it after the note it overlaps if there is room
         const d = n.end - n.start, next = mine[k + 1] ? mine[k + 1].start : mlen;
-        if (prev.end + d <= next + 1e-6) { out.push({ ...n, start: prev.end, end: prev.end + d }); warn(`${where}: a note overlapped the one before it and was moved after it. Check it.`); }
-        else warn(`${where}: a note overlapping the one before it was dropped. Check it.`);
+        if (prev.end + d <= next + 1e-6) { out.push({ ...n, start: prev.end, end: prev.end + d }); warn(`${where}: a note overlapped the one before it, so it was moved to follow it. Check it.`); }
+        else warn(`${where}: a note overlapping the one before it was left out. Check it.`);
         continue;
       }
       out.push(n);
@@ -209,7 +209,7 @@
       else off.push(s.mno);
     });
     const ms = [...new Set(off)];
-    if (ms.length) warn(`${name}: text taken from the other voice on its staff; ${off.length} syllable(s) don't match its rhythm (m. ${ms.slice(0, 8).join(', ')}${ms.length > 8 ? '…' : ''}). Check the underlay.`);
+    if (ms.length) warn(`${name}: the words were taken from the other voice on the same staff, but ${off.length} syllable(s) don’t fit this voice’s rhythm (m. ${ms.slice(0, 8).join(', ')}${ms.length > 8 ? '…' : ''}). Check the underlay.`);
   }
   // A voice with its own text: add a word the other voice carries where this one starts a note untexted
   // (as "A-" of "Amen" written only in the other voice), unless this voice sings that word itself next.
@@ -245,7 +245,7 @@
     if (!info.some(m => m.backward)) return ms.map(el => ({ el, pass: 1 }));
     if (mode !== 'out') return info.map((m, i) => ({ el: m.el, pass: 1, open: m.forward && i > 0, close: m.backward }));
     const fwd = info.find(m => m.forward);
-    warn(`Repeats are written out in full${fwd ? ` (from m.${fwd.el.getAttribute('number')})` : ''}. Choose "Repeat signs" to keep them as written.`);
+    warn(`Repeats are written out in full${fwd ? ` (from m. ${fwd.el.getAttribute('number')})` : ''}. To keep the repeat signs instead, choose “Keep repeat signs” under Repeats.`);
     const order = [];
     let i = 0, from = 0, pass = 1, after = false;
     while (i < info.length && order.length < info.length * 10) {
@@ -338,7 +338,7 @@
       const key2 = keyAlter(shown, mod(dia, 7));
       let accKey = null;
       if (alter2 !== key2 && (!editorial || o.ficta)) {
-        if (Math.abs(alter2) > 1) warn(`${where}: double sharp/flat can't be shown.`);
+        if (Math.abs(alter2) > 1) warn(`${where}: double sharps and double flats can’t be shown.`);
         accKey = alter2 > key2 ? '+' : 'b';
       }
       const ties = kids(node, 'tie').map(t => t.getAttribute('type'));
@@ -354,9 +354,9 @@
 
     measureOrder(partEl, o.repeats, warn).forEach((step, si) => {
       const measure = step.el, revisit = seen.has(measure); pass = step.pass; seen.add(measure);
-      const mno = measure.getAttribute('number'), edMem = {}, where = `${name} m.${mno}`;
+      const mno = measure.getAttribute('number'), edMem = {}, where = `${name} m. ${mno}`;
       const incipit = !events.some(e => e.kind === 'note' || e.kind === 'rest') && isPrefatory(measure);
-      if (incipit) warn('The score opens with a prefatory staff (original clefs and signs): its clefs and signs are used, its measure is not printed.');
+      if (incipit) warn('The score opens with a prefatory staff showing the original clefs and signs. Those clefs and signs are used, but the prefatory bar itself isn’t printed.');
       if (!incipit && secs && secs.has(si) && events.length) {
         if (events[events.length - 1].kind === 'bar') events.pop();
         events.push({ kind: 'sec', t0: mstart });
@@ -372,15 +372,15 @@
             const d = kid(node, 'divisions'); if (d) divisions = +text(d);
             const k = kid(node, 'key', 'fifths');
             if (k) {
-              if (events.length && !revisit) warn(`${name} m.${mno}: key change; signature not reprinted, accidentals follow the new key.`);
+              if (events.length && !revisit) warn(`${name} m. ${mno}: the key changes here. The new signature isn’t printed, but the accidentals follow the new key.`);
               fifths = +text(k); shown = fifths + tr.fifths;
-              if (shown > 0) { warn(`${name}: the key needs ${shown} sharp(s); mensural notation has no sharp signatures, so each sharp is printed on its note. Consider transposing.`); shown = 0; }
+              if (shown > 0) { warn(`${name}: this key needs ${shown} sharp(s). Mensural notation has no sharp key signatures, so each sharp is printed beside its note. You may want to transpose.`); shown = 0; }
             }
             const c = kids(node, 'clef').find(c => !c.getAttribute('number') || c.getAttribute('number') === '1');
             if (c && !(clefInfo && c.getAttribute('print-object') === 'no')) {   // a hidden clef is the edition's, not the source's
               const ci = { sign: text(kid(c, 'sign')), line: +text(kid(c, 'line')) || 0, octave: +text(kid(c, 'clef-octave-change')) || 0 };
               if (!incipit && !editionClef) editionClef = ci;
-              if (!clefInfo) clefInfo = ci; else if (ci.sign !== clefInfo.sign || ci.line !== clefInfo.line) warn(`${name} m.${mno}: clef change ignored (kept the first clef).`);
+              if (!clefInfo) clefInfo = ci; else if (ci.sign !== clefInfo.sign || ci.line !== clefInfo.line) warn(`${name} m. ${mno}: clef change ignored. The voice keeps its first clef.`);
             }
             const t = kid(node, 'time');
             if (t && kid(t, 'beats')) {
@@ -407,7 +407,7 @@
           case 'backup': pos -= dur(node); break;
           case 'forward': pos += dur(node); mlen = Math.max(mlen, pos); break;
           case 'note': {
-            if (kid(node, 'grace')) { warn(`${where}: grace note skipped.`); break; }
+            if (kid(node, 'grace')) { warn(`${where}: grace note left out.`); break; }
             if (kid(node, 'cue') || !kid(node, 'duration')) break;
             const chord = !!kid(node, 'chord'), d = dur(node), start = chord ? last : pos;
             if (!chord) { last = pos; pos += d; mlen = Math.max(mlen, pos); }
@@ -438,7 +438,7 @@
       else {
         if (voice === null && items.length) voice = items[0].voice;
         line = items.filter(it => it.voice === voice);
-        if (line.some(it => it.chord)) { warn(`${where}: chord note skipped (one line per part).`); line = line.filter(it => !it.chord); }
+        if (line.some(it => it.chord)) { warn(`${where}: chord notes left out. Each part can only hold a single line of music.`); line = line.filter(it => !it.chord); }
       }
       // a bracket belongs to this line unless it names another voice; at the same moment a closing
       // bracket comes before the notes that start then, an opening one just before them
@@ -521,7 +521,7 @@
     const placeOf = (dia, where) => {
       const p = line + (dia - ref);
       if (p >= 0 && p <= 14) return { k: PITCH_KEYS[p] };
-      if (!o.ledgers) warn(`${where}: note is past the font's range in ${clefName}; placed at the nearest position. Turn on extra ledger lines to draw it.`);
+      if (!o.ledgers) warn(`${where}: this note is out of the font’s range in ${clefName}, so it was placed at the nearest position. Turn on “Add ledger lines” under Notation to draw it at its pitch.`);
       return { k: PITCH_KEYS[Math.max(0, Math.min(14, p))], lp: o.ledgers ? p : undefined };
     };
     let sig = '';
@@ -609,7 +609,7 @@
     if (voices.length < 2) return;
     const n = Math.max(...voices.map(v => v.lens.length));
     const short = voices.filter(v => v.lens.length < n);
-    if (short.length && short.length < voices.length) for (const v of short) warn(`${v.label} has ${v.lens.length} bars where the other voices have ${n}: check for a missing bar.`);
+    if (short.length && short.length < voices.length) for (const v of short) warn(`${v.label} has ${v.lens.length} bars, but the other voices have ${n}. A bar may be missing.`);
     const off = new Map(voices.map(v => [v, []]));
     for (let i = 0; i < n; i++) {
       const here = voices.filter(v => v.lens[i]), count = new Map();
@@ -624,7 +624,7 @@
       }
     }
     for (const [v, bars] of off) if (bars.length)
-      warn(`${v.label} is out of step with the other voices in ${bars.length > 1 ? bars.length + ' bars' : 'one bar'}: ${bars.slice(0, 6).join(', ')}${bars.length > 6 ? `, and ${bars.length - 6} more` : ''}. A note or rest there is missing or has the wrong value.`);
+      warn(`${v.label} is out of step with the other voices in ${bars.length > 1 ? bars.length + ' bars' : 'one bar'}: ${bars.slice(0, 6).join(', ')}${bars.length > 6 ? `, and ${bars.length - 6} more` : ''}. Look for a missing note or rest, or one with the wrong value.`);
   }
 
   // ---------------------------------------------------------------- main
@@ -639,7 +639,7 @@
     const parts = [], clefs = [], lens = [];
     for (const sel of o.parts) {
       const entry = info.parts[sel.index], el = partEls[entry.part], name = entry.name, label = sel.label || partLabel(name);
-      if (entry.split) warn(`${entry.split.staff}: two voices share this staff, so it was split by pitch into ${entry.split.pair.join(' and ')}. Check where they cross.`);
+      if (entry.split) warn(`${entry.split.staff}: two voices share this staff, so they were separated by pitch into ${entry.split.pair.join(' and ')}. Check the places where they cross.`);
       const parsed = readPart(el, name, o, tr, warn, entry.split, secSteps);
       const dias = parsed.events.filter(e => e.kind === 'note').map(e => e.dia);
       const clefName = o.clefs === 'modern' && !sel.clef ? modernClef(name, parsed.editionClef, dias)
@@ -657,7 +657,7 @@
     // "ij" within a section only: a new section starts its text afresh
     if (o.ij) for (const p of parts) sections.forEach((s, k) => { if (!k || p.cuts[s.step] !== undefined) markRepeats(slice(p, k)); });
     // not a problem, but worth knowing: one note for all the parts
-    const notes = clefs.length ? [`The font reaches only one ledger line past the staff, so, as a scribe would, these parts take a clef that keeps them on it: ${clefs.join(', ')}. Choose another in the parts table, or modern clefs, if you like.`] : [];
+    const notes = clefs.length ? [`The font only reaches one ledger line beyond the staff, so these parts get a clef that keeps them on it, as a scribe would have done: ${clefs.join(', ')}. You can pick a different clef in the voices table, or switch to modern clefs under Notation.`] : [];
     return { parts, sections: sections.length > 1 ? sections : [], warnings, notes };
   }
 

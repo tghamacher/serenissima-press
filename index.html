@@ -14,7 +14,7 @@
 <body>
 <header class="sp-top">
   <h1>Serenissima Press</h1><span class="ver" id="version" data-version="1.1.0">version 1.1.0</span>
-  <p>MusicXML in, Renaissance partbooks and choirbooks out: mensural notation with text underlay.</p>
+  <p>Turn MusicXML scores into Renaissance partbooks and choirbooks, in mensural notation with the words set underneath.</p>
   <nav><a href="cheatsheet.html">Font cheat sheet</a><a id="feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform" target="_blank" rel="noopener">Feedback</a><a href="https://github.com/tghamacher/serenissima-press" target="_blank" rel="noopener">GitHub</a><a href="#about">About</a><select id="theme" class="sp-theme" aria-label="Colour theme"><option value="system">System theme</option><option value="light">Light</option><option value="dark">Dark</option></select></nav>
 </header>
 
@@ -23,11 +23,11 @@
     <details class="sp-group" data-group="music" open><summary>1 · Music</summary>
     <label class="sp-drop" id="drop" tabindex="0">
       <strong id="dropTitle">Choose MusicXML files</strong>
-      <small>.musicxml, .xml or .mxl — one piece or several — or a saved project; or drop them here</small>
+      <small>Click to browse, or drag files here. Accepts .musicxml, .xml and .mxl scores (several at once) and saved projects.</small>
       <input type="file" id="file" accept=".musicxml,.xml,.mxl,.serenissima" multiple hidden>
     </label>
     <ol class="sp-pieces" id="pieces"></ol>
-    <p class="sp-hint" style="margin-top:8px" id="resumeHint" hidden>Pick up where you left off: <button class="sp-link" id="resume" type="button"></button></p>
+    <p class="sp-hint" style="margin-top:8px" id="resumeHint" hidden>Continue where you left off: <button class="sp-link" id="resume" type="button"></button></p>
     <p class="sp-hint" style="margin-top:8px" id="sampleHint">No file handy? <button class="sp-link" id="sample" type="button">Try the sample</button></p>
     </details>
 
@@ -50,13 +50,13 @@
         <label class="sp-field"><span>Page size</span><select id="page"></select></label>
         <label class="sp-field"><span>Orientation</span><select id="orient"><option value="portrait">Portrait (tall)</option><option value="landscape">Landscape (wide)</option></select></label>
       </div>
-      <p class="sp-hint" id="pageHint" hidden>Partbooks of this size were usually printed oblong: choose Landscape for the period shape.</p>
+      <p class="sp-hint" id="pageHint" hidden>Partbooks this size were usually printed oblong. Choose Landscape for the historical shape.</p>
       <label class="sp-field"><span>Margins</span>
         <select id="margins">
           <option value="narrow">Narrow</option>
           <option value="normal">Normal</option>
           <option value="wide">Wide</option>
-          <option value="book">Book: narrow inside, deep foot</option>
+          <option value="book">Book: narrow inside, wide bottom</option>
           <option value="custom">Custom…</option>
         </select>
       </label>
@@ -81,40 +81,40 @@
         <label class="sp-field"><span>Staves and spacing</span>
           <select id="spacing">
             <option value="period" id="spacingPeriod">Period</option>
-            <option value="modern">Modern: roomier, smaller staves</option>
+            <option value="modern">Modern: smaller staves, more space</option>
           </select>
         </label>
         <p class="sp-hint" id="spacingHint"></p>
       </div>
       <div id="tightRow" hidden>
-        <label class="sp-check"><input type="checkbox" id="tight" checked> Notes close together, as the scribes wrote them</label>
-        <p class="sp-hint">As in the Alamire workshop's books: the notes of a melisma almost touching, the words spread under them, a note moved on only to keep its syllable clear of the one before. Off, the notes are spaced as in the printed books.</p>
+        <label class="sp-check"><input type="checkbox" id="tight" checked> Close note spacing</label>
+        <p class="sp-hint">Packs the notes together the way the Alamire workshop's scribes did. Melismas nearly touch, and notes only spread out where a syllable needs the room. Turn it off to space the notes as in printed books.</p>
       </div>
       <label class="sp-field"><span>Text type</span>
         <select id="textType"><option value="roman">Roman (EB Garamond)</option><option value="gothic">Gothic (Rotunda Pommerania)</option></select>
       </label>
-      <p class="sp-hint">Gothic is the rounded blackletter of the earliest music prints and of Spanish and German books, with long and round s and the printers' ligatures. Roman came in with the humanist presses.</p>
-      <div class="sp-sub">Voice names at the head of the music</div>
+      <p class="sp-hint">Gothic is a rounded blackletter, used in the earliest music prints and in many Spanish and German books. It comes with long s and the old printers' ligatures. Roman type arrived later with the humanist presses.</p>
+      <div class="sp-sub">Print the voice names</div>
       <div class="sp-row">
-        <label class="sp-check"><input type="checkbox" id="labelFirst" checked> Where a piece begins</label>
+        <label class="sp-check"><input type="checkbox" id="labelFirst" checked> At the start of a piece</label>
         <label class="sp-check"><input type="checkbox" id="labelRest" checked> On later pages</label>
       </div>
       <div id="ruleRow">
-        <label class="sp-check"><input type="checkbox" id="ruleEmpty"> Rule the unused staves</label>
-        <p class="sp-hint">As in a manuscript, whose pages were ruled before the music was copied. Printed books left the space blank.</p>
+        <label class="sp-check"><input type="checkbox" id="ruleEmpty"> Draw staff lines on empty staves</label>
+        <p class="sp-hint">Scribes ruled their pages before copying the music, so leftover staves still have lines. Printed books left that space blank.</p>
       </div>
       <div id="signRow" hidden>
-        <label class="sp-field"><span>Sign where a voice runs on to the facing page</span>
+        <label class="sp-field"><span>Continuation sign</span>
           <select id="signum"><option value="fleur">⚜ Fleur-de-lis</option><option value="hand">☞ Pointing hand</option><option value="hedera">❦ Leaf (hedera)</option><option value="none">None</option></select>
         </label>
-        <p class="sp-hint">When a page is full, its lowest voice goes on at the foot of the facing page. The same sign at the end of its line and before its next line shows the singer where to look.</p>
+        <p class="sp-hint">When a page fills up, its lowest voice continues at the bottom of the facing page. A matching sign at the break and where the music picks up shows the singer where to look.</p>
       </div>
       <label class="sp-check"><input type="checkbox" id="titlePage"> Title page</label>
-      <label class="sp-field" id="imprintRow" hidden><span>Imprint, at the foot of the title page</span><input type="text" id="imprint" placeholder="e.g. Edited by A. Singer · MMXXVI"></label>
+      <label class="sp-field" id="imprintRow" hidden><span>Imprint (bottom of the title page)</span><input type="text" id="imprint" placeholder="e.g. Edited by A. Singer · MMXXVI"></label>
       <div id="manyPieces" hidden>
-        <label class="sp-check"><input type="checkbox" id="index" checked> Index of the pieces at the back</label>
-        <label class="sp-field" id="pieceStartRow"><span>Each piece after the first starts</span>
-          <select id="pieceStart"><option value="line">On a new line, below the last (as in printed partbooks)</option><option value="page">On a new page</option></select>
+        <label class="sp-check"><input type="checkbox" id="index" checked> Add an index of pieces at the back</label>
+        <label class="sp-field" id="pieceStartRow"><span>Start each new piece</span>
+          <select id="pieceStart"><option value="line">On the next line (as in printed partbooks)</option><option value="page">On a new page</option></select>
         </label>
       </div>
 
@@ -124,13 +124,13 @@
       <label class="sp-field" id="pieceSelRow" hidden><span>Settings for</span><select id="pieceSel"></select></label>
       <div id="pieceNames" hidden>
         <label class="sp-field"><span>Title of this piece</span><input type="text" id="pieceTitle"></label>
-        <label class="sp-field"><span>Its composer</span><input type="text" id="pieceComposer"></label>
+        <label class="sp-field"><span>Composer of this piece</span><input type="text" id="pieceComposer"></label>
       </div>
       <table class="sp-parts">
         <thead><tr><th></th><th>Label</th><th>Clef</th><th class="sideCol">Page</th></tr></thead>
         <tbody id="parts"></tbody>
       </table>
-      <p class="sp-hint" id="sideHint">Choirbook: “left”/“right” page, top to bottom in this order.</p>
+      <p class="sp-hint" id="sideHint">Choose which page of the opening each voice goes on. Voices on the same page are stacked top to bottom in the order listed.</p>
       <div id="sectionsBox" hidden>
         <div class="sp-field"><span>Sections</span></div>
         <table class="sp-parts sp-secs">
@@ -142,7 +142,7 @@
       <div id="chantBox">
         <div class="sp-field"><span>Plainchant</span></div>
         <div id="chants"></div>
-        <p class="sp-hint"><button class="sp-link" id="addChant" type="button">Add a chant verse</button> in GABC, as for Gregorio, for a setting sung in alternation with chant. It is set in black square notes on the staff, as the books set chant beside polyphony.</p>
+        <p class="sp-hint"><button class="sp-link" id="addChant" type="button">Add a chant verse</button> in GABC (the format Gregorio uses) for a setting sung in alternation with chant. The chant is set in black square notes on the staff.</p>
         <input type="file" id="chantFile" accept=".gabc,.txt" hidden>
       </div>
       <label class="sp-field"><span>Note values</span>
@@ -161,15 +161,15 @@
 
       <details class="sp-group" data-group="notation"><summary>4 · Notation</summary>
       <label class="sp-field"><span>Automatic clefs</span>
-        <select id="clefs"><option value="period">Period: keep every note on the staff</option><option value="modern">Modern: treble, treble an octave lower, bass</option></select>
+        <select id="clefs"><option value="period">Period: choose clefs that keep notes on the staff</option><option value="modern">Modern: treble, treble an octave lower, bass</option></select>
       </label>
-      <label class="sp-check"><input type="checkbox" id="ledgers" checked> Extra ledger lines where a note needs them</label>
+      <label class="sp-check"><input type="checkbox" id="ledgers" checked> Add ledger lines when a note needs them</label>
       <label class="sp-field"><span>Repeats</span>
-        <select id="repeats"><option value="out">Write out in full</option><option value="signs">Repeat signs (as written)</option></select>
+        <select id="repeats"><option value="out">Write out in full</option><option value="signs">Keep repeat signs</option></select>
       </label>
       <label class="sp-check"><input type="checkbox" id="ficta"> Print editorial accidentals (ficta)</label>
-      <label class="sp-check"><input type="checkbox" id="barlines"> Barlines at every bar</label>
-      <label class="sp-check"><input type="checkbox" id="brackets"> Ligature brackets from the edition</label>
+      <label class="sp-check"><input type="checkbox" id="barlines"> Show barlines</label>
+      <label class="sp-check"><input type="checkbox" id="brackets"> Show the edition's ligature brackets</label>
 
       </details>
 
@@ -178,11 +178,11 @@
         <label class="sp-field"><span id="initialFor">Each voice</span>
           <select id="initial">
             <option value="woodcut">Woodcut, 1592</option>
-            <option value="gothic">Gothic, flourished</option>
-            <option value="letter">Letter on dotted ground</option>
+            <option value="gothic">Gothic, decorated</option>
+            <option value="letter">Letter on a dotted background</option>
             <option value="capital">Plain capital</option>
             <option value="blank">Blank frame (decorate by hand)</option>
-            <option value="image">My own image…</option>
+            <option value="image">Upload an image…</option>
             <option value="none">None</option>
           </select>
         </label>
@@ -195,9 +195,9 @@
           <label class="sp-field"><span id="initial2For">Other voices and sections</span>
             <select id="initial2">
               <option value="capital">Plain capital</option>
-              <option value="letter">Letter on dotted ground</option>
+              <option value="letter">Letter on a dotted background</option>
               <option value="woodcut">Woodcut, 1592</option>
-              <option value="gothic">Gothic, flourished</option>
+              <option value="gothic">Gothic, decorated</option>
               <option value="blank">Blank frame (decorate by hand)</option>
               <option value="none">None</option>
             </select>
@@ -206,32 +206,32 @@
             <select id="initialLines2"><option value="1">1 staff</option><option value="2">2 staves</option><option value="3">3 staves</option></select>
           </label>
         </div>
-        <label class="sp-check" id="rubricRow"><input type="checkbox" id="rubric"> These initials in red</label>
+        <label class="sp-check" id="rubricRow"><input type="checkbox" id="rubric"> Print these initials in red</label>
       </div>
-      <p class="sp-hint">The woodcut alphabet has only A D F G L N O Q T; other letters are set on a dotted ground.</p>
+      <p class="sp-hint">The woodcut set only has A, D, F, G, L, N, O, Q and T. Any other letter is set on a dotted background instead.</p>
       <input type="file" id="initialFile" accept="image/*" hidden>
       </details>
 
       <div class="sp-printbar">
         <button class="sp-btn primary" id="print" type="button">Print / save as PDF</button>
-        <p class="sp-hint" style="margin-top:6px">In the print dialog choose “Save as PDF”, set margins to “None”, and turn on “Background graphics” for the dotted initial.</p>
+        <p class="sp-hint" style="margin-top:6px">In the print dialog, choose “Save as PDF”, set Margins to “None”, and turn on “Background graphics” so dotted initials come out.</p>
         <button class="sp-btn wide" id="saveProject" type="button">Save project</button>
-        <p class="sp-hint" style="margin-top:6px">One file with the scores and every setting, to open here again (choose it as you would a score), on another device, or to send. This browser also keeps the last book open, to pick up after a reload.</p>
+        <p class="sp-hint" style="margin-top:6px">Saves your scores and all your settings in one file. Open it here the same way you open a score, on any computer, or send it to someone. Your browser also remembers the last book you had open, in case you reload the page.</p>
       </div>
     </div>
   </aside>
 
   <section class="sp-preview" aria-label="Preview">
     <div class="sp-status" id="status" aria-live="polite"></div>
-    <div class="sp-empty" id="empty">Choose a MusicXML file of a Renaissance piece (one voice per part, with lyrics) and it will be typeset here.</div>
+    <div class="sp-empty" id="empty">Open a MusicXML file and it will be typeset here. It works best with one voice per part and the lyrics included.</div>
     <div class="sp-scale" id="scale"><div id="book"></div></div>
   </section>
 </main>
 
 <footer class="sp-foot" id="about">
-  <p><strong>Serenissima Press</strong> converts modern MusicXML into mensural notation in the browser; nothing is uploaded anywhere. The result is a starting point: check ties, perfection, ficta and text underlay against your source.</p>
+  <p><strong>Serenissima Press</strong> converts MusicXML into mensural notation right in your browser. Your files are never uploaded. Treat the result as a first draft and check ties, perfections, ficta and text underlay against your source.</p>
   <p>Music font: <a href="https://www.earlymusicsources.com/">EMS Serenissima</a> by Elam Rotem, Early Music Sources, licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Text fonts: EB Garamond and IM Fell French Canon (SIL Open Font License), via Google Fonts. Initials: EB Garamond Initials by Georg Duffner, after Conrad Berner’s 1592 specimen (SIL Open Font License); Yinit by Yannis Haralambous (public domain).</p>
-  <p>When you share a book, credit the editor of the MusicXML edition you used.</p>
+  <p>If you share a book, please credit the editor of the MusicXML edition you started from.</p>
   <p>Version 1.1.0 · <a href="https://github.com/tghamacher/serenissima-press">Source code and release notes on GitHub</a> · <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform">Send feedback</a> (no account needed) or <a href="https://github.com/tghamacher/serenissima-press/issues/new/choose">open an issue on GitHub</a>.</p>
 </footer>
 

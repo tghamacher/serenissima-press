@@ -231,7 +231,7 @@
     // fonts only start loading when used, so ask for them before measuring anything
     try { await Promise.all([...families].map(f => document.fonts.load(f.replace(/^(italic )?/, '$140px ')))); } catch (e) { }
     await document.fonts.ready;
-    if (!document.fonts.check('20px "EMS Serenissima"')) throw new Error('The EMS Serenissima music font could not be loaded.');
+    if (!document.fonts.check('20px "EMS Serenissima"')) throw new Error('The EMS Serenissima music font couldn’t be loaded. Check your connection and reload the page.');
     geom = geom || measureGeom();
     meas = el('div'); meas.style.cssText = 'position:absolute;left:-20000px;top:0;visibility:hidden;white-space:pre';
     book.dataset.type = meas.dataset.type = gothic ? 'gothic' : 'roman';
@@ -258,7 +258,7 @@
       prepareText(p, style);
       const f = INITIAL_FONTS[style];
       if (f && f.letters && !f.letters.includes(p.initialLetter)) {
-        const w = `${f.name} initials have no ${p.initialLetter}; it is set on a dotted ground instead.`;
+        const w = `${f.name} initials have no ${p.initialLetter}, so it’s set on a dotted background instead.`;
         if (!warnings.includes(w)) warnings.push(w);
         style = 'letter';
       }
@@ -626,7 +626,7 @@
           let pl = place(g, a, b, F);
           if (!pl) {
             // a single bar too long for an opening: set it anyway, overfull
-            if (!warnings.some(w => w.includes('single bar'))) warnings.push(`${g.pc.title || 'The music'}: a single bar is too long for one opening at this staff size. Choose a smaller staff.`);
+            if (!warnings.some(w => w.includes('single bar'))) warnings.push(`${g.pc.title || 'The music'}: a single bar is too long to fit on one opening at this staff size. Choose a smaller staff size.`);
             pl = { rows: g.all.map((p, q) => rowsOf(g, q, a, b, F)), move: null };
           }
           openings.push({ g, ci, ...pl });
