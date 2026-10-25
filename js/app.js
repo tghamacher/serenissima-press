@@ -215,10 +215,10 @@
   // the ruling and a choirbook's staff (see SPACING_HINTS); each can still be changed, and each format and
   // style keeps its own choices. A printed book is black and white; a manuscript may have its initials (and a
   // choirbook its "Residuum") in red.
-  const LOOK_IDS = ['textType', 'initial', 'initial2', 'rubric', 'ruleEmpty', 'numbering', 'tight'];
+  const LOOK_IDS = ['textType', 'initial', 'initial2', 'rubric', 'ruleEmpty', 'numbering', 'noteSpacing'];
   const LOOKS = {
-    print: { textType: 'roman', initial: 'woodcut', initial2: 'capital', rubric: false, ruleEmpty: false, numbering: 'arabic', tight: false },
-    manuscript: { textType: 'gothic', initial: 'gothic', initial2: 'gothic', rubric: true, ruleEmpty: true, numbering: 'roman', tight: true }
+    print: { textType: 'roman', initial: 'woodcut', initial2: 'capital', rubric: false, ruleEmpty: false, numbering: 'arabic', noteSpacing: 'printed' },
+    manuscript: { textType: 'gothic', initial: 'gothic', initial2: 'gothic', rubric: true, ruleEmpty: true, numbering: 'roman', noteSpacing: 'close' }
   };
   const STYLE_HINTS = {
     choirbook: {
@@ -245,7 +245,6 @@
     document.querySelectorAll('[data-style]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.style === style())));
     $('styleHint').textContent = STYLE_HINTS[state.format][style()];
     $('rubricRow').hidden = printed();
-    $('tightRow').hidden = printed();   // close spacing is the scribes', so only for a manuscript
     showSpacing();
   }
   function showFormat() {
@@ -312,7 +311,7 @@
         partbookPage: pg('partbook'), choirbookPage: pg('choirbook'),
         numbering: $('numbering').value, titlePage: $('titlePage').checked, index: $('index').checked, pieceStart: $('pieceStart').value,
         labels: { first: $('labelFirst').checked, rest: $('labelRest').checked }, margins: margins(), ruleEmpty: $('ruleEmpty').checked, textType: $('textType').value, signum: $('signum').value, style: style(),
-        tight: !printed() && $('tight').checked,
+        noteSpacing: $('noteSpacing').value,
         spacing: $('spacing').value === 'modern' ? 'modern' : style()
       });
     } catch (e) { $('book').classList.remove('sp-busy'); status(e.message); return; }
@@ -513,7 +512,7 @@
     showSpacing(); typeset();
   };
   $('staffCustom').oninput = typeset;
-  for (const id of ['repeats', 'ficta', 'barlines', 'brackets', 'clefs', 'ledgers', 'numbering', 'index', 'pieceStart', 'labelFirst', 'labelRest', 'ruleEmpty', 'textType', 'signum', 'initialLines', 'initial2', 'initialLines2', 'rubric', 'tight']) $(id).onchange = typeset;
+  for (const id of ['repeats', 'ficta', 'barlines', 'brackets', 'clefs', 'ledgers', 'numbering', 'index', 'pieceStart', 'labelFirst', 'labelRest', 'ruleEmpty', 'textType', 'signum', 'initialLines', 'initial2', 'initialLines2', 'rubric', 'noteSpacing']) $(id).onchange = typeset;
   $('spacing').onchange = () => { showSpacing(); typeset(); };
   $('initial').onchange = () => { if ($('initial').value === 'image' && !state.initialSrc) $('initialFile').click(); typeset(); };
   $('initialFile').onchange = e => {
@@ -537,7 +536,7 @@
   // ---- projects: the book's settings and its scores in one file (JSON), to open again here or elsewhere; the
   // last one is also kept in this browser, to pick up after a reload
   const PROJECT_IDS = ['title', 'composer', 'imprint', 'staffSize', 'staffCustom', 'numbering', 'spacing', 'textType', 'labelFirst', 'labelRest', 'ruleEmpty', 'signum',
-    'titlePage', 'index', 'pieceStart', 'clefs', 'ledgers', 'repeats', 'ficta', 'barlines', 'brackets', 'initial', 'initialLines', 'initial2', 'initialLines2', 'rubric', 'tight'];
+    'titlePage', 'index', 'pieceStart', 'clefs', 'ledgers', 'repeats', 'ficta', 'barlines', 'brackets', 'initial', 'initialLines', 'initial2', 'initialLines2', 'rubric', 'noteSpacing'];
   function project() {
     saveLook();
     return {
@@ -567,6 +566,10 @@
     // the book: what each format and style keeps, then the controls (the look of the format in use among them)
     for (const k of ['format', 'initialSrc']) if (b[k] !== undefined) state[k] = b[k];
     for (const k of ['styles', 'page', 'orient', 'margins']) if (b[k]) Object.assign(state[k], b[k]);
+    // before 1.2, close spacing was a switch of the manuscript style: on, close; off, as printed
+    const spacingOf = tight => tight ? 'close' : 'printed';
+    for (const l of Object.values(b.looks || {})) if (l.tight !== undefined) { if (l.noteSpacing === undefined) l.noteSpacing = spacingOf(l.tight); delete l.tight; }
+    if (b.controls && b.controls.tight !== undefined) { if (b.controls.noteSpacing === undefined) b.controls.noteSpacing = spacingOf(b.controls.tight && b.styles && b.styles[b.format || 'partbook'] === 'manuscript'); delete b.controls.tight; }
     if (b.looks) Object.assign(state.looks, b.looks);
     for (const [id, v] of Object.entries(b.controls || {})) if ($(id)) { if ($(id).type === 'checkbox') $(id).checked = !!v; else $(id).value = v; }
     state.cur = Math.min(Math.max(0, b.cur || 0), state.pieces.length - 1);

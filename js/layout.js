@@ -69,26 +69,35 @@
   }
 
   // token boxes: [staff L][sign][staff R], wide enough for the syllable centred under the note head.
-  // tight (the manuscript style): as the scribes wrote, notes close together and the words fitted under them, a
-  // syllable spreading under the notes beside it; a note moves on only to keep its syllable clear of the one
-  // before. own: what a syllable needs on the left at a line's start; tail: how far it hangs past its box.
+  // Note spacing, from very close to wide. gap: the least staff between signs (in F); syl: the least room
+  // between syllables (in text size). Close spacings (close: true), as the scribes wrote: notes close together
+  // and the words fitted under them, a syllable spreading under the notes beside it; a note moves on only to keep
+  // its syllable clear of the one before. own: what a syllable needs on the left at a line's start; tail: how far
+  // it hangs past its box. The others, as the printers set: each note as wide as its syllable.
   // Each of the font's notes carries its own piece of staff, wider than its head; so the notes can come closer,
-  // their pieces overlap (the lines lie on each other), trim off each side. Not where the sign reaches the edge
-  // of its piece: ledger lines, the longa's and maxima's tails, fusas' flags, an accidental or a dot.
-  let tight = false;
-  const TIGHT_GAP = 0.025, TRIM = 0.03;
+  // their pieces overlap (the lines lie on each other), trim off each side (trim: true). Not where the sign
+  // reaches the edge of its piece: ledger lines, the longa's and maxima's tails, fusas' flags, an accidental or a dot.
+  const SPACINGS = {
+    closest: { close: true, gap: 0.012, syl: 0.25, trim: true },
+    close: { close: true, gap: 0.025, syl: 0.35, trim: true },     // the Alamire manuscripts
+    moderate: { close: true, gap: 0.045, syl: 0.45, trim: false },
+    printed: { close: false, gap: GAP, syl: 0.5, trim: false },   // the printed books
+    wide: { close: false, gap: 0.1, syl: 0.8, trim: false }
+  };
+  let sp = SPACINGS.printed;
+  const TRIM = 0.03;
   const trimmable = tk => (tk.t === 'n' || tk.t === 'r') && !tk.a && !tk.d && tk.lp === undefined && !/^[1qr68]|[zsk,]$/.test(tk.g);
   function boxes(p, F) {
-    const T = F * TEXT, gap = (tight ? TIGHT_GAP : GAP) * F, tg = (tight ? 0.35 : 0.5) * T;
+    const T = F * TEXT, gap = sp.gap * F, tg = sp.syl * T;
     let x = 0, prev = -Infinity;
     return p.tokens.map(tk => {
-      const trim = tight && trimmable(tk) ? TRIM * F : 0;
+      const trim = sp.trim && trimmable(tk) ? TRIM * F : 0;
       const aW = wE(tk.a, F), gW = wE(tk.g, F), dW = wE(tk.d, F), glyph = aW + gW + dW - 2 * trim, center = aW + gW / 2 - trim;
       let L = 0, R = gap, own = 0, tail = 0;
       if (tk.sd) {
         const half = (wT(tk.sd, T) + tg) / 2;
         own = Math.max(0, half - center);
-        if (tight) { L = Math.max(0, prev - (x + center - half)); prev = x + L + center + half; tail = Math.max(0, half - (glyph - center) - R); }
+        if (sp.close) { L = Math.max(0, prev - (x + center - half)); prev = x + L + center + half; tail = Math.max(0, half - (glyph - center) - R); }
         else { L = own; R = Math.max(gap, half - (glyph - center)); }
       }
       if (tk.g === 'E') R = 0;
@@ -96,8 +105,8 @@
       return { tk, aW, gW, w: L + glyph + R, L, R, own, tail, trim };
     });
   }
-  // a box that starts a line: in tight spacing, only the room its own syllable needs (not what the line before wanted)
-  function startLine(b) { if (tight && b && b.L !== b.own && b.tk.sd) { b.w += b.own - b.L; b.L = b.own; } }
+  // a box that starts a line: in close spacing, only the room its own syllable needs (not what the line before wanted)
+  function startLine(b) { if (sp.close && b && b.L !== b.own && b.tk.sd) { b.w += b.own - b.L; b.L = b.own; } }
   function prefix(p, F) { const gap = GAP * F * 1.5; return { gap, w: wE(p.clef, F) + gap + (p.sig ? wE(p.sig, F) + gap : 0) }; }
   function breakLines(p, F, widthFor) {
     const bx = boxes(p, F), pre = prefix(p, F), cW = wE('Ug', F) + GAP * F;
@@ -215,14 +224,14 @@
   //      margins: { top, bottom, inside, outside } in inches, ruleEmpty (draw the staves the music leaves empty),
   //      textType: 'roman'|'gothic', signum: 'fleur'|'hand'|'hedera'|'none' (choirbooks: where a voice runs on),
   //      style: 'print'|'manuscript' (choirbooks: a manuscript has "Residuum" where a voice goes on),
-  //      tight: notes close together, as the scribes wrote them (an option of the manuscript style),
+  //      noteSpacing: 'closest'|'close'|'moderate'|'printed'|'wide' (see SPACINGS; close is the manuscripts', printed the books'),
   //      spacing: 'print'|'manuscript'|'modern' (choirbooks: staff size and spacing after the period books, or roomier) }
   // In a choirbook the voice at the top of the left page gets the first initial; in partbooks every voice
   // does. Sections that start a new line or page get the other initials.
   async function render(book, D, o) {
     const I = o.initials, warnings = [], labels = o.labels || { first: true, rest: true };
     gothic = o.textType === 'gothic';
-    tight = !!o.tight;
+    sp = SPACINGS[o.noteSpacing] || SPACINGS.printed;
     const period = o.format === 'choirbook' && o.spacing !== 'modern';
     ({ TEXT, SYS, TEXT_TOP } = SPACING[period ? 'period' : 'modern']);
     const families = new Set(['"EMS Serenissima"', '"EB Garamond"', 'italic "EB Garamond"', '"IM Fell French Canon"']);

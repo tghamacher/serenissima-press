@@ -8,7 +8,7 @@
   const GLORIA = "name: Gloria Patri;\n%%\n(c4) GLó(f)ri(gh)a(h) Pa(h)tri,(h.) (:) et(h) Fí(h)li(g)o,(f.) (;) et(f) Spi(gh)rí(h)tu(h)i(h) San(g)cto.(f.) (::)";
   const text = d => d.getElementById('book').textContent;
   const pagesWith = (pages, sel) => pages.filter(p => p.querySelector(sel)).length;
-  const spaced = (d, tight) => { const c = d.getElementById('tight'); c.checked = tight; c.dispatchEvent(new Event('change')); };
+  const spaced = (d, how) => { const s = d.getElementById('noteSpacing'); s.value = how; s.dispatchEvent(new Event('change')); };
   const pageSize = (d, page, orient) => { for (const [id, v] of [['page', page], ['orient', orient]]) { const s = d.getElementById(id); s.value = v; s.dispatchEvent(new Event('change')); } };
   // every "Residuum" clear of the staves, clefs and words around it (some must be there to check)
   const residuumClear = d => {
@@ -39,6 +39,20 @@
     return bad;
   };
 
+  // the mensuration signs a one-voice score gives, its bars in the meters given (each bar a note filling it)
+  const signs = (meters, o = {}) => () => {
+    const len = { 1: 'whole', 2: 'half', 4: 'quarter' };
+    const bars = meters.map(([b, t], i) => {
+      const dur = b * 4 / t, time = i === 0 || meters[i - 1].join() !== [b, t].join() ? `<time><beats>${b}</beats><beat-type>${t}</beat-type></time>` : '';
+      return `<measure number="${i + 1}"><attributes>${i ? '' : '<divisions>1</divisions><clef><sign>G</sign><line>2</line></clef>'}${time}</attributes>` +
+        `<note><pitch><step>G</step><octave>4</octave></pitch><duration>${dur}</duration><type>${len[t] || 'whole'}</type></note></measure>`;
+    }).join('');
+    const xml = `<?xml version="1.0"?><score-partwise><part-list><score-part id="P1"><part-name>Cantus</part-name></score-part></part-list><part id="P1">${bars}</part></score-partwise>`;
+    const C = window.SPConvert, r = C.convert(C.parseScore(xml), { reduction: 4, repeats: 'out', ledgers: true, clefs: 'period', parts: [{ index: 0 }], ...o });
+    const got = r.parts[0].tokens.filter(t => t.t === 'm').map(t => t.g).join(' ');
+    return got === o.want ? [] : [`signs ${got}, expected ${o.want}`];
+  };
+
   window.CASES = [
     // ---- GABC
     { name: 'gabc: notes, clef, syllables', unit: gabc(GLORIA, { clef: 'C4', sig: '', notes: 18, name: 'Gloria Patri', warnings: 0, syl: 'Gló:begin ri:middle a:end Pa:begin tri,:end et:single Fí:begin li:middle o,:end et:single Spi:begin rí:middle tu:middle i:end San:begin cto.:end' }) },
@@ -48,6 +62,10 @@
     { name: 'gabc: no clef is assumed C4', unit: gabc('Do(f)mi(g)ne(h)', { clef: 'C4', warnings: 1 }) },
     { name: 'gabc: no chant is an error', unit: gabc('just words', { error: /No chant found/ }) },
 
+    // ---- mensuration signs: one for each change of sign, not for each change of an edition's time signature
+    { name: 'mensuration: irregular bars keep one C', unit: signs([[4, 4], [2, 4], [4, 4], [1, 4], [4, 4]], { want: 'T1' }) },
+    { name: 'mensuration: a real change is shown, and the return', unit: signs([[4, 4], [2, 4], [3, 1], [3, 1], [4, 4], [2, 4]], { want: 'T1 T3 T1' }) },
+
     // ---- the sample, in each format and style
     { name: 'sample: partbook, printed', score: SAMPLE, expect: { warnings: 0, pages: [4, 12] } },
     { name: 'sample: partbook, manuscript', score: SAMPLE, style: 'manuscript', expect: { warnings: 0, pages: [4, 12] },
@@ -56,16 +74,32 @@
       check: d => d.querySelector('.sp-residuum') ? ['Residuum in the printed style'] : [] },
     { name: 'sample: choirbook, manuscript', score: SAMPLE, format: 'choirbook', style: 'manuscript', expect: { warnings: 0, pages: [2, 8] }, check: residuumClear },
     // where a voice goes on for only one staff, its "Residuum" is written smaller rather than run into the next
-    { name: 'residuum: letter landscape, notes spaced as printed', score: SAMPLE, format: 'choirbook', style: 'manuscript', setup: d => { pageSize(d, 'letter', 'landscape'); spaced(d, false); }, check: residuumClear },
-    // notes close together: the manuscript style's own option, on by default, and a shorter book than without it
-    { name: 'close spacing: only in the manuscript style', score: SAMPLE, format: 'choirbook', check: d => {
-        const bad = [], row = d.getElementById('tightRow');
-        if (!row.hidden) bad.push('Shown in the printed style');
+    { name: 'residuum: letter landscape, notes spaced as printed', score: SAMPLE, format: 'choirbook', style: 'manuscript', setup: d => { pageSize(d, 'letter', 'landscape'); spaced(d, 'printed'); }, check: residuumClear },
+    // note spacing: in both styles, starting as each style's books did, and each style keeps its own
+    { name: 'note spacing: follows the style', score: SAMPLE, format: 'choirbook', check: d => {
+        const bad = [], s = d.getElementById('noteSpacing');
+        if (s.closest('[hidden]')) bad.push('Hidden in the printed style');
+        if (s.value !== 'printed') bad.push(`The printed style starts at ${s.value}`);
+        spaced(d, 'wide');
         d.querySelector('[data-style=manuscript]').click();
-        if (row.hidden) bad.push('Hidden in the manuscript style');
-        if (!d.getElementById('tight').checked) bad.push('Not on by default in the manuscript style');
+        if (s.value !== 'close') bad.push(`The manuscript style starts at ${s.value}`);
+        d.querySelector('[data-style=print]').click();
+        if (s.value !== 'wide') bad.push('The printed style forgot its spacing');
         return bad; } },
-    { name: 'close spacing: off, a longer book', score: SAMPLE, style: 'manuscript', setup: d => spaced(d, false), expect: { pages: [6, 12] } },
+    { name: 'note spacing: printed spacing in a manuscript, a longer book', score: SAMPLE, style: 'manuscript', setup: d => spaced(d, 'printed'), expect: { pages: [6, 12] } },
+    // each step closer takes fewer staves (the book typeset at each, wide to very close)
+    { name: 'note spacing: closer, fewer staves', score: SAMPLE, setup: async (d, win) => {
+        win.staves = [];
+        for (const how of ['wide', 'printed', 'moderate', 'close', 'closest']) {
+          const was = d.getElementById('book').innerHTML; spaced(d, how);
+          for (let t = 0; t < 100 && d.getElementById('book').innerHTML === was; t++) await new Promise(r => setTimeout(r, 100));
+          await new Promise(r => setTimeout(r, 800));
+          win.staves.push([how, d.querySelectorAll('#book .sp-staff').length]);
+        } },
+      expect: { warnings: 0 },
+      check: (d, r) => { const s = d.defaultView.staves, bad = [];
+        for (let i = 1; i < s.length; i++) if (!(s[i][1] < s[i - 1][1])) bad.push(`${s[i][0]}: ${s[i][1]} staves, not fewer than ${s[i - 1][0]}'s ${s[i - 1][1]}`);
+        return bad; } },
     { name: 'residuum: A5 portrait', score: SAMPLE, format: 'choirbook', style: 'manuscript', setup: d => pageSize(d, 'a5', 'portrait'), check: residuumClear },
 
     // ---- Non Papa's Ego flos campi, a 7: a score converted from PDF, its faults corrected by hand (the woodcut

@@ -352,6 +352,8 @@
       tie = ties.includes('start') ? ev : null;
     }
 
+    // the mensuration sign in force: the last one since the section began
+    const inForce = () => { for (let i = events.length - 1; i >= 0; i--) { if (events[i].kind === 'sec') return null; if (events[i].kind === 'mens') return events[i].code; } return null; };
     measureOrder(partEl, o.repeats, warn).forEach((step, si) => {
       const measure = step.el, revisit = seen.has(measure); pass = step.pass; seen.add(measure);
       const mno = measure.getAttribute('number'), edMem = {}, where = `${name} m. ${mno}`;
@@ -390,7 +392,9 @@
               const beats = +(text(kid(t, 'beats')).split('+')[0]), type = +text(kid(t, 'beat-type'));
               meter = text(kid(t, 'beats')).split('+').reduce((a, b) => a + +b, 0) * 4 / type;
               perfect = sign === 'T3' || sign === 'T4' || (beats === 3 && near(beats * 4 / type / o.reduction, 3));
-              if (!revisit) events.push({ kind: 'mens', code: sign, t0: mstart });   // not restated when a repeat comes round again
+              // not restated when a repeat comes round again, nor where the sign does not change (an edition's
+              // irregular bars, 4/4 then 2/4, are all one C); a new section restates it
+              if (!revisit && sign !== inForce()) events.push({ kind: 'mens', code: sign, t0: mstart });
             }
             break;
           }
