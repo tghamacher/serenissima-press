@@ -130,10 +130,33 @@
   // Glyph-font initials are drawn as SVG cropped to the letter's ink. Framed ones (a letter cut into a
   // decorated block) fill the initial's height; bare capitals stand on its foot, as tall as their H.
   const INITIAL_FONTS = {
-    woodcut: { family: '"EB Garamond Initials"', framed: true, letters: 'ADFGLNOQT', name: 'Woodcut' },
+    woodcut: { family: '"EB Garamond Initials"', framed: true, letters: 'ADFGLNOQT', name: 'Woodcut', fallback: 'foliated', fallbackName: 'the foliated woodcut' },
     gothic: { family: 'Yinit', framed: true },
-    capital: { family: '"IM Fell French Canon"' }
+    // Dieter Steffmann's: two gothic, three roman. Each is sized by all its ink, flourishes and frame included
+    gothicWoodcut: { family: '"Gotische Initialen"', framed: true },
+    flourished: { family: '"Rothenburg Decorative"', framed: true },
+    constructed: { family: '"Typographer Caps"', framed: true },
+    foliated: { family: '"Goudy Initialen"', framed: true },
+    leaves: { family: '"Zallman Caps"', framed: true },
+    capital: { family: '"IM Fell French Canon"' },
+    // cadels traced from the writing books (outlines in fonts/initials/<outlines>.json): Rossi has no K or W
+    cadel: { outlines: 'rossi-cadels', framed: true, letters: 'ABCDEFGHILMNOPQRSTVXYZ', name: 'Rossi’s cadel', fallback: 'cadelFranck', fallbackName: 'Franck’s cadel' },
+    cadelFranck: { outlines: 'franck-cadels', framed: true, letters: 'ABCDEFGHIKLMNOPQRSTVWXYZ', name: 'Franck’s cadel', fallback: 'capital', fallbackName: 'a plain capital' }
   };
+  // the traced alphabets, as loaded: { m: the matrix of their paths, letters: { A: { box: [x, y, w, h], d } } }
+  const OUTLINES = {};
+  async function loadOutlines(name) {
+    if (OUTLINES[name]) return;
+    const r = await fetch(`fonts/initials/${name}.json`);
+    if (!r.ok) throw new Error('The cadel initials couldn’t be loaded. Check your connection and reload the page.');
+    OUTLINES[name] = await r.json();
+  }
+  function outline(o, L) {
+    const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg'), p = document.createElementNS(NS, 'path');
+    svg.setAttribute('viewBox', L.box.join(' ')); svg.setAttribute('aria-hidden', 'true');
+    p.setAttribute('transform', `matrix(${o.m.join(' ')})`); p.setAttribute('d', L.d); p.setAttribute('fill', 'currentColor');
+    svg.append(p); return svg;
+  }
   const inkCache = new Map();
   let ctx = null;
   function ink(ch, family) {
@@ -236,9 +259,17 @@
     ({ TEXT, SYS, TEXT_TOP } = SPACING[period ? 'period' : 'modern']);
     const families = new Set(['"EMS Serenissima"', '"EB Garamond"', 'italic "EB Garamond"', '"IM Fell French Canon"']);
     if (gothic) families.add('"Rotunda Pommerania"');
-    for (const spec of [I.first, I.other]) { const f = INITIAL_FONTS[spec.style]; if (f) f.family.split(', ').forEach(x => families.add(x)); }
+    // (and the alphabet that stands in for a letter one lacks)
+    // (and the alphabets that stand in for letters one lacks)
+    const outlines = new Set();
+    for (const spec of [I.first, I.other]) for (let f = INITIAL_FONTS[spec.style]; f; f = INITIAL_FONTS[f.fallback]) {
+      if (f.family) f.family.split(', ').forEach(x => families.add(x));
+      if (f.outlines) outlines.add(f.outlines);
+    }
+    await Promise.all([...outlines].map(loadOutlines));
     // fonts only start loading when used, so ask for them before measuring anything
-    try { await Promise.all([...families].map(f => document.fonts.load(f.replace(/^(italic )?/, '$140px ')))); } catch (e) { }
+    // (with the capitals: a font in parts, by unicode-range, loads only the parts its text needs)
+    try { await Promise.all([...families].map(f => document.fonts.load(f.replace(/^(italic )?/, '$140px '), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'))); } catch (e) { }
     await document.fonts.ready;
     if (!document.fonts.check('20px "EMS Serenissima"')) throw new Error('The EMS Serenissima music font couldn’t be loaded. Check your connection and reload the page.');
     geom = geom || measureGeom();
@@ -263,13 +294,13 @@
     }
     // a voice (or a section of it) gets its text ready and its initial
     function dress(p, spec) {
-      let style = spec.style === 'image' && !I.src ? 'letter' : spec.style;
+      let style = spec.style === 'image' && !I.src ? 'capital' : spec.style;
       prepareText(p, style);
-      const f = INITIAL_FONTS[style];
-      if (f && f.letters && !f.letters.includes(p.initialLetter)) {
-        const w = `${f.name} initials have no ${p.initialLetter}, so it’s set on a dotted background instead.`;
+      // a letter the alphabet lacks comes from the one that stands in for it (and that one's, if need be)
+      for (let f = INITIAL_FONTS[style]; f && f.letters && !f.letters.includes(p.initialLetter); f = INITIAL_FONTS[style]) {
+        const w = `${f.name} initials have no ${p.initialLetter}, so ${f.fallbackName} is used for it instead.`;
         if (!warnings.includes(w)) warnings.push(w);
-        style = 'letter';
+        style = f.fallback;
       }
       p.init = { style, lines: spec.lines, red: I.red && spec === I.other };
       return p;
@@ -326,6 +357,7 @@
       const h = slot ? lines * slot.h - slot.ann - slot.lift - 0.22 * F : lines * F * SYS - 0.22 * F;
       if (style === 'none') return null;
       if (!f) return { h, w: h };
+      if (f.outlines) { const L = OUTLINES[f.outlines].letters[p.initialLetter]; return { h, w: h * L.box[2] / L.box[3], f, outline: L }; }
       const k = ink(p.initialLetter, f.family), top = f.framed ? k.y : ink('H', f.family).y, kh = f.framed ? k.h : top;
       return { h, w: h * k.w / kh, f, view: [-k.x, -top, k.w, kh] };
     }
@@ -333,10 +365,11 @@
       const d = initialDims(p, F), { style, red } = p.init;
       const box = el('div', 'sp-initial' + (d.f ? ' sp-glyph' : '') + (style === 'blank' ? ' sp-blank' : '') + (red ? ' sp-red' : ''));
       box.style.width = d.w + 'px'; box.style.height = d.h + 'px';
+      if (d.outline) { box.append(outline(OUTLINES[d.f.outlines], d.outline)); return box; }
       if (d.f) { box.append(glyph(p.initialLetter, d.f.family, d.view)); return box; }
       const inner = el('div', 'sp-in'); box.append(inner);
       if (style === 'image') { const img = el('img'); img.src = I.src; img.alt = ''; inner.append(img); }
-      else if (style === 'letter') { const t = el('span', null, p.initialLetter); t.style.fontSize = d.h * 0.74 + 'px'; inner.append(t); }
+
       return box;
     }
     const initW = (p, F) => { const d = initialDims(p, F); return d ? d.w + 0.16 * F : 0; };

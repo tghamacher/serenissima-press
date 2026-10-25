@@ -8,12 +8,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+French+Canon&display=block" rel="stylesheet">
-<link rel="stylesheet" href="css/site.css?v=1.2.0">
+<link rel="stylesheet" href="css/site.css?v=1.3.0">
 <script>/* the editor's theme, before anything is drawn: light, dark, or the system's */ try { const t = localStorage.getItem("sp-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) { }</script>
 </head>
 <body>
 <header class="sp-top">
-  <h1>Serenissima Press</h1><span class="ver" id="version" data-version="1.2.0">version 1.2.0</span>
+  <h1>Serenissima Press</h1><span class="ver" id="version" data-version="1.3.0">version 1.3.0</span>
   <p>Turn MusicXML scores into Renaissance partbooks and choirbooks, in mensural notation with the words set underneath.</p>
   <nav><a href="cheatsheet.html">Font cheat sheet</a><a id="feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform" target="_blank" rel="noopener">Feedback</a><a href="https://github.com/tghamacher/serenissima-press" target="_blank" rel="noopener">GitHub</a><a href="#about">About</a><select id="theme" class="sp-theme" aria-label="Colour theme"><option value="system">System theme</option><option value="light">Light</option><option value="dark">Dark</option></select></nav>
 </header>
@@ -183,13 +183,25 @@
       <div class="sp-row">
         <label class="sp-field"><span id="initialFor">Each voice</span>
           <select id="initial">
-            <option value="woodcut">Woodcut, 1592</option>
-            <option value="gothic">Gothic, decorated</option>
-            <option value="letter">Letter on a dotted background</option>
-            <option value="capital">Plain capital</option>
-            <option value="blank">Blank frame (decorate by hand)</option>
-            <option value="image">Upload an image…</option>
-            <option value="none">None</option>
+            <optgroup label="Roman">
+              <option value="woodcut">Woodcut, 1592</option>
+              <option value="foliated">Foliated woodcut</option>
+              <option value="leaves">Roman with leaves</option>
+              <option value="constructed">Roman with construction lines</option>
+            </optgroup>
+            <optgroup label="Gothic">
+              <option value="gothic">Gothic, decorated</option>
+              <option value="gothicWoodcut">Gothic woodcut</option>
+              <option value="flourished">Flourished gothic</option>
+              <option value="cadel">Cadels, after Rossi (1598)</option>
+              <option value="cadelFranck">Cadels, after Franck (1601)</option>
+            </optgroup>
+            <optgroup label="Other">
+              <option value="capital">Plain capital</option>
+              <option value="blank">Blank frame (decorate by hand)</option>
+              <option value="image">Upload an image…</option>
+              <option value="none">None</option>
+            </optgroup>
           </select>
         </label>
         <label class="sp-field" style="flex:0 0 90px"><span>Height</span>
@@ -200,12 +212,24 @@
         <div class="sp-row">
           <label class="sp-field"><span id="initial2For">Other voices and sections</span>
             <select id="initial2">
-              <option value="capital">Plain capital</option>
-              <option value="letter">Letter on a dotted background</option>
-              <option value="woodcut">Woodcut, 1592</option>
-              <option value="gothic">Gothic, decorated</option>
-              <option value="blank">Blank frame (decorate by hand)</option>
-              <option value="none">None</option>
+              <optgroup label="Other">
+                <option value="capital">Plain capital</option>
+                <option value="blank">Blank frame (decorate by hand)</option>
+                <option value="none">None</option>
+              </optgroup>
+              <optgroup label="Roman">
+                <option value="woodcut">Woodcut, 1592</option>
+                <option value="foliated">Foliated woodcut</option>
+                <option value="leaves">Roman with leaves</option>
+                <option value="constructed">Roman with construction lines</option>
+              </optgroup>
+              <optgroup label="Gothic">
+                <option value="gothic">Gothic, decorated</option>
+                <option value="gothicWoodcut">Gothic woodcut</option>
+                <option value="flourished">Flourished gothic</option>
+                <option value="cadel">Cadels, after Rossi (1598)</option>
+                <option value="cadelFranck">Cadels, after Franck (1601)</option>
+              </optgroup>
             </select>
           </label>
           <label class="sp-field" style="flex:0 0 90px"><span>Height</span>
@@ -214,13 +238,13 @@
         </div>
         <label class="sp-check" id="rubricRow"><input type="checkbox" id="rubric"> Print these initials in red</label>
       </div>
-      <p class="sp-hint">The woodcut set only has A, D, F, G, L, N, O, Q and T. Any other letter is set on a dotted background instead.</p>
+      <p class="sp-hint">The 1592 woodcut set only has A, D, F, G, L, N, O, Q and T; any other letter comes from the foliated woodcut. Rossi’s cadels have no K or W, so Franck’s are used for those. Every other alphabet has all 26 letters (J and U are written as I and V, as in the period books). The roman alphabets suit printed books, and the gothic ones suit manuscripts and early prints.</p>
       <input type="file" id="initialFile" accept="image/*" hidden>
       </details>
 
       <div class="sp-printbar">
         <button class="sp-btn primary" id="print" type="button">Print / save as PDF</button>
-        <p class="sp-hint" style="margin-top:6px">In the print dialog, choose “Save as PDF”, set Margins to “None”, and turn on “Background graphics” so dotted initials come out.</p>
+        <p class="sp-hint" style="margin-top:6px">In the print dialog, choose “Save as PDF” and set Margins to “None”.</p>
         <button class="sp-btn wide" id="saveProject" type="button">Save project</button>
         <p class="sp-hint" style="margin-top:6px">Saves your scores and all your settings in one file. Open it here the same way you open a score, on any computer, or send it to someone. Your browser also remembers the last book you had open, in case you reload the page.</p>
       </div>
@@ -236,15 +260,15 @@
 
 <footer class="sp-foot" id="about">
   <p><strong>Serenissima Press</strong> converts MusicXML into mensural notation right in your browser. Your files are never uploaded. Treat the result as a first draft and check ties, perfections, ficta and text underlay against your source.</p>
-  <p>Music font: <a href="https://www.earlymusicsources.com/">EMS Serenissima</a> by Elam Rotem, Early Music Sources, licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Text fonts: EB Garamond and IM Fell French Canon (SIL Open Font License), via Google Fonts. Initials: EB Garamond Initials by Georg Duffner, after Conrad Berner’s 1592 specimen (SIL Open Font License); Yinit by Yannis Haralambous (public domain).</p>
+  <p>Music font: <a href="https://www.earlymusicsources.com/">EMS Serenissima</a> by Elam Rotem, Early Music Sources, licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Text fonts: EB Garamond and IM Fell French Canon (SIL Open Font License), via Google Fonts. Initials: EB Garamond Initials by Georg Duffner, after Conrad Berner’s 1592 specimen (SIL Open Font License); Yinit by Yannis Haralambous (public domain); Gotische Initialen, Rothenburg Decorative, Typographer Caps, Goudy Initialen and Zallman Caps by Dieter Steffmann (LaTeX Project Public License, from the CTAN initials package). Cadels traced from Marco Antonio Rossi’s <i>Giardino de scrittori</i> (1598) and Paul Franck’s <i>Kunstrichtige Schreibart</i> (1601), both public domain.</p>
   <p>If you share a book, please credit the editor of the MusicXML edition you started from.</p>
-  <p>Version 1.2.0 · <a href="https://github.com/tghamacher/serenissima-press">Source code and release notes on GitHub</a> · <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform">Send feedback</a> (no account needed) or <a href="https://github.com/tghamacher/serenissima-press/issues/new/choose">open an issue on GitHub</a>.</p>
+  <p>Version 1.3.0 · <a href="https://github.com/tghamacher/serenissima-press">Source code and release notes on GitHub</a> · <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform">Send feedback</a> (no account needed) or <a href="https://github.com/tghamacher/serenissima-press/issues/new/choose">open an issue on GitHub</a>.</p>
 </footer>
 
-<script src="js/zip.js?v=1.2.0"></script>
-<script src="js/convert.js?v=1.2.0"></script>
-<script src="js/gabc.js?v=1.2.0"></script>
-<script src="js/layout.js?v=1.2.0"></script>
-<script src="js/app.js?v=1.2.0"></script>
+<script src="js/zip.js?v=1.3.0"></script>
+<script src="js/convert.js?v=1.3.0"></script>
+<script src="js/gabc.js?v=1.3.0"></script>
+<script src="js/layout.js?v=1.3.0"></script>
+<script src="js/app.js?v=1.3.0"></script>
 </body>
 </html>

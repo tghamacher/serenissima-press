@@ -570,6 +570,8 @@
     const spacingOf = tight => tight ? 'close' : 'printed';
     for (const l of Object.values(b.looks || {})) if (l.tight !== undefined) { if (l.noteSpacing === undefined) l.noteSpacing = spacingOf(l.tight); delete l.tight; }
     if (b.controls && b.controls.tight !== undefined) { if (b.controls.noteSpacing === undefined) b.controls.noteSpacing = spacingOf(b.controls.tight && b.styles && b.styles[b.format || 'partbook'] === 'manuscript'); delete b.controls.tight; }
+    // before 1.3, initials could be set on a dotted ground: now the foliated woodcut
+    for (const c of [b.controls, ...Object.values(b.looks || {})]) if (c) for (const id of ['initial', 'initial2']) if (c[id] === 'letter') c[id] = 'foliated';
     if (b.looks) Object.assign(state.looks, b.looks);
     for (const [id, v] of Object.entries(b.controls || {})) if ($(id)) { if ($(id).type === 'checkbox') $(id).checked = !!v; else $(id).value = v; }
     state.cur = Math.min(Math.max(0, b.cur || 0), state.pieces.length - 1);

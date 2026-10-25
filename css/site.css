@@ -4,6 +4,14 @@
 /* Initials: EB Garamond Initials (Georg Duffner), SIL OFL 1.1; Yinit (Yannis Haralambous), public domain */
 @font-face { font-family: "EB Garamond Initials"; src: url("../fonts/EBGaramond-Initials.otf") format("opentype"); font-display: block; }
 @font-face { font-family: "Yinit"; src: url("../fonts/Yinit.otf") format("opentype"); font-display: block; }
+/* Initials by Dieter Steffmann, LaTeX Project Public License (see fonts/LPPL-Steffmann-Initials.txt) */
+/* (in two halves: the converter's offsets cannot reach past 128 KB of outlines) */
+@font-face { font-family: "Gotische Initialen"; src: url("../fonts/GotischeInitialen-1.woff") format("woff"); unicode-range: U+41-4D; font-display: block; }
+@font-face { font-family: "Gotische Initialen"; src: url("../fonts/GotischeInitialen-2.woff") format("woff"); unicode-range: U+4E-5A; font-display: block; }
+@font-face { font-family: "Rothenburg Decorative"; src: url("../fonts/RothenburgDecorative.woff") format("woff"); font-display: block; }
+@font-face { font-family: "Typographer Caps"; src: url("../fonts/TypographerCaps.woff") format("woff"); font-display: block; }
+@font-face { font-family: "Goudy Initialen"; src: url("../fonts/GoudyInitialen.woff") format("woff"); font-display: block; }
+@font-face { font-family: "Zallman Caps"; src: url("../fonts/ZallmanCaps.woff") format("woff"); font-display: block; }
 /* Text: EB Garamond (Georg Duffner, Octavio Pardo), SIL OFL 1.1; Rotunda Pommerania (Peter Wiegel), SIL OFL 1.1 */
 @font-face { font-family: "EB Garamond"; src: url("../fonts/EBGaramond-VF.ttf") format("truetype"); font-weight: 400 800; font-style: normal; font-display: swap; }
 @font-face { font-family: "EB Garamond"; src: url("../fonts/EBGaramond-Italic-VF.ttf") format("truetype"); font-weight: 400 800; font-style: italic; font-display: swap; }
@@ -156,17 +164,14 @@ button, select, input { font: inherit; color: inherit; }
 .sp-syl { position: absolute; transform: translateX(-50%); white-space: pre; line-height: 1; font-family: var(--pagefont); }
 .sp-credit { position: absolute; left: 0; right: 0; bottom: 22px; text-align: center; font-size: 9.5px; color: var(--muted); font-family: var(--textfont); }
 .sp-initial { position: absolute; left: 0; top: 0; border: 2.5px solid var(--ink); padding: 3px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.sp-in { width: 100%; height: 100%; border: 1px solid var(--ink); display: flex; align-items: center; justify-content: center; overflow: hidden;
-         background: radial-gradient(circle, var(--ink) 0.8px, transparent 1.2px) 0 0 / 5px 5px; background-color: var(--paper); }
-.sp-in span { font-family: "IM Fell French Canon", var(--textfont); line-height: 1; padding-top: .08em; color: var(--ink);
-              text-shadow: 0 0 2px var(--paper), 0 0 3px var(--paper), 0 0 4px var(--paper), 0 0 6px var(--paper), 0 0 8px var(--paper); }
-.sp-initial.sp-blank { border-width: 1px; border-style: dashed; padding: 0; } .sp-blank .sp-in { border: 0; background: none; }
+.sp-in { width: 100%; height: 100%; border: 1px solid var(--ink); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.sp-initial.sp-blank { border-width: 1px; border-style: dashed; padding: 0; } .sp-blank .sp-in { border: 0; }
 .sp-in img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .sp-initial.sp-glyph { border: 0; padding: 0; color: var(--ink); }
 .sp-initial.sp-red { color: var(--rubric); }
 /* "Residuum" written down the indent where a voice goes on from the opening before (gothic type) */
 .sp-residuum { position: absolute; line-height: 0; color: var(--ink); z-index: 1; }
-.sp-residuum.sp-red { color: var(--rubric); } .sp-red .sp-in span { color: var(--rubric); }
+.sp-residuum.sp-red { color: var(--rubric); }
 .sp-glyph svg { display: block; width: 100%; height: 100%; overflow: visible; fill: currentColor; }
 
 @media print {

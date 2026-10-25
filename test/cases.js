@@ -102,6 +102,28 @@
         return bad; } },
     { name: 'residuum: A5 portrait', score: SAMPLE, format: 'choirbook', style: 'manuscript', setup: d => pageSize(d, 'a5', 'portrait'), check: residuumClear },
 
+    // ---- the initial alphabets: each loads, and draws the letter as its glyph
+    // the traced cadels: drawn from their outlines; Rossi's lacks a K, so a Kyrie's comes from Franck's, and says so
+    ...['cadel', 'cadelFranck'].map(style => ({
+      name: `initials: ${style}`, score: SAMPLE, format: 'choirbook', style: 'manuscript',
+      setup: d => { for (const id of ['initial', 'initial2']) { const s = d.getElementById(id); s.value = style; s.dispatchEvent(new Event('change')); } },
+      expect: { warnings: 0 },
+      check: d => { const n = d.querySelectorAll('.sp-initial.sp-glyph svg path[d]').length; return n >= 4 ? [] : [`${n} cadel initials drawn, expected one for each voice`]; } })),
+    { name: 'initials: Rossi has no K, so a Kyrie takes Franck’s', score: 'test/scores/kyrie.musicxml', setup: d => { const s = d.getElementById('initial'); s.value = 'cadel'; s.dispatchEvent(new Event('change')); },
+      expect: { warnings: 1, warn: /Rossi’s cadel initials have no K, so Franck’s cadel is used for it instead/ },
+      check: d => d.querySelector('.sp-initial.sp-glyph svg path[d]') ? [] : ['No cadel drawn'] },
+    ...['gothicWoodcut', 'flourished', 'constructed', 'foliated', 'leaves'].map(style => ({
+      name: `initials: ${style}`, score: SAMPLE, format: 'choirbook',
+      setup: d => { for (const id of ['initial', 'initial2']) { const s = d.getElementById(id); s.value = style; s.dispatchEvent(new Event('change')); } },
+      expect: { warnings: 0 },
+      check: d => {
+        const bad = [], fam = d.defaultView.getComputedStyle(d.querySelector('.sp-initial.sp-glyph') || d.body).fontFamily;
+        const g = d.querySelectorAll('.sp-initial.sp-glyph');
+        if (g.length < 4) bad.push(`${g.length} glyph initials, expected one for each voice`);
+        const svgFont = [...d.querySelectorAll('.sp-initial.sp-glyph text, .sp-initial.sp-glyph [font-family]')].map(t => t.getAttribute('font-family') || t.style.fontFamily).find(Boolean) || fam;
+        if (!d.fonts.check(`20px ${svgFont}`)) bad.push(`The font ${svgFont} did not load`);
+        return bad; } })),
+
     // ---- Non Papa's Ego flos campi, a 7: a score converted from PDF, its faults corrected by hand (the woodcut
     // alphabet has no E, so the printed books say so)
     { name: 'ego flos campi: partbook', score: 'test/scores/ego-flos-campi.mxl', expect: { warnings: 1, warn: /Woodcut initials have no E/ } },

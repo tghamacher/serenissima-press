@@ -1,6 +1,6 @@
 # Serenissima Press
 
-**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 1.2.0 · [Release notes](#release-notes) · [Feedback](#feedback)
+**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 1.3.0 · [Release notes](#release-notes) · [Feedback](#feedback)
 
 Turn a MusicXML score of Renaissance polyphony into **partbooks** (one voice per book) or a **choirbook** (voices spread across facing pages), in mensural notation with text underlay, set in the [EMS Serenissima](https://www.earlymusicsources.com/) font.
 
@@ -21,7 +21,7 @@ The result is a good starting point: check ties, perfection, ficta and text unde
 1. Open the [site](https://tghamacher.github.io/serenissima-press/) and choose one or more `.musicxml`, `.xml` or `.mxl` files (one voice per part, lyrics included). Each file is a piece of the book; add more at any time and put them in order.
 2. Pick **Partbook** or **Choirbook**, page size, orientation (portrait or landscape) and margins, labels and clefs.
 3. Check **Note values**: editions in x/2 time usually keep the original values (whole note = semibreve); editions in x/4 usually halve them (half note = semibreve). The tool guesses; check it.
-4. **Print / save as PDF**: choose "Save as PDF", margins "None", and turn on "Background graphics".
+4. **Print / save as PDF**: choose "Save as PDF" and margins "None".
 
 The settings are in groups you can open and close; the editor can be light, dark or follow your system (the pages always stay paper-coloured, as they will print).
 
@@ -32,7 +32,7 @@ A link like `index.html?score=examples/o-quam-gloriosum.mxl&format=choirbook` op
 - **Notes and rests:** notes become mensural values (maxima to semifusa); ties merge, triplets become coloration, dotted notes get a dot of addition, and 3-semibreve breves under O are perfect.
 - **Accidentals:** worked out from pitch against the key signature; editorial accidentals (ficta) are left out unless you ask for them. Mensural notation has no sharp key signatures, so sharps are printed on their notes; transposing can help.
 - **Lines:** each line has a clef, signature and custos; staves are justified to full width.
-- **Initials:** in a choirbook, a large decorated initial opens the voice at the top left and smaller ones open the other voices and any sections set to start a new page (plain capitals by default, optionally in red). Each voice has only one initial on a page, at the start of its space, so that each singer can find their part: a later section set to start a new line begins with its words whole. In partbooks each voice opens with the large one. Styles: woodcut (EB Garamond Initials, after Berner's 1592 specimen; it has only A D F G L N O Q T, other letters fall back to a dotted ground), flourished Gothic (Yinit), letter on dotted ground, plain capital, blank frame, your own image, or none.
+- **Initials:** in a choirbook, a large decorated initial opens the voice at the top left and smaller ones open the other voices and any sections set to start a new page (plain capitals by default, optionally in red). Each voice has only one initial on a page, at the start of its space, so that each singer can find their part: a later section set to start a new line begins with its words whole. In partbooks each voice opens with the large one. Styles: roman alphabets (the 1592 woodcut, EB Garamond Initials after Berner's specimen, with only A D F G L N O Q T, other letters coming from the foliated woodcut; a foliated woodcut; roman with leaves; roman with construction lines, after Tory and Dürer), gothic alphabets (decorated, Yinit; a gothic woodcut; flourished gothic; cadels after Rossi, 1598, and after Franck, 1601, traced from the writing books: Rossi's have no K or W, and Franck's stand in for them, with a notice), plain capital, blank frame, your own image, or none.
 - **Text type:** roman (EB Garamond), or gothic (Rotunda Pommerania), the rounded blackletter of the earliest music prints and of Spanish and German books. In gothic the text is set as the printers set it: long s within a word and round s at its end, the founts' ligatures (ch, ck, ff, fi, fl, ll, ſſ, ſt, tt …), voice names in lower case (Cantus, not CANTVS), and no spaced capitals, small capitals or italics. The font has no accented vowels, so accents are dropped.
 - **Clefs:** the font reaches one ledger line above and below the staff. With **period** clefs (the default), a part that goes further in the edition's clef gets the clef a scribe would have used: a common one (C1, C3, C4, F4, then G2, C2, F3) that keeps every note within reach. This is listed as a note, not a warning. **Modern** clefs, for singers learning the notation, set sopranos and altos in treble, tenors in treble an octave lower and basses in F4. A note past the font's reach is drawn from the font's own note, with only the extra ledger lines it needs, copied from the font's first one (the option can be turned off).
 - **Printed or manuscript:** a book is either *Printed · Renaissance* or *Manuscript · Gothic*. A printed choirbook follows Dorico (Rome) and Moderne (Lyon), a printed partbook the Venetian and Parisian presses (Gardano, Scotto, Le Roy & Ballard); a manuscript choirbook follows the Alamire workshop. The style sets the type (roman or gothic), the initials (woodcut, or flourished gothic in red), the numbering (arabic, or lower-case roman), the ruling (blank, or ruled pages) and a choirbook's staff (see below); each can still be changed, and each format and style keeps its own choices. A printed book is black and white; a manuscript may have its initials (and a choirbook its "Residuum") in red. Printed is the default.
@@ -70,6 +70,12 @@ If you have a GitHub account you can also [open an issue](https://github.com/tgh
 ## Release notes
 
 Versions are numbered *major*.*feature*.*fix*: a release with new features raises the middle number, a release of fixes only raises the last. Before 1.0.0 the tool was in beta, numbered 0.*feature*.*fix*.
+
+### 1.3.0 (2026-10-25)
+
+- **New initial alphabets.** Roman: a foliated woodcut, roman with leaves, and roman with construction lines after Tory and Dürer. Gothic: a gothic woodcut and flourished gothic (Dieter Steffmann's designs), and two sets of cadels traced from the writing books, after Marco Antonio Rossi (1598) and Paul Franck (1601). Both menus are now grouped into Roman, Gothic and Other.
+- **Rossi's cadels have no K or W.** Franck's stand in for them, and a notice says so.
+- **No more letters on a dotted ground.** The 1592 woodcut's missing letters now come from the foliated woodcut, and printing no longer needs "Background graphics". Projects that used the dotted style open with the foliated woodcut.
 
 ### 1.2.0 (2026-10-25)
 
@@ -250,5 +256,5 @@ Versions are numbered *major*.*feature*.*fix*: a release with new features raise
 
 - **Music font:** EMS Serenissima by Elam Rotem, Early Music Sources, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See `fonts/LICENSE-EMS_Serenissima.md`.
 - **Text fonts:** EB Garamond by Georg Duffner and Octavio Pardo and Rotunda Pommerania by Peter Wiegel ([SIL Open Font License 1.1](https://openfontlicense.org), see `fonts/OFL-EBGaramond.txt` and `fonts/OFL-RotundaPommerania.txt`), shipped unmodified; IM Fell French Canon (SIL Open Font License), loaded from Google Fonts.
-- **Initials:** EB Garamond Initials by Georg Duffner ([SIL Open Font License 1.1](https://openfontlicense.org), see `fonts/OFL-EBGaramond-Initials.txt`); Yinit by Yannis Haralambous (public domain, see `fonts/LICENSE-Yinit.md`). Shipped unmodified from CTAN.
+- **Initials:** EB Garamond Initials by Georg Duffner ([SIL Open Font License 1.1](https://openfontlicense.org), see `fonts/OFL-EBGaramond-Initials.txt`); Yinit by Yannis Haralambous (public domain, see `fonts/LICENSE-Yinit.md`). Shipped unmodified from CTAN. Gotische Initialen, Rothenburg Decorative, Typographer Caps, Goudy Initialen and Zallman Caps by Dieter Steffmann, from the CTAN [initials](https://ctan.org/pkg/initials) package ([LaTeX Project Public License](https://www.latex-project.org/lppl/), see `fonts/LPPL-Steffmann-Initials.txt`): converted from Type 1 to WOFF with dvisvgm and renamed, the outlines unchanged. Cadels traced with potrace from Marco Antonio Rossi's *Giardino de scrittori* (Rome, 1598; scan on Wikimedia Commons) and Paul Franck's *Kunstrichtige Schreibart* (Nuremberg, 1601; the Getty Research Institute's copy of the 1655 printing, on the Internet Archive), both public domain; the outlines are in `fonts/initials/`.
 - When you share a book, credit the editor of the MusicXML edition it was made from.
