@@ -66,6 +66,28 @@
     { name: 'mensuration: irregular bars keep one C', unit: signs([[4, 4], [2, 4], [4, 4], [1, 4], [4, 4]], { want: 'T1' }) },
     { name: 'mensuration: a real change is shown, and the return', unit: signs([[4, 4], [2, 4], [3, 1], [3, 1], [4, 4], [2, 4]], { want: 'T1 T3 T1' }) },
 
+    // ---- playback: each note knows when it sounds and its pitch; the book's notes reach the player, in time order
+    { name: 'playback: pitch and time of each note', unit: () => {
+        const C = window.SPConvert, xml = `<?xml version="1.0"?><score-partwise><part-list><score-part id="P1"><part-name>Cantus</part-name></score-part></part-list><part id="P1">` +
+          `<measure number="1"><attributes><divisions>1</divisions><key><fifths>-1</fifths></key><time><beats>4</beats><beat-type>2</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes>` +
+          `<note><pitch><step>G</step><octave>4</octave></pitch><duration>4</duration><type>whole</type></note><note><rest/><duration>2</duration><type>half</type></note>` +
+          `<note><pitch><step>B</step><alter>-1</alter><octave>4</octave></pitch><duration>2</duration><type>half</type></note></measure></part></score-partwise>`;
+        const r = C.convert(C.parseScore(xml), { reduction: 2, repeats: 'out', ledgers: true, clefs: 'period', parts: [{ index: 0 }] });
+        const got = JSON.stringify(r.parts[0].tokens.filter(t => t.pb).map(t => t.pb)), want = '[[0,4,67],[6,2,70]]';
+        return got === want ? [] : [`notes ${got}, expected ${want}`]; } },
+    { name: 'playback: the book\'s notes, for the player', score: SAMPLE, check: d => {
+        const P = d.defaultView.SPPlay, bad = [], els = d.querySelectorAll('#book .sp-n');
+        if (d.getElementById('player').hidden) bad.push('No player');
+        if (P.notes.length !== els.length || !els.length) bad.push(`${P.notes.length} notes to play, ${els.length} on the page`);
+        if (P.voices.length !== 4) bad.push(`voices ${P.voices.join(', ')}, expected four`);
+        if (d.querySelectorAll('#playVoices input').length !== P.voices.length) bad.push('A box for each voice is missing');
+        if (P.notes.some((n, i) => i && n.on < P.notes[i - 1].on)) bad.push('Notes out of time order');
+        if (P.notes.some(n => !(n.len > 0) || !(n.midi > 30 && n.midi < 90))) bad.push('A note with no length or an odd pitch');
+        // at the start, each voice that sings from the first beat is sounding
+        const first = P.notes[0].on, now = P.at(first + 0.01);
+        if (!now.length || now.length > 4) bad.push(`${now.length} notes sounding at the start`);
+        return bad; } },
+
     // ---- the sample, in each format and style
     { name: 'sample: partbook, printed', score: SAMPLE, expect: { warnings: 0, pages: [4, 12] } },
     { name: 'sample: partbook, manuscript', score: SAMPLE, style: 'manuscript', expect: { warnings: 0, pages: [4, 12] },

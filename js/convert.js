@@ -347,7 +347,7 @@
         if (!ties.includes('start')) tie = null;
         return;
       }
-      const ev = { kind: 'note', dia, ql, acc: accKey, fermata, syl: lyricOf(node) || (head && lyricOf(head)), cont, where, perfect, t, t0: t, end: t + ql };
+      const ev = { kind: 'note', dia, midi: midi + 12, ql, acc: accKey, fermata, syl: lyricOf(node) || (head && lyricOf(head)), cont, where, perfect, t, t0: t, end: t + ql };
       events.push(ev);
       tie = ties.includes('start') ? ev : null;
     }
@@ -548,7 +548,8 @@
           if (kind === 'dot') { out[out.length - 1].d += '.' + k; continue; }
           const tk = { t: 'n', a: '', g: v + k, d: '', k };
           if (lp !== undefined) { tk.lp = lp; tk.v = v; }
-          if (first) { if (e.acc) tk.a = e.acc + k; if (e.syl) { tk.s = e.syl.text; tk.y = e.syl.syllabic; } }
+          // (for playback: when it sounds and how long, in the edition's quarter notes from the start, and its pitch)
+          if (first) { if (e.acc) tk.a = e.acc + k; if (e.syl) { tk.s = e.syl.text; tk.y = e.syl.syllabic; } tk.pb = [e.t0, e.ql, e.midi]; }
           out.push(tk); first = false;
         }
         if (e.fermata) out[out.length - 1].d += '*';

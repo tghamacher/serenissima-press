@@ -338,6 +338,8 @@
         else if (b.tk.lp !== undefined && geom) g = farNote(b.tk, b.aW, b.gW, F);
         else g = el('span', null, (b.tk.a || '') + b.tk.g + (b.tk.d || ''));
         if (b.trim) g.style.margin = `0 ${-b.trim}px`;
+        // a note to be played: its time and pitch (see app.js), and its voice
+        if (b.tk.pb) { g.classList.add('sp-n'); g.dataset.pb = b.tk.pb.join(' '); g.dataset.v = b.tk.v || ''; }
         staff.append(g);
         staff.append(fill(b.R + per, F));
         if (b.tk.sd) marks.push([g, b]);

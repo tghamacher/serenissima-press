@@ -8,12 +8,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+French+Canon&display=block" rel="stylesheet">
-<link rel="stylesheet" href="css/site.css?v=1.3.0">
+<link rel="stylesheet" href="css/site.css?v=1.4.0">
 <script>/* the editor's theme, before anything is drawn: light, dark, or the system's */ try { const t = localStorage.getItem("sp-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) { }</script>
 </head>
 <body>
 <header class="sp-top">
-  <h1>Serenissima Press</h1><span class="ver" id="version" data-version="1.3.0">version 1.3.0</span>
+  <h1>Serenissima Press</h1><span class="ver" id="version" data-version="1.4.0">version 1.4.0</span>
   <p>Turn MusicXML scores into Renaissance partbooks and choirbooks, in mensural notation with the words set underneath.</p>
   <nav><a href="cheatsheet.html">Font cheat sheet</a><a id="feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform" target="_blank" rel="noopener">Feedback</a><a href="https://github.com/tghamacher/serenissima-press" target="_blank" rel="noopener">GitHub</a><a href="#about">About</a><select id="theme" class="sp-theme" aria-label="Colour theme"><option value="system">System theme</option><option value="light">Light</option><option value="dark">Dark</option></select></nav>
 </header>
@@ -252,6 +252,13 @@
   </aside>
 
   <section class="sp-preview" aria-label="Preview">
+    <div class="sp-player" id="player" hidden>
+      <button type="button" class="sp-btn" id="playBtn">▶ Play</button>
+      <button type="button" class="sp-btn" id="stopBtn" title="Stop, and go back to the start" aria-label="Stop">■</button>
+      <label class="sp-tempo">Tactus <input type="number" id="tempo" min="20" max="160" step="2" value="66"> semibreves a minute</label>
+      <span class="sp-voices" id="playVoices" role="group" aria-label="Voices to play"></span>
+      <span class="sp-hint">Click a note to play from there. The space bar plays and pauses.</span>
+    </div>
     <div class="sp-status" id="status" aria-live="polite"></div>
     <div class="sp-empty" id="empty">Open a MusicXML file and it will be typeset here. It works best with one voice per part and the lyrics included.</div>
     <div class="sp-scale" id="scale"><div id="book"></div></div>
@@ -262,13 +269,14 @@
   <p><strong>Serenissima Press</strong> converts MusicXML into mensural notation right in your browser. Your files are never uploaded. Treat the result as a first draft and check ties, perfections, ficta and text underlay against your source.</p>
   <p>Music font: <a href="https://www.earlymusicsources.com/">EMS Serenissima</a> by Elam Rotem, Early Music Sources, licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Text fonts: EB Garamond and IM Fell French Canon (SIL Open Font License), via Google Fonts. Initials: EB Garamond Initials by Georg Duffner, after Conrad Berner’s 1592 specimen (SIL Open Font License); Yinit by Yannis Haralambous (public domain); Gotische Initialen, Rothenburg Decorative, Typographer Caps, Goudy Initialen and Zallman Caps by Dieter Steffmann (LaTeX Project Public License, from the CTAN initials package). Cadels traced from Marco Antonio Rossi’s <i>Giardino de scrittori</i> (1598) and Paul Franck’s <i>Kunstrichtige Schreibart</i> (1601), both public domain.</p>
   <p>If you share a book, please credit the editor of the MusicXML edition you started from.</p>
-  <p>Version 1.3.0 · <a href="https://github.com/tghamacher/serenissima-press">Source code and release notes on GitHub</a> · <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform">Send feedback</a> (no account needed) or <a href="https://github.com/tghamacher/serenissima-press/issues/new/choose">open an issue on GitHub</a>.</p>
+  <p>Version 1.4.0 · <a href="https://github.com/tghamacher/serenissima-press">Source code and release notes on GitHub</a> · <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform">Send feedback</a> (no account needed) or <a href="https://github.com/tghamacher/serenissima-press/issues/new/choose">open an issue on GitHub</a>.</p>
 </footer>
 
-<script src="js/zip.js?v=1.3.0"></script>
-<script src="js/convert.js?v=1.3.0"></script>
-<script src="js/gabc.js?v=1.3.0"></script>
-<script src="js/layout.js?v=1.3.0"></script>
-<script src="js/app.js?v=1.3.0"></script>
+<script src="js/zip.js?v=1.4.0"></script>
+<script src="js/convert.js?v=1.4.0"></script>
+<script src="js/gabc.js?v=1.4.0"></script>
+<script src="js/layout.js?v=1.4.0"></script>
+<script src="js/play.js?v=1.4.0"></script>
+<script src="js/app.js?v=1.4.0"></script>
 </body>
 </html>

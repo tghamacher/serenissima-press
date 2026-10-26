@@ -121,6 +121,17 @@ button, select, input { font: inherit; color: inherit; }
 
 .sp-preview { padding: 20px; overflow: auto; }
 .sp-status { max-width: 820px; margin: 0 auto 16px; }
+/* playback: the bar stays at the top of the preview; the notes sounding are lit in red */
+.sp-player { position: sticky; top: -20px; z-index: 5; max-width: 820px; margin: -20px auto 14px; padding: 10px 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+             background: var(--panel); border: 1px solid var(--rule); border-top: 0; border-radius: 0 0 6px 6px; font: 14px var(--ui); }
+.sp-player .sp-btn { padding: 5px 12px; }
+.sp-player #playBtn { min-width: 92px; }
+.sp-tempo input { width: 58px; }
+.sp-voices { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.sp-voices label { display: inline-flex; align-items: center; gap: 4px; }
+.sp-player .sp-hint { flex-basis: 100%; margin: 0; }
+#book .sp-n { cursor: pointer; }
+#book .sp-n.sp-playing { color: var(--rubric); }
 .sp-report { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
 .sp-notice { background: var(--warn-bg); border: 1px solid var(--warn-rule); border-radius: 6px; padding: 9px 13px; margin-bottom: 10px; font-size: 13px; }
 .sp-notice.err { background: var(--err-bg); border-color: var(--err-rule); }
@@ -136,7 +147,7 @@ button, select, input { font: inherit; color: inherit; }
 @media (max-width: 860px) {
   .sp-main { grid-template-columns: 1fr; }
   .sp-controls { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--rule); }
-  .sp-preview { padding: 12px; }
+  .sp-preview { padding: 12px; } .sp-player { top: -12px; margin-top: -12px; }
 }
 
 /* ---------------------------------------------------------------- book pages */
@@ -176,7 +187,8 @@ button, select, input { font: inherit; color: inherit; }
 
 @media print {
   :root { color-scheme: light; } body { background: none; }
-  .sp-top, .sp-controls, .sp-status, .sp-foot, .sp-empty { display: none !important; }
+  .sp-top, .sp-controls, .sp-status, .sp-foot, .sp-empty, .sp-player { display: none !important; }
+  #book .sp-n.sp-playing { color: inherit; }
   .sp-main { display: block; min-height: 0; }
   .sp-preview { padding: 0; overflow: visible; }
   .sp-scale { transform: none !important; height: auto !important; width: auto !important; }

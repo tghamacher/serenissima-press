@@ -149,7 +149,7 @@
       if (n > 1) li.append(btn('↑', 'Move up', move(-1), i === 0), btn('↓', 'Move down', move(1), i === n - 1));
       li.append(btn('×', 'Remove', () => {
         state.pieces.splice(i, 1); state.cur = Math.min(state.cur, state.pieces.length - 1);
-        if (!state.pieces.length) { $('settings').hidden = true; $('empty').hidden = false; $('book').innerHTML = ''; status(); keep(); }
+        if (!state.pieces.length) { $('settings').hidden = true; $('empty').hidden = false; $('book').innerHTML = ''; status(); keep(); showPlayer(); }
         showPieces(); if (state.pieces.length) { showPiece(); typeset(); }
       }, false));
       ol.append(li);
@@ -273,6 +273,7 @@
   async function run() {
     if (!state.pieces.length) return;
     const many = state.pieces.length > 1, warnings = [], notes = [], pieces = [];
+    let clock = 0;   // playback: where the next piece starts, in semibreves
     for (const pc of state.pieces) {
       const sel = pc.parts.filter(p => p.include);
       if (!sel.length) { warnings.push(`${pc.title}: no voices are selected, so it’s left out of the book.`); pc.sections = []; continue; }
@@ -292,6 +293,14 @@
       addChants(pc, res, sel, warnings);
       pc.sections = res.sections.map(s => ({ ...s, mode: s.chant ? 'line' : 'run', ...pc.secs[s.step] }));
       res.parts.forEach((p, i) => p.side = sel[i].side);
+      // playback: each note's start and length in semibreves (the tactus, whatever this piece's note values), on
+      // the book's one timeline, the pieces one after another with a semibreve's rest between; and its voice
+      const red = +pc.reduction || 1; let end = 0;
+      for (const p of res.parts) for (const tk of p.tokens) if (tk.pb) {
+        const [t0, ql, midi] = tk.pb; end = Math.max(end, (t0 + ql) / red);
+        tk.pb = [+(clock + t0 / red).toFixed(4), +(ql / red).toFixed(4), midi]; tk.v = p.label;
+      }
+      clock += end + 1;
       // with one piece, its title is the book's
       pieces.push({ title: many ? pc.title : $('title').value, composer: many ? pc.composer : $('composer').value, parts: res.parts, sections: pc.sections, at: pc });
     }
@@ -299,6 +308,7 @@
     const pg = f => { const [, w, h] = PAGES[state.page[f]]; return state.orient[f] === 'landscape' ? [h, w] : [w, h]; };
     const scale = $('scale'); scale.style.transform = 'none'; scale.style.height = ''; scale.style.width = '';
     $('book').classList.add('sp-busy');
+    window.SPPlay.stop();   // the notes it was playing are about to go
     let out;
     try {
       out = await L.render($('book'), { title: $('title').value, composer: $('composer').value, imprint: $('imprint').value, pieces }, {
@@ -323,6 +333,7 @@
     for (const [pi, step, at] of out.where) pieces[pi].at.where.set(step, at);
     showSections();
     fitPreview();
+    showPlayer();
     status(null, warnings.concat(out.warnings), notes);
     document.title = `${$('title').value || 'Serenissima Press'} – ${state.format}`;
     keep();
@@ -536,7 +547,7 @@
   // ---- projects: the book's settings and its scores in one file (JSON), to open again here or elsewhere; the
   // last one is also kept in this browser, to pick up after a reload
   const PROJECT_IDS = ['title', 'composer', 'imprint', 'staffSize', 'staffCustom', 'numbering', 'spacing', 'textType', 'labelFirst', 'labelRest', 'ruleEmpty', 'signum',
-    'titlePage', 'index', 'pieceStart', 'clefs', 'ledgers', 'repeats', 'ficta', 'barlines', 'brackets', 'initial', 'initialLines', 'initial2', 'initialLines2', 'rubric', 'noteSpacing'];
+    'titlePage', 'index', 'pieceStart', 'clefs', 'ledgers', 'repeats', 'ficta', 'barlines', 'brackets', 'initial', 'initialLines', 'initial2', 'initialLines2', 'rubric', 'noteSpacing', 'tempo'];
   function project() {
     saveLook();
     return {
@@ -613,6 +624,34 @@
   }
 
   $('print').onclick = () => window.print();
+
+  // ---- playback (js/play.js): the bar over the preview, a box for each voice (a voice unticked is silent, and
+  // stays so through changes to the book), a note clicked plays from there, the space bar plays and pauses
+  const P = window.SPPlay, silent = new Set();
+  function showPlayer() {
+    P.tempo = $('tempo').value;   // (as a project may have set it)
+    const { notes, voices } = P.load($('book'));
+    $('player').hidden = !notes;
+    const box = $('playVoices'); box.innerHTML = '';
+    for (const v of voices) {
+      const l = document.createElement('label'), c = document.createElement('input');
+      c.type = 'checkbox'; c.checked = !silent.has(v); P.mute(v, silent.has(v));
+      c.onchange = () => { if (c.checked) silent.delete(v); else silent.add(v); P.mute(v, !c.checked); };
+      l.append(c, v); box.append(l);
+    }
+    playLabel();
+  }
+  const playLabel = () => { $('playBtn').textContent = P.playing ? '❚❚ Pause' : '▶ Play'; };
+  P.onchange = playLabel;
+  P.tempo = $('tempo').value;
+  $('playBtn').onclick = () => P.playing ? P.pause() : P.play();
+  $('stopBtn').onclick = () => P.stop();
+  $('tempo').onchange = () => { P.tempo = $('tempo').value; };
+  $('book').addEventListener('click', e => { const n = e.target.closest('.sp-n'); if (n) P.play(+n.dataset.pb.split(' ')[0]); });
+  document.addEventListener('keydown', e => {
+    if (e.key !== ' ' || $('player').hidden || e.target.closest('input, textarea, select, button, [contenteditable]')) return;
+    e.preventDefault(); if (P.playing) P.pause(); else P.play();
+  });
   showFormat(); showMargins();
 
   // the editor's theme (the pages stay paper): light, dark or the system's, remembered in this browser
