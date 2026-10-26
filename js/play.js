@@ -6,7 +6,11 @@
   const LOOKAHEAD = 1.0, TICK = 50;   // seconds scheduled ahead; ms between scheduling passes
   let ac = null, out = null, wave = null;
   let notes = [], voices = [], book = null;
-  let playing = false, startAt = 0, from = 0, next = 0, timer = 0, raf = 0, sounding = [], lit = new Set(), shownPage = null;
+  let playing = false, startAt = 0, from = 0, next = 0, timer = 0, raf = 0, sounding = [], lit = new Set(), followed = null, handAt = 0, fv = null;
+  // the reader scrolling by hand: the view stops following the notes for a while
+  const HAND = 4000;
+  for (const ev of ['wheel', 'touchmove']) global.addEventListener(ev, () => { handAt = Date.now(); }, { passive: true });
+  global.addEventListener('keydown', e => { if (/^(Page|Arrow(Up|Down)|Home|End)/.test(e.key)) handAt = Date.now(); });
   const opts = { tempo: 66, muted: new Set(), onchange: () => { } };
 
   // the notes on the page, in order of time
@@ -56,6 +60,15 @@
     }
     if (pos() > end() + 0.5) stop(true);
   }
+  // keep a note in view, below the playing bar pinned at the top of the window
+  function follow(el) {
+    if (el === followed || Date.now() - handAt < HAND) return;
+    followed = el;
+    const bar = document.querySelector('.sp-player:not([hidden])');
+    const top = bar ? bar.getBoundingClientRect().bottom : 0, r = el.getBoundingClientRect();
+    if (r.top < top + 12 || r.bottom > global.innerHeight - 24)
+      global.scrollBy({ top: r.top - top - (global.innerHeight - top) / 3, behavior: 'smooth' });
+  }
   // light the notes sounding now; keep the newest in view
   function frame() {
     const t = pos(), now = new Set();
@@ -63,19 +76,22 @@
     for (const e of lit) if (!now.has(e)) e.classList.remove('sp-playing');
     for (const e of now) e.classList.add('sp-playing');
     lit = now;
-    const first = [...now][0], page = first && first.closest('.sp-page');
-    if (page && page !== shownPage) { shownPage = page; first.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+    // follow one voice, through its rests too: in partbooks the voices sounding together are in different books
+    const on = [...now];
+    if (fv === null || opts.muted.has(fv)) fv = on.length ? on[0].dataset.v : null;
+    const el = on.find(e => e.dataset.v === fv);
+    if (el) follow(el);
     if (playing) raf = requestAnimationFrame(frame);
   }
 
-  function play(at) {
+  function play(at, voice) {
     if (!notes.length) return;
     audio();
     if (ac.state === 'suspended') ac.resume();
     if (playing) pause();
     if (at !== undefined) from = at;
     if (from >= end()) from = 0;
-    playing = true; startAt = ac.currentTime + 0.08; shownPage = null;
+    playing = true; startAt = ac.currentTime + 0.08; followed = null; handAt = 0; if (voice !== undefined) fv = voice;
     // from the first note still sounding here (one begun before it sounds for the rest of its length)
     next = Math.max(0, notes.findIndex(n => n.on + n.len > from));
     schedule(); timer = setInterval(schedule, TICK); raf = requestAnimationFrame(frame);
@@ -91,7 +107,7 @@
   }
   function stop(atEnd) {
     const was = playing; playing = false; silence();
-    from = 0; for (const e of lit) e.classList.remove('sp-playing'); lit = new Set();
+    from = 0; fv = null; for (const e of lit) e.classList.remove('sp-playing'); lit = new Set();
     if (was || atEnd) opts.onchange();
   }
   // a new tempo, or voices muted, take effect from where playing has got to

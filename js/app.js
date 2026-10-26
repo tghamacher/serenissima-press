@@ -667,7 +667,7 @@
   $('playBtn').onclick = () => P.playing ? P.pause() : P.play();
   $('stopBtn').onclick = () => P.stop();
   $('tempo').onchange = () => { P.tempo = $('tempo').value; };
-  $('book').addEventListener('click', e => { const n = e.target.closest('.sp-n'); if (n) P.play(+n.dataset.pb.split(' ')[0]); });
+  $('book').addEventListener('click', e => { const n = e.target.closest('.sp-n'); if (n) P.play(+n.dataset.pb.split(' ')[0], n.dataset.v); });
   document.addEventListener('keydown', e => {
     if (e.key !== ' ' || $('player').hidden || e.target.closest('input, textarea, select, button, [contenteditable]')) return;
     e.preventDefault(); if (P.playing) P.pause(); else P.play();
