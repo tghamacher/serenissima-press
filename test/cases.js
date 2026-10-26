@@ -9,6 +9,10 @@
   const text = d => d.getElementById('book').textContent;
   const pagesWith = (pages, sel) => pages.filter(p => p.querySelector(sel)).length;
   const spaced = (d, how) => { const s = d.getElementById('noteSpacing'); s.value = how; s.dispatchEvent(new Event('change')); };
+  const colophon = text => d => {
+    const c = d.getElementById('colophon'); c.checked = true; c.dispatchEvent(new Event('change'));
+    const t = d.getElementById('colophonText'); t.value = text; t.dispatchEvent(new Event('input'));
+  };
   const pageSize = (d, page, orient) => { for (const [id, v] of [['page', page], ['orient', orient]]) { const s = d.getElementById(id); s.value = v; s.dispatchEvent(new Event('change')); } };
   // every "Residuum" clear of the staves, clefs and words around it (some must be there to check)
   const residuumClear = d => {
@@ -145,6 +149,25 @@
         const svgFont = [...d.querySelectorAll('.sp-initial.sp-glyph text, .sp-initial.sp-glyph [font-family]')].map(t => t.getAttribute('font-family') || t.style.fontFamily).find(Boolean) || fam;
         if (!d.fonts.check(`20px ${svgFont}`)) bad.push(`The font ${svgFont} did not load`);
         return bad; } })),
+
+    // ---- the colophon: at the end of each partbook, clear of the music; in a choirbook not over the staves
+    { name: 'colophon: each partbook ends with it', score: SAMPLE, setup: colophon('Venetiis, apud Antonium Gardanum\n1544, et 1601'),
+      check: d => {
+        const bad = [], cs = [...d.querySelectorAll('#book .sp-colo')], pages = [...d.querySelectorAll('#book .sp-page')];
+        if (cs.length !== 4) bad.push(`${cs.length} colophons, expected one for each of the four books`);
+        const t = cs.length ? cs[0].textContent : '';
+        if (!/FINIS/.test(t) || !/M\. D\. XLIIII\./.test(t) || !/M\. DC\. I\./.test(t)) bad.push(`colophon reads "${t}"`);
+        for (const c of cs) {
+          const a = c.getBoundingClientRect(), pg = c.closest('.sp-page'), r = pg.getBoundingClientRect();
+          if (a.bottom > r.bottom + 1 || a.top < r.top - 1) bad.push(`A colophon beyond its page (page ${pages.indexOf(pg) + 1})`);
+          if ([...pg.querySelectorAll('.sp-sys, .sp-syl')].some(s => { const b = s.getBoundingClientRect(); return b.top < a.bottom - 1 && b.bottom > a.top + 1; })) bad.push(`A colophon over the music (page ${pages.indexOf(pg) + 1})`);
+        }
+        return bad; } },
+    { name: 'colophon: choirbook, on a page of its own', score: SAMPLE, format: 'choirbook', style: 'manuscript', setup: colophon('Scriptum Mechliniae 1520'),
+      check: d => {
+        const cs = d.querySelectorAll('#book .sp-colo');
+        if (cs.length !== 1) return [`${cs.length} colophons, expected one`];
+        return cs[0].closest('.sp-page').querySelector('.sp-staff') ? ['The colophon is on a page of music'] : []; } },
 
     // ---- Non Papa's Ego flos campi, a 7: a score converted from PDF, its faults corrected by hand (the woodcut
     // alphabet has no E, so the printed books say so)

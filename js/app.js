@@ -15,7 +15,7 @@
   };
   // pieces: [{ file, xml (as read, for saving), doc, info, title, composer, reduction, mens, transpose, parts: [{index, name, include, label, clef, side}],
   //   secs: {step: {name, mode}}, sections (as last converted) }]; cur: the piece whose settings are shown
-  const state = { format: 'partbook', page: { partbook: 'quarto', choirbook: 'tabloid' }, orient: { partbook: 'landscape', choirbook: 'portrait' }, initialSrc: '', pieces: [], cur: 0, secKey: '' };
+  const state = { format: 'partbook', page: { partbook: 'quarto', choirbook: 'tabloid' }, orient: { partbook: 'landscape', choirbook: 'portrait' }, initialSrc: '', deviceSrc: '', pieces: [], cur: 0, secKey: '' };
   const piece = () => state.pieces[state.cur];
 
   // ---- margins, in inches: [top, bottom, inside, outside], for each format. "Book" follows the
@@ -96,7 +96,7 @@
     const lines = [
       `Version: ${$('version').dataset.version}`,
       `Format: ${state.format}, ${sel('page')} ${state.orient[state.format]}, staff ${sel('staffSize')}${state.staffUsed ? ` (${Math.round(state.staffUsed)} px)` : ''}, numbering ${sel('numbering')}, text ${$('textType').value}, sign ${$('signum').value}, spacing ${$('spacing').value}, style ${style()}, margins ${Object.values(margins()).join('/')} in`,
-      `Clefs: ${sel('clefs')}; repeats: ${sel('repeats')}; options: ${on(['ledgers', 'ficta', 'barlines', 'brackets', 'titlePage', 'index', 'labelFirst', 'labelRest', 'ruleEmpty'])}`,
+      `Clefs: ${sel('clefs')}; repeats: ${sel('repeats')}; options: ${on(['ledgers', 'ficta', 'barlines', 'brackets', 'titlePage', 'index', 'colophon', 'labelFirst', 'labelRest', 'ruleEmpty'])}`,
       ...state.pieces.map(pc => `Piece: ${pc.file} — note values ${pc.reduction}, mensuration ${pc.mens || 'auto'}, transpose ${pc.transpose}; voices: ${pc.parts.filter(p => p.include).map(p => `${p.label} ${p.clef || 'auto'}${state.format === 'choirbook' ? ' ' + p.side : ''}`).join(', ')}${Object.values(pc.secs).some(s => s.mode && s.mode !== 'run') ? '; sections: ' + Object.entries(pc.secs).filter(([, s]) => s.mode && s.mode !== 'run').map(([k, s]) => `${k}:${s.mode}`).join(' ') : ''}`),
       `Browser: ${navigator.userAgent}`
     ];
@@ -311,7 +311,8 @@
     window.SPPlay.stop();   // the notes it was playing are about to go
     let out;
     try {
-      out = await L.render($('book'), { title: $('title').value, composer: $('composer').value, imprint: $('imprint').value, pieces }, {
+      const colophon = $('colophon').checked ? { finis: $('finis').checked, device: $('device').value, src: state.deviceSrc, text: colophonText() } : null;
+      out = await L.render($('book'), { title: $('title').value, composer: $('composer').value, imprint: $('imprint').value, colophon, pieces }, {
         format: state.format, staffSize: staffSize(),
         initials: {
           first: { style: $('initial').value, lines: +$('initialLines').value },
@@ -530,6 +531,24 @@
     const f = e.target.files[0]; if (!f) return;
     const r = new FileReader(); r.onload = () => { state.initialSrc = r.result; typeset(); }; r.readAsDataURL(f);
   };
+  // ---- the colophon: "Finis", the printer's device and the colophon's lines, at the end of each book
+  $('colophon').onchange = () => { $('colophonBox').hidden = !$('colophon').checked; typeset(); };
+  for (const id of ['finis', 'romanYear']) $(id).onchange = typeset;
+  $('colophonText').oninput = typeset;
+  $('device').onchange = () => { if ($('device').value === 'image' && !state.deviceSrc) $('deviceFile').click(); typeset(); };
+  $('deviceFile').onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader(); r.onload = () => { state.deviceSrc = r.result; typeset(); }; r.readAsDataURL(f);
+  };
+  // years as the printers wrote them: 1544 becomes M. D. XLIIII. (four as IIII, as in most Venetian imprints)
+  function periodYear(n) {
+    const group = (v, one, five, ten) => v === 9 ? one + ten : v === 4 ? one.repeat(4) : (v >= 5 ? five : '') + one.repeat(v % 5);
+    const th = 'M'.repeat(Math.floor(n / 1000)), h = Math.floor(n / 100) % 10, t = Math.floor(n / 10) % 10, u = n % 10;
+    const hundreds = h === 9 ? 'CM' : h === 4 ? 'CD' : (h >= 5 ? 'D' : '') + 'C'.repeat(h % 5);
+    const tens = t === 9 ? 'XC' : t === 4 ? 'XL' : (t >= 5 ? 'L' : '') + 'X'.repeat(t % 5);
+    return [th, hundreds, tens + group(u, 'I', 'V', 'X')].filter(Boolean).join('. ') + '.';
+  }
+  const colophonText = () => $('romanYear').checked ? $('colophonText').value.replace(/\b(1[0-9]{3}|20[0-9]{2})\b\.?/g, (m, y) => periodYear(+y)) : $('colophonText').value;
   $('addChant').onclick = () => {
     const pc = piece(); if (!pc) return;
     const base = pc.base || [];
@@ -547,14 +566,14 @@
   // ---- projects: the book's settings and its scores in one file (JSON), to open again here or elsewhere; the
   // last one is also kept in this browser, to pick up after a reload
   const PROJECT_IDS = ['title', 'composer', 'imprint', 'staffSize', 'staffCustom', 'numbering', 'spacing', 'textType', 'labelFirst', 'labelRest', 'ruleEmpty', 'signum',
-    'titlePage', 'index', 'pieceStart', 'clefs', 'ledgers', 'repeats', 'ficta', 'barlines', 'brackets', 'initial', 'initialLines', 'initial2', 'initialLines2', 'rubric', 'noteSpacing', 'tempo'];
+    'titlePage', 'index', 'pieceStart', 'clefs', 'ledgers', 'repeats', 'ficta', 'barlines', 'brackets', 'initial', 'initialLines', 'initial2', 'initialLines2', 'rubric', 'noteSpacing', 'tempo', 'colophon', 'finis', 'device', 'colophonText', 'romanYear'];
   function project() {
     saveLook();
     return {
       serenissima: 1, version: $('version').dataset.version, saved: new Date().toISOString(),
       book: {
         controls: Object.fromEntries(PROJECT_IDS.map(id => [id, $(id).type === 'checkbox' ? $(id).checked : $(id).value])),
-        format: state.format, styles: state.styles, looks: state.looks, page: state.page, orient: state.orient, margins: state.margins, initialSrc: state.initialSrc, cur: state.cur
+        format: state.format, styles: state.styles, looks: state.looks, page: state.page, orient: state.orient, margins: state.margins, initialSrc: state.initialSrc, deviceSrc: state.deviceSrc, cur: state.cur
       },
       pieces: state.pieces.map(pc => ({
         file: pc.file, xml: pc.xml, title: pc.title, composer: pc.composer, reduction: pc.reduction, mens: pc.mens, transpose: pc.transpose, secs: pc.secs, chants: pc.chants,
@@ -575,7 +594,7 @@
       for (const p of s.parts || []) { const q = pc.parts.find(x => x.index === p.index); if (q) Object.assign(q, p); }
     }
     // the book: what each format and style keeps, then the controls (the look of the format in use among them)
-    for (const k of ['format', 'initialSrc']) if (b[k] !== undefined) state[k] = b[k];
+    for (const k of ['format', 'initialSrc', 'deviceSrc']) if (b[k] !== undefined) state[k] = b[k];
     for (const k of ['styles', 'page', 'orient', 'margins']) if (b[k]) Object.assign(state[k], b[k]);
     // before 1.2, close spacing was a switch of the manuscript style: on, close; off, as printed
     const spacingOf = tight => tight ? 'close' : 'printed';
@@ -590,6 +609,7 @@
     $('page').value = state.page[state.format]; $('orient').value = state.orient[state.format];
     $('staffCustom').hidden = $('staffSize').value !== 'custom';
     $('imprintRow').hidden = !$('titlePage').checked;
+    $('colophonBox').hidden = !$('colophon').checked;
     showFormat(); showMargins(); showPageHint();
     showPieces(); showPiece(); typeset();
   }

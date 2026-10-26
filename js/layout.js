@@ -286,6 +286,7 @@
     }
     if (gothic) {
       D.title = gothicText(D.title); D.composer = gothicText(D.composer); D.imprint = gothicText(D.imprint);
+      if (D.colophon) D.colophon.text = gothicText(D.colophon.text);
       for (const pc of D.pieces) {
         pc.title = gothicText(pc.title); pc.composer = gothicText(pc.composer);
         pc.parts.forEach(p => p.label = gothicLabel(p.label));
@@ -538,6 +539,33 @@
     }
     const where = [];   // for the sections list: [piece, step, opening or page]
 
+    // the colophon, after the printed books (D.colophon: { finis, device, src, text }): "Finis", the printer's
+    // device or an ornament, and the colophon's lines naming the place, the printer and the year
+    const COLO_GAP = 18;
+    function colophonEl() {
+      // (its type a little larger than the words under the music, so it grows with a choirbook's staves)
+      const c = D.colophon, box = el('div', 'sp-colo'); box.style.fontSize = Math.max(17, (staff || 0) * TEXT * 1.15) + 'px';
+      if (c.finis) box.append(el('div', 'sp-colo-finis', gothic ? 'Finis.' : 'FINIS.'));
+      if (c.device === 'image' && c.src) { const im = el('img', 'sp-colo-dev'); im.src = c.src; im.alt = ''; box.append(im); }
+      else if (c.device === 'fleuron' || c.device === 'hedera') box.append(el('div', 'sp-colo-orn', c.device === 'fleuron' ? '❧' : '❦'));
+      if (c.text && c.text.trim()) box.append(el('div', 'sp-colo-text', c.text.trim()));
+      return box;
+    }
+    function colophonHeight(Win, Hin) {
+      const pg = page(Win, Hin, 'recto'), c = colophonEl(); pg.append(c); book.append(pg);
+      const h = c.offsetHeight; pg.remove(); return h;
+    }
+    // at the foot of a page that ends a book (the index), if what is on it leaves room; else on a page of its own
+    function colophonAfter(pg, Win, Hin) {
+      const c = colophonEl(); c.classList.add('sp-colo-foot'); c.style.bottom = MG.b + 'px'; pg.append(c);
+      const content = [...pg.children].filter(x => x !== c && !x.classList.contains('sp-credit')).reduce((m, x) => Math.max(m, x.offsetTop + x.offsetHeight), 0);
+      if (content + COLO_GAP <= c.offsetTop) return pg;
+      c.remove(); return colophonPage(Win, Hin);
+    }
+    function colophonPage(Win, Hin) {
+      const pg = page(Win, Hin, 'recto'); pg.classList.add('sp-colo-page'); pg.append(colophonEl()); book.append(pg); return pg;
+    }
+
     let size, staff;
     if (o.format === 'choirbook') {
       // As in a ruled choirbook, every page has the same staves at the same places; the voices on a page
@@ -757,7 +785,10 @@
         book.append(spread);
       });
       slot = null;
-      if (o.index && D.pieces.length > 1) book.append(indexPage(Win, Hin, D.pieces.map((pc, i) => [pc.title, folio(starts[i] || 1)])));
+      if (o.index && D.pieces.length > 1) {
+        const ix = indexPage(Win, Hin, D.pieces.map((pc, i) => [pc.title, folio(starts[i] || 1)])); book.append(ix);
+        if (D.colophon) colophonAfter(ix, Win, Hin);
+      } else if (D.colophon) colophonPage(Win, Hin);   // (not over the ruled staves of the last opening)
       const pages = book.querySelectorAll('.sp-page');
       if (pages.length) pages[pages.length - 1].append(credit());
       size = [Win, Hin];
@@ -797,20 +828,27 @@
           if (r.mark && label === voices.find(x => D.pieces[r.mark[0]].parts.some(p => p.label === x))) where.push([r.mark[0], r.mark[1], pages.length]);
         });
         if (o.titlePage) addTitlePage(Win, Hin, label);
-        let last = null;
+        let last = null, placed = false;
+        const ix = o.index && D.pieces.length > 1, colo = D.colophon ? colophonHeight(Win, Hin) : 0;
         pages.forEach((pgr, n) => {
           const begins = pgr.rows.some(r => r.kind === 'title'), shown = begins ? labels.first : labels.rest;
           const pg = page(Win, Hin, (n + 1) % 2 ? 'recto' : 'verso'), head = el('div', 'sp-head', shown ? label : ''), num = numeral(n + 1);
           // page numbers in the outer corner: right on a right-hand (odd) page, left on a left-hand one
           if (num) head.append(el('span', 'sp-num ' + ((n + 1) % 2 ? 'r' : 'l'), num));
-          pg.append(head, block(pgr.rows, F, W, avail));
-          book.append(pg); last = pg;
+          // with no index to follow, the colophon at the foot of the last page if the music leaves room (its
+          // staves then end above it)
+          const foot = colo && !ix && n === pages.length - 1 && avail - pgr.used >= colo + COLO_GAP;
+          pg.append(head, block(pgr.rows, F, W, foot ? avail - colo - COLO_GAP : avail));
+          if (foot) { const c = colophonEl(); c.style.marginTop = COLO_GAP + 'px'; pg.append(c); }
+          book.append(pg); last = pg; placed = placed || foot;
         });
-        if (o.index && D.pieces.length > 1) {
+        if (ix) {
           const entries = [];
           pages.forEach((pgr, n) => pgr.rows.forEach(r => { if (r.kind === 'title') entries.push([r.title, n + 1]); }));
           book.append(last = indexPage(Win, Hin, entries, label));
+          if (colo) { last = colophonAfter(last, Win, Hin); placed = true; }
         }
+        if (colo && !placed) last = colophonPage(Win, Hin);
         if (last) last.append(credit());
       }
       size = [Win, Hin];

@@ -8,12 +8,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+French+Canon&display=block" rel="stylesheet">
-<link rel="stylesheet" href="css/site.css?v=1.4.0">
+<link rel="stylesheet" href="css/site.css?v=1.5.0">
 <script>/* the editor's theme, before anything is drawn: light, dark, or the system's */ try { const t = localStorage.getItem("sp-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) { }</script>
 </head>
 <body>
 <header class="sp-top">
-  <h1>Serenissima Press</h1><span class="ver" id="version" data-version="1.4.0">version 1.4.0</span>
+  <h1>Serenissima Press</h1><span class="ver" id="version" data-version="1.5.0">version 1.5.0</span>
   <p>Turn MusicXML scores into Renaissance partbooks and choirbooks, in mensural notation with the words set underneath.</p>
   <nav><a href="cheatsheet.html">Font cheat sheet</a><a id="feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform" target="_blank" rel="noopener">Feedback</a><a href="https://github.com/tghamacher/serenissima-press" target="_blank" rel="noopener">GitHub</a><a href="#about">About</a><select id="theme" class="sp-theme" aria-label="Colour theme"><option value="system">System theme</option><option value="light">Light</option><option value="dark">Dark</option></select></nav>
 </header>
@@ -117,6 +117,17 @@
       </div>
       <label class="sp-check"><input type="checkbox" id="titlePage"> Title page</label>
       <label class="sp-field" id="imprintRow" hidden><span>Imprint (bottom of the title page)</span><input type="text" id="imprint" placeholder="e.g. Edited by A. Singer · MMXXVI"></label>
+      <label class="sp-check"><input type="checkbox" id="colophon"> Colophon at the end</label>
+      <div id="colophonBox" hidden>
+        <label class="sp-check"><input type="checkbox" id="finis" checked> “Finis” after the music</label>
+        <label class="sp-field"><span>Printer’s device</span>
+          <select id="device"><option value="fleuron">❧ Fleuron</option><option value="hedera">❦ Leaf (hedera)</option><option value="image">Upload your own device…</option><option value="none">None</option></select>
+        </label>
+        <label class="sp-field"><span>Colophon</span><textarea id="colophonText" rows="3" placeholder="Venetiis, apud Antonium Gardanum&#10;1544"></textarea></label>
+        <label class="sp-check"><input type="checkbox" id="romanYear" checked> Years in Roman numerals (1544 becomes M. D. XLIIII.)</label>
+        <p class="sp-hint">Printed music books ended with the printer’s mark and a line naming the city, the printer and the year. In partbooks each voice’s book ends with it, at the foot of the last page if there’s room.</p>
+        <input type="file" id="deviceFile" accept="image/*" hidden>
+      </div>
       <div id="manyPieces" hidden>
         <label class="sp-check"><input type="checkbox" id="index" checked> Add an index of pieces at the back</label>
         <label class="sp-field" id="pieceStartRow"><span>Start each new piece</span>
@@ -269,14 +280,14 @@
   <p><strong>Serenissima Press</strong> converts MusicXML into mensural notation right in your browser. Your files are never uploaded. Treat the result as a first draft and check ties, perfections, ficta and text underlay against your source.</p>
   <p>Music font: <a href="https://www.earlymusicsources.com/">EMS Serenissima</a> by Elam Rotem, Early Music Sources, licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Text fonts: EB Garamond and IM Fell French Canon (SIL Open Font License), via Google Fonts. Initials: EB Garamond Initials by Georg Duffner, after Conrad Berner’s 1592 specimen (SIL Open Font License); Yinit by Yannis Haralambous (public domain); Gotische Initialen, Rothenburg Decorative, Typographer Caps, Goudy Initialen and Zallman Caps by Dieter Steffmann (LaTeX Project Public License, from the CTAN initials package). Cadels traced from Marco Antonio Rossi’s <i>Giardino de scrittori</i> (1598) and Paul Franck’s <i>Kunstrichtige Schreibart</i> (1601), both public domain.</p>
   <p>If you share a book, please credit the editor of the MusicXML edition you started from.</p>
-  <p>Version 1.4.0 · <a href="https://github.com/tghamacher/serenissima-press">Source code and release notes on GitHub</a> · <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform">Send feedback</a> (no account needed) or <a href="https://github.com/tghamacher/serenissima-press/issues/new/choose">open an issue on GitHub</a>.</p>
+  <p>Version 1.5.0 · <a href="https://github.com/tghamacher/serenissima-press">Source code and release notes on GitHub</a> · <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform">Send feedback</a> (no account needed) or <a href="https://github.com/tghamacher/serenissima-press/issues/new/choose">open an issue on GitHub</a>.</p>
 </footer>
 
-<script src="js/zip.js?v=1.4.0"></script>
-<script src="js/convert.js?v=1.4.0"></script>
-<script src="js/gabc.js?v=1.4.0"></script>
-<script src="js/layout.js?v=1.4.0"></script>
-<script src="js/play.js?v=1.4.0"></script>
-<script src="js/app.js?v=1.4.0"></script>
+<script src="js/zip.js?v=1.5.0"></script>
+<script src="js/convert.js?v=1.5.0"></script>
+<script src="js/gabc.js?v=1.5.0"></script>
+<script src="js/layout.js?v=1.5.0"></script>
+<script src="js/play.js?v=1.5.0"></script>
+<script src="js/app.js?v=1.5.0"></script>
 </body>
 </html>

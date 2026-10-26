@@ -211,6 +211,16 @@ button, select, input { font: inherit; color: inherit; }
 .sp-tp-comp { font-size: 1.37em; font-variant: small-caps; letter-spacing: .08em; }
 .sp-tp-orn { font-size: 2.3em; line-height: 1; }
 .sp-tp-imprint { font-style: italic; margin-bottom: 1.9em; min-height: 1em; }
+/* the colophon: "Finis", the printer's device, the colophon's lines; at the foot of a page, or on its own */
+.sp-colo { display: flex; flex-direction: column; align-items: center; gap: .65em; text-align: center; font-size: 17px; }
+.sp-colo-finis { letter-spacing: .3em; padding-left: .3em; }
+.sp-colo-orn { font-size: 2.2em; line-height: 1; }
+.sp-colo-dev { height: 5.5em; max-width: 70%; object-fit: contain; }
+.sp-colo-text { white-space: pre-line; font-style: italic; line-height: 1.45; max-width: 85%; }
+.sp-colo-foot { position: absolute; left: 0; right: 0; }
+.sp-colo-page { display: flex; align-items: center; justify-content: center; } .sp-colo-page .sp-colo { width: 100%; }
+[data-type="gothic"] .sp-colo-text { font-style: normal; }
+[data-type="gothic"] .sp-colo-finis { letter-spacing: .04em; padding-left: 0; }
 .sp-ix-head { text-align: center; font-size: 22px; letter-spacing: .3em; padding-left: .3em; margin: 6px 0 26px; }
 .sp-ix-row { display: flex; align-items: baseline; font-size: 17px; line-height: 1.75; }
 .sp-ix-t { font-style: italic; }
