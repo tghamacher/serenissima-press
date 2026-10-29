@@ -183,6 +183,7 @@ button, select, input { font: inherit; color: inherit; }
 /* "Residuum" written down the indent where a voice goes on from the opening before (gothic type) */
 .sp-residuum { position: absolute; line-height: 0; color: var(--ink); z-index: 1; }
 .sp-residuum.sp-red { color: var(--rubric); }
+.sp-band-l.sp-red { color: var(--rubric); }
 .sp-glyph svg { display: block; width: 100%; height: 100%; overflow: visible; fill: currentColor; }
 
 @media print {

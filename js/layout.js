@@ -241,7 +241,7 @@
   // D: { title, composer, imprint (for the title page),
   //      pieces: [{ title, composer, parts: [{label, clef, sig, tokens, cuts, side}], sections: [{step, name, movement, mode}] }] }
   //      (side: 'verso' or 'recto' in a choirbook; mode: 'run', 'line' or 'page', where a section starts)
-  // o: { format, staffSize, initials: {first: {style, lines}, other: {style, lines}, src, red},
+  // o: { format, staffSize, initials: {first: {style, lines}, other: {style, lines}, src, red, voice (choirbooks: see dress)},
   //      partbookPage: [w,h], choirbookPage: [w,h], numbering: 'arabic'|'roman'|'none', titlePage, index,
   //      pieceStart: 'line'|'page' (partbooks), labels: { first, rest } (voice names where a piece begins, and after),
   //      margins: { top, bottom, inside, outside } in inches, ruleEmpty (draw the staves the music leaves empty),
@@ -294,16 +294,22 @@
       }
     }
     // a voice (or a section of it) gets its text ready and its initial
+    // (in a choirbook, the voices below the first may begin with their name's letter, as in the Alamire workshop's
+    // books: the T of Tenor, the rest of the name beside it, the text's first word written whole)
+    const voiceSpec = I.voice ? { ...I.other, voice: true } : I.other;
     function dress(p, spec) {
       let style = spec.style === 'image' && !I.src ? 'capital' : spec.style;
-      prepareText(p, style);
+      const named = spec.voice && !['none', 'image'].includes(style) && /^\p{L}/u.test(p.label || '');
+      prepareText(p, named ? 'none' : style);
+      if (named) p.initialLetter = p.label.charAt(0).toUpperCase().replace(/U/g, 'V').replace(/J/g, 'I');
       // a letter the alphabet lacks comes from the one that stands in for it (and that one's, if need be)
       for (let f = INITIAL_FONTS[style]; f && f.letters && !f.letters.includes(p.initialLetter); f = INITIAL_FONTS[style]) {
         const w = `${f.name} initials have no ${p.initialLetter}, so ${f.fallbackName} is used for it instead.`;
         if (!warnings.includes(w)) warnings.push(w);
         style = f.fallback;
       }
-      p.init = { style, lines: spec.lines, red: I.red && spec === I.other };
+      p.init = { style, lines: spec.lines, red: I.red && (spec === I.other || spec === voiceSpec) };
+      if (named) p.init.voice = p.label.slice(1);
       return p;
     }
     book.innerHTML = '';
@@ -584,7 +590,7 @@
         const all = verso.concat(recto);
         const cutAt = st => all.every(p => p.cuts && p.cuts[st] !== undefined);
         // the voice at the top of the left page gets the first initial
-        const sp = all.map((p, q) => spans(pc, p, cutAt, q === 0 ? I.first : I.other));
+        const sp = all.map((p, q) => spans(pc, p, cutAt, q === 0 ? I.first : voiceSpec));
         // the page may be turned at any bar every voice has reached, best where nothing runs across it (clean); at
         // another, a voice holding a note across it ends its line with that note, and the page is turned while it is held
         const loose = p => p.loose || p.cuts, turnAt = st => all.every(p => p.cuts && loose(p)[st] !== undefined);
@@ -725,7 +731,10 @@
           return box;
         }
         const iw = r.v.init.lines && r.li < r.v.init.lines ? initW(r.v, F) : 0;
-        if (iw && r.li === 0) { const ib = initialBox(r.v, F); ib.style.top = S.ann + S.lift + 'px'; ib.style.left = at + 'px'; box.append(ib); }
+        // an initial that is the voice name's first letter: the rest of the name beside its top, in place of the name
+        const named = iw && r.li === 0 && r.v.init.voice !== undefined;
+        if (named) { const l = band.firstChild; l.textContent = r.v.init.voice; l.style.paddingLeft = at + iw + 'px'; if (r.v.init.red) l.classList.add('sp-red'); }
+        if (iw && r.li === 0) { const ib = initialBox(r.v, F); ib.style.top = S.ann + (named ? 0 : S.lift) + 'px'; ib.style.left = at + 'px'; box.append(ib); }
         if (r.resid) {
           // down the staves beside it (less a little at the foot): drawn out to fill them, up to a point, or, beside
           // fewer staves than it wants, made smaller to fit. Turned to read downwards, the tops of its letters to the staff.

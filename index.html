@@ -8,12 +8,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+French+Canon&display=block" rel="stylesheet">
-<link rel="stylesheet" href="css/site.css?v=1.5.1">
+<link rel="stylesheet" href="css/site.css?v=1.6.0">
 <script>/* the editor's theme, before anything is drawn: light, dark, or the system's */ try { const t = localStorage.getItem("sp-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) { }</script>
 </head>
 <body>
 <header class="sp-top">
-  <h1>Serenissima Press</h1><span class="ver" id="version" data-version="1.5.1">version 1.5.1</span>
+  <h1>Serenissima Press</h1><span class="ver" id="version" data-version="1.6.0">version 1.6.0</span>
   <p>Turn MusicXML scores into Renaissance partbooks and choirbooks, in mensural notation with the words set underneath.</p>
   <nav><a href="cheatsheet.html">Font cheat sheet</a><a id="feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform" target="_blank" rel="noopener">Feedback</a><a href="https://github.com/tghamacher/serenissima-press" target="_blank" rel="noopener">GitHub</a><a href="#about">About</a><select id="theme" class="sp-theme" aria-label="Colour theme"><option value="system">System theme</option><option value="light">Light</option><option value="dark">Dark</option></select></nav>
 </header>
@@ -247,6 +247,8 @@
             <select id="initialLines2"><option value="1">1 staff</option><option value="2">2 staves</option><option value="3">3 staves</option></select>
           </label>
         </div>
+        <label class="sp-check" id="voiceInitialRow"><input type="checkbox" id="voiceInitials"> Start each lower voice with its name’s letter</label>
+        <p class="sp-hint" id="voiceInitialHint">As in the Alamire workshop’s choirbooks: the Tenor’s initial is a T and the Bassus’s a B, with the rest of the name written beside it, and the words begin in full on the staff. The first voice keeps the text’s initial.</p>
         <label class="sp-check" id="rubricRow"><input type="checkbox" id="rubric"> Print these initials in red</label>
       </div>
       <p class="sp-hint">The 1592 woodcut set only has A, D, F, G, L, N, O, Q and T; any other letter comes from the foliated woodcut. Rossi’s cadels have no K or W, so Franck’s are used for those. Every other alphabet has all 26 letters (J and U are written as I and V, as in the period books). The roman alphabets suit printed books, and the gothic ones suit manuscripts and early prints.</p>
@@ -280,14 +282,14 @@
   <p><strong>Serenissima Press</strong> converts MusicXML into mensural notation right in your browser. Your files are never uploaded. Treat the result as a first draft and check ties, perfections, ficta and text underlay against your source.</p>
   <p>Music font: <a href="https://www.earlymusicsources.com/">EMS Serenissima</a> by Elam Rotem, Early Music Sources, licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Text fonts: EB Garamond and IM Fell French Canon (SIL Open Font License), via Google Fonts. Initials: EB Garamond Initials by Georg Duffner, after Conrad Berner’s 1592 specimen (SIL Open Font License); Yinit by Yannis Haralambous (public domain); Gotische Initialen, Rothenburg Decorative, Typographer Caps, Goudy Initialen and Zallman Caps by Dieter Steffmann (LaTeX Project Public License, from the CTAN initials package). Cadels traced from Marco Antonio Rossi’s <i>Giardino de scrittori</i> (1598) and Paul Franck’s <i>Kunstrichtige Schreibart</i> (1601), both public domain.</p>
   <p>If you share a book, please credit the editor of the MusicXML edition you started from.</p>
-  <p>Version 1.5.1 · <a href="https://github.com/tghamacher/serenissima-press">Source code and release notes on GitHub</a> · <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform">Send feedback</a> (no account needed) or <a href="https://github.com/tghamacher/serenissima-press/issues/new/choose">open an issue on GitHub</a>.</p>
+  <p>Version 1.6.0 · <a href="https://github.com/tghamacher/serenissima-press">Source code and release notes on GitHub</a> · <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform">Send feedback</a> (no account needed) or <a href="https://github.com/tghamacher/serenissima-press/issues/new/choose">open an issue on GitHub</a>.</p>
 </footer>
 
-<script src="js/zip.js?v=1.5.1"></script>
-<script src="js/convert.js?v=1.5.1"></script>
-<script src="js/gabc.js?v=1.5.1"></script>
-<script src="js/layout.js?v=1.5.1"></script>
-<script src="js/play.js?v=1.5.1"></script>
-<script src="js/app.js?v=1.5.1"></script>
+<script src="js/zip.js?v=1.6.0"></script>
+<script src="js/convert.js?v=1.6.0"></script>
+<script src="js/gabc.js?v=1.6.0"></script>
+<script src="js/layout.js?v=1.6.0"></script>
+<script src="js/play.js?v=1.6.0"></script>
+<script src="js/app.js?v=1.6.0"></script>
 </body>
 </html>

@@ -215,10 +215,10 @@
   // the ruling and a choirbook's staff (see SPACING_HINTS); each can still be changed, and each format and
   // style keeps its own choices. A printed book is black and white; a manuscript may have its initials (and a
   // choirbook its "Residuum") in red.
-  const LOOK_IDS = ['textType', 'initial', 'initial2', 'rubric', 'ruleEmpty', 'numbering', 'noteSpacing'];
+  const LOOK_IDS = ['textType', 'initial', 'initial2', 'rubric', 'ruleEmpty', 'numbering', 'noteSpacing', 'voiceInitials'];
   const LOOKS = {
-    print: { textType: 'roman', initial: 'woodcut', initial2: 'capital', rubric: false, ruleEmpty: false, numbering: 'arabic', noteSpacing: 'printed' },
-    manuscript: { textType: 'gothic', initial: 'gothic', initial2: 'gothic', rubric: true, ruleEmpty: true, numbering: 'roman', noteSpacing: 'close' }
+    print: { textType: 'roman', initial: 'woodcut', initial2: 'capital', rubric: false, ruleEmpty: false, numbering: 'arabic', noteSpacing: 'printed', voiceInitials: false },
+    manuscript: { textType: 'gothic', initial: 'gothic', initial2: 'gothic', rubric: true, ruleEmpty: true, numbering: 'roman', noteSpacing: 'close', voiceInitials: false }
   };
   const STYLE_HINTS = {
     choirbook: {
@@ -253,6 +253,7 @@
     $('sideHint').hidden = !cb;
     $('initialFor').textContent = cb ? 'First voice (top left)' : 'Each voice';
     $('initial2For').textContent = cb ? 'Other voices and sections' : 'Sections';
+    $('voiceInitialRow').hidden = $('voiceInitialHint').hidden = !cb;
     // as in the sources: printed partbooks are numbered by page, choirbooks by leaf (on the right-hand page)
     $('numberingLabel').textContent = cb ? 'Folio numbers' : 'Page numbers';
     $('numberingHint').textContent = cb ? 'Choirbooks are numbered by leaf, so only the right-hand pages get a number.' : 'Printed partbooks number every page in the outer corner. Roman numerals were common until about 1550.';
@@ -317,7 +318,8 @@
         initials: {
           first: { style: $('initial').value, lines: +$('initialLines').value },
           other: { style: $('initial2').value, lines: +$('initialLines2').value },
-          src: state.initialSrc, red: $('rubric').checked && !printed()
+          src: state.initialSrc, red: $('rubric').checked && !printed(),
+          voice: state.format === 'choirbook' && $('voiceInitials').checked
         },
         partbookPage: pg('partbook'), choirbookPage: pg('choirbook'),
         numbering: $('numbering').value, titlePage: $('titlePage').checked, index: $('index').checked, pieceStart: $('pieceStart').value,
@@ -524,7 +526,7 @@
     showSpacing(); typeset();
   };
   $('staffCustom').oninput = typeset;
-  for (const id of ['repeats', 'ficta', 'barlines', 'brackets', 'clefs', 'ledgers', 'numbering', 'index', 'pieceStart', 'labelFirst', 'labelRest', 'ruleEmpty', 'textType', 'signum', 'initialLines', 'initial2', 'initialLines2', 'rubric', 'noteSpacing']) $(id).onchange = typeset;
+  for (const id of ['repeats', 'ficta', 'barlines', 'brackets', 'clefs', 'ledgers', 'numbering', 'index', 'pieceStart', 'labelFirst', 'labelRest', 'ruleEmpty', 'textType', 'signum', 'initialLines', 'initial2', 'initialLines2', 'rubric', 'noteSpacing', 'voiceInitials']) $(id).onchange = typeset;
   $('spacing').onchange = () => { showSpacing(); typeset(); };
   $('initial').onchange = () => { if ($('initial').value === 'image' && !state.initialSrc) $('initialFile').click(); typeset(); };
   $('initialFile').onchange = e => {
@@ -566,7 +568,7 @@
   // ---- projects: the book's settings and its scores in one file (JSON), to open again here or elsewhere; the
   // last one is also kept in this browser, to pick up after a reload
   const PROJECT_IDS = ['title', 'composer', 'imprint', 'staffSize', 'staffCustom', 'numbering', 'spacing', 'textType', 'labelFirst', 'labelRest', 'ruleEmpty', 'signum',
-    'titlePage', 'index', 'pieceStart', 'clefs', 'ledgers', 'repeats', 'ficta', 'barlines', 'brackets', 'initial', 'initialLines', 'initial2', 'initialLines2', 'rubric', 'noteSpacing', 'tempo', 'colophon', 'finis', 'device', 'colophonText', 'romanYear'];
+    'titlePage', 'index', 'pieceStart', 'clefs', 'ledgers', 'repeats', 'ficta', 'barlines', 'brackets', 'initial', 'initialLines', 'initial2', 'initialLines2', 'rubric', 'voiceInitials', 'noteSpacing', 'tempo', 'colophon', 'finis', 'device', 'colophonText', 'romanYear'];
   function project() {
     saveLook();
     return {

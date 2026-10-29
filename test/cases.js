@@ -138,6 +138,17 @@
     { name: 'initials: Rossi has no K, so a Kyrie takes Franck’s', score: 'test/scores/kyrie.musicxml', setup: d => { const s = d.getElementById('initial'); s.value = 'cadel'; s.dispatchEvent(new Event('change')); },
       expect: { warnings: 1, warn: /Rossi’s cadel initials have no K, so Franck’s cadel is used for it instead/ },
       check: d => d.querySelector('.sp-initial.sp-glyph svg path[d]') ? [] : ['No cadel drawn'] },
+    // the lower voices begin with their name's letter (the Alamire choirbooks): the Tenor's is a T, so Rossi's cadels serve
+    // a Kyrie, and the rest of the name is written beside it; the first voice keeps the K
+    { name: 'initials: lower voices by their name', score: 'test/scores/kyrie.musicxml', format: 'choirbook', style: 'manuscript',
+      setup: d => { const s = d.getElementById('initial2'); s.value = 'cadel'; s.dispatchEvent(new Event('change')); const c = d.getElementById('voiceInitials'); c.checked = true; c.dispatchEvent(new Event('change')); },
+      expect: { warnings: 0 },
+      check: d => {
+        const bad = [], names = [...d.querySelectorAll('#book .sp-band-l')].map(e => e.textContent).filter(Boolean);
+        if (names[0] !== 'Cantu$') bad.push(`The first voice is named ${names[0]}, expected Cantu$`);
+        if (!names.includes('enor')) bad.push(`No “enor” beside the Tenor’s initial: ${names.join(', ')}`);
+        if (!d.querySelector('.sp-initial.sp-glyph svg path[d]')) bad.push('No cadel drawn');
+        return bad; } },
     ...['gothicWoodcut', 'flourished', 'constructed', 'foliated', 'leaves'].map(style => ({
       name: `initials: ${style}`, score: SAMPLE, format: 'choirbook',
       setup: d => { for (const id of ['initial', 'initial2']) { const s = d.getElementById(id); s.value = style; s.dispatchEvent(new Event('change')); } },
