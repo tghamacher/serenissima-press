@@ -8,10 +8,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+French+Canon&family=Inter:wght@400;500;600&display=block" rel="stylesheet">
-<link rel="stylesheet" href="css/site.css?v=1.7.0">
+<link rel="stylesheet" href="css/site.css?v=1.8.0">
 <script>/* the editor's theme, before anything is drawn: light, dark, or the system's */ try { const t = localStorage.getItem("sp-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) { }</script>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="sp-rough" x="-1%" y="-1%" width="102%" height="102%"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" result="noise"/><feDisplacementMap in="SourceGraphic" in2="noise" scale="1.3" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
 <header class="sp-top">
   <a class="sp-brand" href="./"><span class="sp-mark" aria-hidden="true">❧</span><h1>Serenissima Press</h1></a>
   <nav><a href="cheatsheet.html">Font cheat sheet</a><a id="feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform" target="_blank" rel="noopener">Feedback</a><a href="https://github.com/tghamacher/serenissima-press" target="_blank" rel="noopener">GitHub</a><a href="#about">About</a><button type="button" class="sp-icon" id="theme" aria-label="Colour theme"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path/></svg></button></nav>
@@ -99,6 +100,14 @@
         <select id="textType"><option value="roman">Roman (EB Garamond)</option><option value="gothic">Gothic (Rotunda Pommerania)</option></select>
       </label>
       <p class="sp-hint">Gothic is a rounded blackletter, used in the earliest music prints and in many Spanish and German books. It comes with long s and the old printers' ligatures. Roman type arrived later with the humanist presses.</p>
+      <label class="sp-field"><span>Surface</span>
+        <select id="surface"><option value="clean">Clean</option><option value="paper">Rag paper, as the printed books</option><option value="vellum">Vellum, as the manuscripts</option></select>
+      </label>
+      <div id="surfaceBox" hidden>
+        <label class="sp-check"><input type="checkbox" id="agedInk"> Aged ink</label>
+        <label class="sp-check"><input type="checkbox" id="printSurface" checked> Print the surface and ink</label>
+        <p class="sp-hint">The printers worked on rag paper, made sheet by sheet on a wire mould; the choirbooks were mostly written on vellum, calfskin scraped thin. Aged ink turns the scribes’ iron-gall ink brown and the printers’ a warm black, a little uneven from note to note; on screen its edges are roughened too, as type pressed into paper, but not in print, where that would turn every page into a large picture. Turn off printing for clean rehearsal copies.</p>
+      </div>
       <div class="sp-sub">Print the voice names</div>
       <div class="sp-row">
         <label class="sp-check"><input type="checkbox" id="labelFirst" checked> At the start of a piece</label>
@@ -288,14 +297,15 @@
   <p><strong>Serenissima Press</strong> converts MusicXML into mensural notation right in your browser. Your files are never uploaded. Treat the result as a first draft and check ties, perfections, ficta and text underlay against your source.</p>
   <p>Music font: <a href="https://www.earlymusicsources.com/">EMS Serenissima</a> by Elam Rotem, Early Music Sources, licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Text fonts: EB Garamond and IM Fell French Canon (SIL Open Font License), via Google Fonts. Initials: EB Garamond Initials by Georg Duffner, after Conrad Berner’s 1592 specimen (SIL Open Font License); Yinit by Yannis Haralambous (public domain); Gotische Initialen, Rothenburg Decorative, Typographer Caps, Goudy Initialen and Zallman Caps by Dieter Steffmann (LaTeX Project Public License, from the CTAN initials package). Cadels traced from Marco Antonio Rossi’s <i>Giardino de scrittori</i> (1598) and Paul Franck’s <i>Kunstrichtige Schreibart</i> (1601), both public domain.</p>
   <p>If you share a book, please credit the editor of the MusicXML edition you started from.</p>
-  <p>Version <span id="version" data-version="1.7.0">1.7.0</span> · <a href="https://github.com/tghamacher/serenissima-press">Source code and release notes on GitHub</a> · <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform">Send feedback</a> (no account needed) or <a href="https://github.com/tghamacher/serenissima-press/issues/new/choose">open an issue on GitHub</a>.</p>
+  <p>Version <span id="version" data-version="1.8.0">1.8.0</span> · <a href="https://github.com/tghamacher/serenissima-press">Source code and release notes on GitHub</a> · <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform">Send feedback</a> (no account needed) or <a href="https://github.com/tghamacher/serenissima-press/issues/new/choose">open an issue on GitHub</a>.</p>
 </footer>
 
-<script src="js/zip.js?v=1.7.0"></script>
-<script src="js/convert.js?v=1.7.0"></script>
-<script src="js/gabc.js?v=1.7.0"></script>
-<script src="js/layout.js?v=1.7.0"></script>
-<script src="js/play.js?v=1.7.0"></script>
-<script src="js/app.js?v=1.7.0"></script>
+<script src="js/zip.js?v=1.8.0"></script>
+<script src="js/convert.js?v=1.8.0"></script>
+<script src="js/gabc.js?v=1.8.0"></script>
+<script src="js/layout.js?v=1.8.0"></script>
+<script src="js/play.js?v=1.8.0"></script>
+<script src="js/surface.js?v=1.8.0"></script>
+<script src="js/app.js?v=1.8.0"></script>
 </body>
 </html>

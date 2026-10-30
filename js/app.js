@@ -95,7 +95,7 @@
     const on = ids => ids.filter(id => $(id).checked).join(', ') || 'none';
     const lines = [
       `Version: ${$('version').dataset.version}`,
-      `Format: ${state.format}, ${sel('page')} ${state.orient[state.format]}, staff ${sel('staffSize')}${state.staffUsed ? ` (${Math.round(state.staffUsed)} px)` : ''}, numbering ${sel('numbering')}, text ${$('textType').value}, sign ${$('signum').value}, spacing ${$('spacing').value}, style ${style()}, margins ${Object.values(margins()).join('/')} in`,
+      `Format: ${state.format}, ${sel('page')} ${state.orient[state.format]}, staff ${sel('staffSize')}${state.staffUsed ? ` (${Math.round(state.staffUsed)} px)` : ''}, numbering ${sel('numbering')}, text ${$('textType').value}, sign ${$('signum').value}, surface ${$('surface').value}${$('agedInk').checked ? ' (aged ink)' : ''}, spacing ${$('spacing').value}, style ${style()}, margins ${Object.values(margins()).join('/')} in`,
       `Clefs: ${sel('clefs')}; repeats: ${sel('repeats')}; options: ${on(['ledgers', 'ficta', 'barlines', 'brackets', 'titlePage', 'index', 'colophon', 'labelFirst', 'labelRest', 'ruleEmpty'])}`,
       ...state.pieces.map(pc => `Piece: ${pc.file} — note values ${pc.reduction}, mensuration ${pc.mens || 'auto'}, transpose ${pc.transpose}; voices: ${pc.parts.filter(p => p.include).map(p => `${p.label} ${p.clef || 'auto'}${state.format === 'choirbook' ? ' ' + p.side : ''}`).join(', ')}${Object.values(pc.secs).some(s => s.mode && s.mode !== 'run') ? '; sections: ' + Object.entries(pc.secs).filter(([, s]) => s.mode && s.mode !== 'run').map(([k, s]) => `${k}:${s.mode}`).join(' ') : ''}`),
       `Browser: ${navigator.userAgent}`
@@ -215,10 +215,10 @@
   // the ruling and a choirbook's staff (see SPACING_HINTS); each can still be changed, and each format and
   // style keeps its own choices. A printed book is black and white; a manuscript may have its initials (and a
   // choirbook its "Residuum") in red.
-  const LOOK_IDS = ['textType', 'initial', 'initial2', 'rubric', 'ruleEmpty', 'numbering', 'noteSpacing', 'voiceInitials'];
+  const LOOK_IDS = ['textType', 'initial', 'initial2', 'rubric', 'ruleEmpty', 'numbering', 'noteSpacing', 'voiceInitials', 'surface', 'agedInk'];
   const LOOKS = {
-    print: { textType: 'roman', initial: 'woodcut', initial2: 'capital', rubric: false, ruleEmpty: false, numbering: 'arabic', noteSpacing: 'printed', voiceInitials: false },
-    manuscript: { textType: 'gothic', initial: 'gothic', initial2: 'gothic', rubric: true, ruleEmpty: true, numbering: 'roman', noteSpacing: 'close', voiceInitials: false }
+    print: { textType: 'roman', initial: 'woodcut', initial2: 'capital', rubric: false, ruleEmpty: false, numbering: 'arabic', noteSpacing: 'printed', voiceInitials: false, surface: 'clean', agedInk: false },
+    manuscript: { textType: 'gothic', initial: 'gothic', initial2: 'gothic', rubric: true, ruleEmpty: true, numbering: 'roman', noteSpacing: 'close', voiceInitials: false, surface: 'clean', agedInk: false }
   };
   const STYLE_HINTS = {
     choirbook: {
@@ -330,6 +330,7 @@
     } catch (e) { $('book').classList.remove('sp-busy'); status(e.message); return; }
     $('book').classList.remove('sp-busy');
     setPageRule(out.pageSize);
+    dressPages();
     state.staffUsed = out.staffSize;
     // where each section starts, for the list of sections
     state.pieces.forEach(pc => pc.where = new Map());
@@ -454,6 +455,24 @@
     let s = $('pageRule'); if (!s) { s = document.createElement('style'); s.id = 'pageRule'; document.head.append(s); }
     s.textContent = `@page { size: ${w}in ${h}in; margin: 0; }`;
   }
+  // ---- the pages' surface and ink (see surface.js): only the look of the pages, so no new typesetting
+  function showSurface() { $('surfaceBox').hidden = $('surface').value === 'clean'; }
+  function dressPages() {
+    const book = $('book'), kind = $('surface').value, aged = kind !== 'clean' && $('agedInk').checked;
+    if (kind === 'clean') delete book.dataset.surface; else book.dataset.surface = kind;
+    if (aged) book.dataset.ink = style(); else delete book.dataset.ink;
+    book.dataset.printSurface = $('printSurface').checked ? 'on' : 'off';
+    book.querySelectorAll('.sp-page').forEach((p, i) => {
+      p.style.backgroundImage = kind === 'clean' ? '' : `url(${window.SPSurface.texture(kind, p.offsetWidth, p.offsetHeight, i % 3)})`;
+    });
+    // aged ink is uneven: each note and syllable a shade paler or fuller (seeded, so the same at every typesetting)
+    let s = 9;
+    for (const e of book.querySelectorAll('.sp-n, .sp-syl')) {
+      if (!aged) { e.style.removeProperty('--fade'); continue; }
+      s = (s * 16807) % 2147483647;
+      e.style.setProperty('--fade', Math.round(Math.pow(s / 2147483647, 3) * 30) + '%');
+    }
+  }
   // shrink the preview to the pane width (after layout, so measurements stay exact)
   function fitPreview() {
     const scale = $('scale'), book = $('book');
@@ -488,12 +507,15 @@
     document.querySelectorAll('[data-format]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
     $('page').value = state.page[state.format];
     $('orient').value = state.orient[state.format];
-    showFormat(); showMargins(); showPageHint(); showSections(); typeset();
+    showFormat(); showMargins(); showPageHint(); showSections(); showSurface(); typeset();
   });
   document.querySelectorAll('[data-style]').forEach(b => b.onclick = () => {
     if (style() === b.dataset.style) return;
+    const surface = $('surface').value, aged = $('agedInk').checked;
     saveLook(); state.styles[state.format] = b.dataset.style; loadLook();
-    showStyle(); typeset();
+    // a period surface chosen for one style suggests its match for the other: rag paper for print, vellum for manuscript
+    if (surface !== 'clean' && $('surface').value === 'clean') { $('surface').value = printed() ? 'paper' : 'vellum'; $('agedInk').checked = aged; }
+    showStyle(); showSurface(); typeset();
   });
   // partbooks start as the Venetian ones were: an oblong quarto
   $('page').value = state.page.partbook; $('orient').value = state.orient.partbook;
@@ -530,6 +552,8 @@
   $('staffCustom').oninput = typeset;
   for (const id of ['repeats', 'ficta', 'barlines', 'brackets', 'clefs', 'ledgers', 'numbering', 'index', 'pieceStart', 'labelFirst', 'labelRest', 'ruleEmpty', 'textType', 'signum', 'initialLines', 'initial2', 'initialLines2', 'rubric', 'noteSpacing', 'voiceInitials']) $(id).onchange = typeset;
   $('spacing').onchange = () => { showSpacing(); typeset(); };
+  $('surface').onchange = () => { showSurface(); dressPages(); keep(); };
+  for (const id of ['agedInk', 'printSurface']) $(id).onchange = () => { dressPages(); keep(); };
   $('initial').onchange = () => { if ($('initial').value === 'image' && !state.initialSrc) $('initialFile').click(); typeset(); };
   $('initialFile').onchange = e => {
     const f = e.target.files[0]; if (!f) return;
@@ -570,7 +594,7 @@
   // ---- projects: the book's settings and its scores in one file (JSON), to open again here or elsewhere; the
   // last one is also kept in this browser, to pick up after a reload
   const PROJECT_IDS = ['title', 'composer', 'imprint', 'staffSize', 'staffCustom', 'numbering', 'spacing', 'textType', 'labelFirst', 'labelRest', 'ruleEmpty', 'signum',
-    'titlePage', 'index', 'pieceStart', 'clefs', 'ledgers', 'repeats', 'ficta', 'barlines', 'brackets', 'initial', 'initialLines', 'initial2', 'initialLines2', 'rubric', 'voiceInitials', 'noteSpacing', 'tempo', 'colophon', 'finis', 'device', 'colophonText', 'romanYear'];
+    'titlePage', 'index', 'pieceStart', 'clefs', 'ledgers', 'repeats', 'ficta', 'barlines', 'brackets', 'initial', 'initialLines', 'initial2', 'initialLines2', 'rubric', 'voiceInitials', 'noteSpacing', 'tempo', 'colophon', 'finis', 'device', 'colophonText', 'romanYear', 'surface', 'agedInk', 'printSurface'];
   function project() {
     saveLook();
     return {
@@ -606,7 +630,9 @@
     if (b.controls && b.controls.tight !== undefined) { if (b.controls.noteSpacing === undefined) b.controls.noteSpacing = spacingOf(b.controls.tight && b.styles && b.styles[b.format || 'partbook'] === 'manuscript'); delete b.controls.tight; }
     // before 1.3, initials could be set on a dotted ground: now the foliated woodcut
     for (const c of [b.controls, ...Object.values(b.looks || {})]) if (c) for (const id of ['initial', 'initial2']) if (c[id] === 'letter') c[id] = 'foliated';
-    if (b.looks) Object.assign(state.looks, b.looks);
+    // a look saved before a setting existed takes its style's own (the surface, before 1.8)
+    for (const [k, l] of Object.entries(b.looks || {})) state.looks[k] = { ...LOOKS[k.split('|')[1]], ...l };
+    loadLook();
     for (const [id, v] of Object.entries(b.controls || {})) if ($(id)) { if ($(id).type === 'checkbox') $(id).checked = !!v; else $(id).value = v; }
     state.cur = Math.min(Math.max(0, b.cur || 0), state.pieces.length - 1);
     document.querySelectorAll('[data-format]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.format === state.format)));
@@ -614,7 +640,7 @@
     $('staffCustom').hidden = $('staffSize').value !== 'custom';
     $('imprintRow').hidden = !$('titlePage').checked;
     $('colophonBox').hidden = !$('colophon').checked;
-    showFormat(); showMargins(); showPageHint();
+    showFormat(); showMargins(); showPageHint(); showSurface();
     showPieces(); showPiece(); typeset();
   }
   // a file name from the book's title

@@ -264,6 +264,14 @@ input[type=checkbox] { accent-color: var(--accent); }
 .sp-band-l.sp-red { color: var(--rubric); }
 .sp-glyph svg { display: block; width: 100%; height: 100%; overflow: visible; fill: currentColor; }
 
+/* the surface: rag paper or vellum (surface.js), under the music; aged ink, iron-gall brown in a manuscript and a
+   warm black in print, each note a shade paler or fuller (--fade, set per note), its edges rough on screen only */
+#book[data-surface] .sp-page { background-size: 100% 100%; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+#book[data-ink="print"] .sp-page { --ink: #241a12; --rubric: #9a3c26; --ink-fade: #8f7a5c; }
+#book[data-ink="manuscript"] .sp-page { --ink: #3d2516; --rubric: #93412b; --ink-fade: #9b7b55; }
+#book[data-ink] .sp-n, #book[data-ink] .sp-syl { color: color-mix(in srgb, var(--ink), var(--ink-fade) var(--fade, 0%)); }
+@media screen { #book[data-ink] .sp-page { filter: url(#sp-rough); } #book[data-ink] .sp-n.sp-playing { color: var(--rubric); } }
+
 @media print {
   :root { color-scheme: light; } body { background: none; }
   .sp-top, .sp-controls, .sp-status, .sp-foot, .sp-empty, .sp-player { display: none !important; }
@@ -274,6 +282,9 @@ input[type=checkbox] { accent-color: var(--accent); }
   #book { display: block; gap: 0; width: auto; }
   .sp-spread { display: block; }
   .sp-page { box-shadow: none; break-after: page; background: #fff; --paper: #fff; }
+  /* clean rehearsal copies: the surface and the ink's age left on screen */
+  #book[data-print-surface="off"] .sp-page { background-image: none !important; --ink: #1b1712 !important; --rubric: #a8261b !important; }
+  #book[data-print-surface="off"] .sp-n, #book[data-print-surface="off"] .sp-syl { --fade: 0% !important; }
 }
 
 /* page and folio numbers, section headings, "tacet", title page, index */
