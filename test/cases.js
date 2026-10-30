@@ -17,6 +17,23 @@
     const s = d.getElementById('surface'); s.value = kind; s.dispatchEvent(new Event('change'));
     const a = d.getElementById('agedInk'); a.checked = aged; a.dispatchEvent(new Event('change'));
   };
+  // on each choirbook page whose voices (named at their first staff) have as many staves each, the same space
+  // between them; on ruled pages, whole staves. Some such page must be there to check.
+  const evenly = (d, ruled) => {
+    const bad = []; let seen = 0;
+    d.querySelectorAll('.sp-staves').forEach((area, pn) => {
+      const slots = [...area.children].filter(s => s.querySelector('.sp-sys, .sp-tacet'));
+      const tops = slots.map(s => parseFloat(s.style.top)), starts = slots.map((s, i) => s.querySelector('.sp-band-l') && s.querySelector('.sp-band-l').textContent.trim() ? i : -1).filter(i => i >= 0);
+      if (starts.length < 2 || starts[0] !== 0) return;
+      const lens = starts.map((s, j) => (starts[j + 1] === undefined ? slots.length : starts[j + 1]) - s);
+      if (!lens.every(l => l === lens[0])) return;
+      seen++;
+      const gaps = starts.slice(1).map((s, j) => tops[s] - tops[starts[j]]);
+      if (gaps.some(g => Math.abs(g - gaps[0]) > 0.5)) bad.push(`page ${pn + 1}: voices ${gaps.map(g => g.toFixed(1)).join(', ')} px apart`);
+      if (ruled) { const pitch = area.querySelector('.sp-slot').offsetHeight || 1; if (tops.some(t => Math.abs(t / pitch - Math.round(t / pitch)) > 0.02)) bad.push(`page ${pn + 1}: a staff off the ruling`); }
+    });
+    return seen ? bad.slice(0, 3) : ['No page whose voices have as many staves each, to check'];
+  };
   const pageSize = (d, page, orient) => { for (const [id, v] of [['page', page], ['orient', orient]]) { const s = d.getElementById(id); s.value = v; s.dispatchEvent(new Event('change')); } };
   // every "Residuum" clear of the staves, clefs and words around it (some must be there to check)
   const residuumClear = d => {
@@ -111,6 +128,10 @@
         if (same && !same.querySelector('input').checked) bad.push(`Muting ${name} in the first piece muted it in the second`);
         first.querySelector('input').click();
         return bad; } },
+
+    { name: 'choirbook: voices of as many staves spaced evenly', score: 'test/scores/ego-flos-campi.mxl', format: 'choirbook', expect: {}, check: d => evenly(d) },
+    { name: 'choirbook: and on ruled pages, on the ruling', score: 'test/scores/ego-flos-campi.mxl', format: 'choirbook', expect: {},
+      setup: d => { const r = d.getElementById('ruleEmpty'); r.checked = true; r.dispatchEvent(new Event('change')); }, check: d => evenly(d, true) },
 
     // ---- the sample, in each format and style
     { name: 'sample: partbook, printed', score: SAMPLE, expect: { warnings: 0, pages: [4, 12] } },

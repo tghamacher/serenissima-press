@@ -639,8 +639,16 @@
       // at: staff of each voice (by index in g.all); end: the staff after the last; last: the lowest voice
       // But never so low that the voices below it (and extra staves at the foot: a run-on from the facing page)
       // would fall off the page: then the voices close up, as tight as need be.
+      // Voices of as many staves each are spaced evenly: each starts exactly j/k of the way down, the space
+      // between them all the same (on a ruled page, where the staves stay on the ruling, the same whole staves)
       function startsOf(g, list, rows, n, extra = 0) {
         const live = list.map(p => g.all.indexOf(p)).filter(q => rows[q].length), at = new Map();
+        const L = live.length && rows[live[0]].length, k = live.length;
+        if (!extra && k > 1 && live.every(q => rows[q].length === L) && k * L <= n) {
+          const step = o.ruleEmpty ? L + Math.floor((n - k * L) / k) : n / k;
+          live.forEach((q, j) => at.set(q, j * step));
+          return { at, end: (k - 1) * step + L, last: live[k - 1] };
+        }
         let i = 0, below = extra + live.reduce((s, q) => s + rows[q].length, 0);
         live.forEach((q, j) => { i = Math.max(i, Math.min(Math.ceil(j * n / live.length - 1e-9), n - below)); at.set(q, i); i += rows[q].length; below -= rows[q].length; });
         return { at, end: i, last: live[live.length - 1] };
@@ -781,6 +789,7 @@
             const q = g.all.indexOf(p), moved = move && move.q === q;
             if (!at.has(q)) continue;
             for (; i < at.get(q); i++) if (o.ruleEmpty) area.append(emptyStaff(i * S.h, F));
+            i = at.get(q);   // (between voices spaced evenly on a page left blank, not a whole staff)
             put(moved ? rows[q].slice(0, rows[q].length - move.over) : rows[q], p.label, false, moved ? 'end' : null);
           }
           // the lowest voice of the facing page, running on below this page's lowest part
