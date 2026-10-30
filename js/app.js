@@ -479,6 +479,8 @@
     try { const r = await fetch('examples/o-quam-gloriosum.mxl'); if (!r.ok) throw new Error(); await loadFiles([new File([await r.arrayBuffer()], 'o-quam-gloriosum.mxl')]); }
     catch { status('Couldn’t load the sample. Check your connection and try again.'); }
   };
+  $('heroOpen').onclick = () => $('file').click();
+  $('heroSample').onclick = () => $('sample').click();
   document.querySelectorAll('[data-format]').forEach(b => b.onclick = () => {
     saveLook();
     state.format = b.dataset.format;
@@ -678,12 +680,28 @@
 
   // the editor's theme (the pages stay paper): light, dark or the system's, remembered in this browser
   const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } } };
-  $('theme').value = store.get('sp-theme') || 'system';
-  $('theme').onchange = () => {
-    const t = $('theme').value;
-    if (t === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
-    store.set('sp-theme', t);
+  // one button, going round system → light → dark, its icon showing the theme in use
+  const themes = ['system', 'light', 'dark'], themeIcon = {
+    system: 'M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM12 3v18',
+    light: 'M12 7a5 5 0 1 0 0 10a5 5 0 0 0 0-10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4',
+    dark: 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z' };
+  let theme = store.get('sp-theme'); if (!themes.includes(theme)) theme = 'system';
+  const showTheme = () => {
+    $('theme').querySelector('path').setAttribute('d', themeIcon[theme]);
+    $('theme').title = `Theme: ${theme === 'system' ? 'as the system' : theme} (click to change)`;
   };
+  $('theme').onclick = () => {
+    theme = themes[(themes.indexOf(theme) + 1) % themes.length];
+    if (theme === 'system') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme;
+    store.set('sp-theme', theme); showTheme();
+  };
+  showTheme();
+  // the longer explanations fold to their first line; a click opens one (those the settings rewrite stay open)
+  document.querySelectorAll('.sp-controls .sp-hint:not([id])').forEach(p => {
+    if (p.closest('.sp-printbar')) return;
+    p.classList.add('sp-fold'); p.title = 'Click to read more';
+    p.addEventListener('click', e => { if (!e.target.closest('button, a')) { p.classList.toggle('open'); p.title = p.classList.contains('open') ? '' : 'Click to read more'; } });
+  });
   // which groups of settings are open, remembered too
   let open = {}; try { open = JSON.parse(store.get('sp-open') || '{}'); } catch (e) { }
   document.querySelectorAll('.sp-group').forEach(d => {
