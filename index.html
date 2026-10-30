@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+French+Canon&family=Inter:wght@400;500;600&display=block" rel="stylesheet">
-<link rel="stylesheet" href="css/site.css?v=1.8.1">
+<link rel="stylesheet" href="css/site.css?v=1.8.2">
 <script>/* the editor's theme, before anything is drawn: light, dark, or the system's */ try { const t = localStorage.getItem("sp-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) { }</script>
 </head>
 <body>
@@ -272,15 +272,6 @@
   </aside>
 
   <section class="sp-preview" aria-label="Preview">
-    <div class="sp-player" id="player" hidden>
-      <button type="button" class="sp-btn sp-play" id="playBtn" title="Play or pause (space bar)">▶ Play</button>
-      <button type="button" class="sp-icon" id="stopBtn" title="Stop, and go back to the start" aria-label="Stop"><svg viewBox="0 0 24 24" width="14" height="14"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></svg></button>
-      <span class="sp-div"></span>
-      <label class="sp-tempo" title="Tactus, in semibreves a minute"><input type="number" id="tempo" min="20" max="160" step="2" value="66"> tactus</label>
-      <span class="sp-div"></span>
-      <span class="sp-voices" id="playVoices" role="group" aria-label="Voices to play"></span>
-      <kbd class="sp-kbd" title="The space bar plays and pauses. Click a note to play from there.">Space</kbd>
-    </div>
     <div class="sp-status" id="status" aria-live="polite"></div>
     <div class="sp-empty" id="empty">
       <div class="sp-hero-page" aria-hidden="true"><span>O</span><i></i><i></i><i></i><i></i><i></i></div>
@@ -290,6 +281,19 @@
       <small>.musicxml · .xml · .mxl · saved projects, or drop them on the box at the left</small>
     </div>
     <div class="sp-scale" id="scale"><div id="book"></div></div>
+    <div class="sp-player" id="player" hidden>
+      <button type="button" class="sp-btn sp-play" id="playBtn" title="Play or pause (space bar)">▶ Play</button>
+      <button type="button" class="sp-icon" id="stopBtn" title="Stop, and go back to the start" aria-label="Stop"><svg viewBox="0 0 24 24" width="14" height="14"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></svg></button>
+      <span class="sp-div"></span>
+      <label class="sp-tempo" title="Tactus, in semibreves a minute"><input type="number" id="tempo" min="20" max="160" step="2" value="66"><span class="sp-tword">tactus</span></label>
+      <span class="sp-div"></span>
+      <button type="button" class="sp-vbtn" id="voicesBtn" aria-expanded="false" aria-controls="voicePop">Voices<span id="voicesOff"></span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>
+      <button type="button" class="sp-icon" id="playerMin" title="Make the bar smaller" aria-label="Make the playback bar smaller"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="sp-vpop" id="voicePop" hidden>
+        <span class="sp-voices" id="playVoices" role="group" aria-label="Voices to play"></span>
+        <p class="sp-hint">Untick a voice to silence it. Click a note on the page to play from there; the space bar plays and pauses.</p>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -297,15 +301,15 @@
   <p><strong>Serenissima Press</strong> converts MusicXML into mensural notation right in your browser. Your files are never uploaded. Treat the result as a first draft and check ties, perfections, ficta and text underlay against your source.</p>
   <p>Music font: <a href="https://www.earlymusicsources.com/">EMS Serenissima</a> by Elam Rotem, Early Music Sources, licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Text fonts: EB Garamond and IM Fell French Canon (SIL Open Font License), via Google Fonts. Initials: EB Garamond Initials by Georg Duffner, after Conrad Berner’s 1592 specimen (SIL Open Font License); Yinit by Yannis Haralambous (public domain); Gotische Initialen, Rothenburg Decorative, Typographer Caps, Goudy Initialen and Zallman Caps by Dieter Steffmann (LaTeX Project Public License, from the CTAN initials package). Cadels traced from Marco Antonio Rossi’s <i>Giardino de scrittori</i> (1598) and Paul Franck’s <i>Kunstrichtige Schreibart</i> (1601), both public domain.</p>
   <p>If you share a book, please credit the editor of the MusicXML edition you started from.</p>
-  <p>Version <span id="version" data-version="1.8.1">1.8.1</span> · <a href="https://github.com/tghamacher/serenissima-press">Source code and release notes on GitHub</a> · <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform">Send feedback</a> (no account needed) or <a href="https://github.com/tghamacher/serenissima-press/issues/new/choose">open an issue on GitHub</a>.</p>
+  <p>Version <span id="version" data-version="1.8.2">1.8.2</span> · <a href="https://github.com/tghamacher/serenissima-press">Source code and release notes on GitHub</a> · <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform">Send feedback</a> (no account needed) or <a href="https://github.com/tghamacher/serenissima-press/issues/new/choose">open an issue on GitHub</a>.</p>
 </footer>
 
-<script src="js/zip.js?v=1.8.1"></script>
-<script src="js/convert.js?v=1.8.1"></script>
-<script src="js/gabc.js?v=1.8.1"></script>
-<script src="js/layout.js?v=1.8.1"></script>
-<script src="js/play.js?v=1.8.1"></script>
-<script src="js/surface.js?v=1.8.1"></script>
-<script src="js/app.js?v=1.8.1"></script>
+<script src="js/zip.js?v=1.8.2"></script>
+<script src="js/convert.js?v=1.8.2"></script>
+<script src="js/gabc.js?v=1.8.2"></script>
+<script src="js/layout.js?v=1.8.2"></script>
+<script src="js/play.js?v=1.8.2"></script>
+<script src="js/surface.js?v=1.8.2"></script>
+<script src="js/app.js?v=1.8.2"></script>
 </body>
 </html>

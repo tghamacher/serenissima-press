@@ -682,8 +682,8 @@
   $('print').onclick = () => window.print();
 
   // ---- playback (js/play.js): the bar over the preview, a box for each voice (a voice unticked is silent, and
-  // stays so through changes to the book), with several pieces a row of them for each piece under its name; a
-  // note clicked plays from there, the space bar plays and pauses
+  // stays so through changes to the book), kept in a pop-up above the bar, with several pieces a row of them for
+  // each piece under its name; a note clicked plays from there, the space bar plays and pauses
   const P = window.SPPlay, silent = new Set();
   function showPlayer() {
     P.tempo = $('tempo').value;   // (as a project may have set it)
@@ -698,16 +698,24 @@
       if (many && n !== piece) {
         piece = n; row = document.createElement('span'); row.className = 'sp-vgroup';
         const name = document.createElement('span'); name.className = 'sp-vpiece'; name.textContent = `${n} · ${title}`; name.title = title;
-        row.append(name); box.append(row);
+        const chips = document.createElement('span'); chips.className = 'sp-vchips';
+        row.append(name, chips); box.append(row); row = chips;
       }
       const l = document.createElement('label'), c = document.createElement('input');
       c.type = 'checkbox'; c.checked = !silent.has(v); P.mute(v, silent.has(v));
-      c.onchange = () => { if (c.checked) silent.delete(v); else silent.add(v); P.mute(v, !c.checked); };
+      c.onchange = () => { if (c.checked) silent.delete(v); else silent.add(v); P.mute(v, !c.checked); showSilent(); };
       c.setAttribute('aria-label', many ? `${label}, ${title}` : label);
       l.append(c, label); row.append(l);
     }
+    showSilent();
     playLabel();
   }
+  // how many voices are silenced, beside the button that shows them
+  const showSilent = () => { const n = $('playVoices').querySelectorAll('input:not(:checked)').length; $('voicesOff').textContent = n ? ` · ${n} silent` : ''; };
+  const showVoices = open => { $('voicePop').hidden = !open; $('voicesBtn').setAttribute('aria-expanded', String(open)); };
+  $('voicesBtn').onclick = () => showVoices($('voicePop').hidden);
+  document.addEventListener('click', e => { if (!$('voicePop').hidden && !e.target.closest('#voicePop, #voicesBtn')) showVoices(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('voicePop').hidden) { showVoices(false); $('voicesBtn').focus(); } });
   const playLabel = () => { $('playBtn').textContent = P.playing ? '❚❚ Pause' : '▶ Play'; };
   P.onchange = playLabel;
   P.tempo = $('tempo').value;
@@ -739,6 +747,14 @@
     store.set('sp-theme', theme); showTheme();
   };
   showTheme();
+  // the playback bar made small (only the play button), remembered too
+  const showMin = small => {
+    $('player').classList.toggle('sp-min', small); if (small) showVoices(false);
+    $('playerMin').title = small ? 'Show the whole bar' : 'Make the bar smaller';
+    $('playerMin').setAttribute('aria-label', small ? 'Show the whole playback bar' : 'Make the playback bar smaller');
+  };
+  $('playerMin').onclick = () => { const small = !$('player').classList.contains('sp-min'); showMin(small); store.set('sp-player-min', small ? '1' : ''); };
+  showMin(store.get('sp-player-min') === '1');
   // the longer explanations fold to their first line; a click opens one (those the settings rewrite stay open)
   document.querySelectorAll('.sp-controls .sp-hint:not([id])').forEach(p => {
     if (p.closest('.sp-printbar')) return;

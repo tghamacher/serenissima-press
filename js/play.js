@@ -68,10 +68,12 @@
   function follow(el) {
     if (el === followed || Date.now() - handAt < HAND) return;
     followed = el;
-    const bar = document.querySelector('.sp-player:not([hidden])');
-    const top = bar ? bar.getBoundingClientRect().bottom : 0, r = el.getBoundingClientRect();
-    if (r.top < top + 12 || r.bottom > global.innerHeight - 24)
-      global.scrollBy({ top: r.top - top - (global.innerHeight - top) / 3, behavior: 'smooth' });
+    // in view between the header and the playback bar at the foot of the window
+    const head = document.querySelector('.sp-top'), bar = document.querySelector('.sp-player:not([hidden])');
+    const top = head ? head.getBoundingClientRect().bottom : 0, foot = bar ? Math.min(global.innerHeight, bar.getBoundingClientRect().top) : global.innerHeight;
+    const r = el.getBoundingClientRect();
+    if (r.top < top + 12 || r.bottom > foot - 12)
+      global.scrollBy({ top: r.top - top - (foot - top) / 3, behavior: 'smooth' });
   }
   // light the notes sounding now; keep the newest in view
   function frame() {
