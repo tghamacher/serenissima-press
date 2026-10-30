@@ -22,6 +22,10 @@
       return { on, len, midi, v: n.dataset.v, el: n };
     }).sort((a, b) => a.on - b.on);
     voices = [...new Set(notes.map(n => n.v))];
+    // each voice's place in the stereo field is among its own piece's voices (a voice is "piece|label")
+    const piece = v => v.slice(0, v.indexOf('|') + 1), peers = new Map();
+    for (const v of voices) { const p = piece(v); if (!peers.has(p)) peers.set(p, []); peers.get(p).push(v); }
+    for (const n of notes) { const p = peers.get(piece(n.v)); n.vi = p.indexOf(n.v); n.k = p.length; }
     return { notes: notes.length, voices };
   }
   const sec = sb => sb * 60 / opts.tempo;
@@ -37,7 +41,7 @@
     wave = ac.createPeriodicWave(new Float32Array([0, 1, 0.42, 0.2, 0.1, 0.05, 0.025]), new Float32Array(7));
   }
   function sound(n, t0) {
-    const t1 = t0 + Math.max(0.06, sec(n.len) - 0.03), vi = voices.indexOf(n.v), k = voices.length;
+    const t1 = t0 + Math.max(0.06, sec(n.len) - 0.03), { vi, k } = n;
     const o = ac.createOscillator(), g = ac.createGain(), p = ac.createStereoPanner ? ac.createStereoPanner() : null;
     o.setPeriodicWave(wave); o.frequency.value = 440 * 2 ** ((n.midi - 69) / 12);
     const peak = 0.5 / Math.max(2, k);

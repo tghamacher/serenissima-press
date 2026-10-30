@@ -275,7 +275,8 @@
     if (!state.pieces.length) return;
     const many = state.pieces.length > 1, warnings = [], notes = [], pieces = [];
     let clock = 0;   // playback: where the next piece starts, in semibreves
-    for (const pc of state.pieces) {
+    state.playVoices = new Map();   // playback: each piece's voices, in score order, under their key "piece|label"
+    for (const [pi, pc] of state.pieces.entries()) {
       const sel = pc.parts.filter(p => p.include);
       if (!sel.length) { warnings.push(`${pc.title}: no voices are selected, so it’s left out of the book.`); pc.sections = []; continue; }
       let res;
@@ -295,11 +296,16 @@
       pc.sections = res.sections.map(s => ({ ...s, mode: s.chant ? 'line' : 'run', ...pc.secs[s.step] }));
       res.parts.forEach((p, i) => p.side = sel[i].side);
       // playback: each note's start and length in semibreves (the tactus, whatever this piece's note values), on
-      // the book's one timeline, the pieces one after another with a semibreve's rest between; and its voice
+      // the book's one timeline, the pieces one after another with a semibreve's rest between; and its voice, as the
+      // piece's number and the voice's label (pieces often share names: each piece's Cantus is its own)
       const red = +pc.reduction || 1; let end = 0;
-      for (const p of res.parts) for (const tk of p.tokens) if (tk.pb) {
-        const [t0, ql, midi] = tk.pb; end = Math.max(end, (t0 + ql) / red);
-        tk.pb = [+(clock + t0 / red).toFixed(4), +(ql / red).toFixed(4), midi]; tk.v = p.label;
+      for (const p of res.parts) {
+        const v = `${pi + 1}|${p.label}`;
+        state.playVoices.set(v, { piece: pi + 1, title: pc.title, label: p.label });
+        for (const tk of p.tokens) if (tk.pb) {
+          const [t0, ql, midi] = tk.pb; end = Math.max(end, (t0 + ql) / red);
+          tk.pb = [+(clock + t0 / red).toFixed(4), +(ql / red).toFixed(4), midi]; tk.v = v;
+        }
       }
       clock += end + 1;
       // with one piece, its title is the book's
@@ -676,18 +682,29 @@
   $('print').onclick = () => window.print();
 
   // ---- playback (js/play.js): the bar over the preview, a box for each voice (a voice unticked is silent, and
-  // stays so through changes to the book), a note clicked plays from there, the space bar plays and pauses
+  // stays so through changes to the book), with several pieces a row of them for each piece under its name; a
+  // note clicked plays from there, the space bar plays and pauses
   const P = window.SPPlay, silent = new Set();
   function showPlayer() {
     P.tempo = $('tempo').value;   // (as a project may have set it)
     const { notes, voices } = P.load($('book'));
     $('player').hidden = !notes;
     const box = $('playVoices'); box.innerHTML = '';
-    for (const v of voices) {
+    const known = [...state.playVoices.keys()].filter(v => voices.includes(v)), many = state.playVoices.size && new Set(known.map(v => state.playVoices.get(v).piece)).size > 1;
+    $('player').classList.toggle('sp-many', !!many);
+    let row = box, piece = 0;
+    for (const v of known) {
+      const { piece: n, title, label } = state.playVoices.get(v);
+      if (many && n !== piece) {
+        piece = n; row = document.createElement('span'); row.className = 'sp-vgroup';
+        const name = document.createElement('span'); name.className = 'sp-vpiece'; name.textContent = `${n} · ${title}`; name.title = title;
+        row.append(name); box.append(row);
+      }
       const l = document.createElement('label'), c = document.createElement('input');
       c.type = 'checkbox'; c.checked = !silent.has(v); P.mute(v, silent.has(v));
       c.onchange = () => { if (c.checked) silent.delete(v); else silent.add(v); P.mute(v, !c.checked); };
-      l.append(c, v); box.append(l);
+      c.setAttribute('aria-label', many ? `${label}, ${title}` : label);
+      l.append(c, label); row.append(l);
     }
     playLabel();
   }

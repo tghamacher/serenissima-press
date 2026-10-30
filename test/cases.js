@@ -96,6 +96,22 @@
         if (!now.length || now.length > 4) bad.push(`${now.length} notes sounding at the start`);
         return bad; } },
 
+    { name: 'playback: two pieces, each with its own row of voices', score: [SAMPLE, 'test/scores/ego-flos-campi.mxl'], check: d => {
+        const P = d.defaultView.SPPlay, bad = [], rows = [...d.querySelectorAll('#playVoices .sp-vgroup')];
+        if (rows.length !== 2) return [`${rows.length} rows of voices, expected one for each piece`];
+        if (!d.getElementById('player').classList.contains('sp-many')) bad.push('The bar is not laid out for several pieces');
+        const names = rows.map(r => r.querySelector('.sp-vpiece').textContent);
+        if (!/^1 · /.test(names[0]) || !/^2 · /.test(names[1])) bad.push(`Rows headed ${names.join(' / ')}`);
+        const boxes = rows.reduce((n, r) => n + r.querySelectorAll('input').length, 0);
+        if (boxes !== P.voices.length) bad.push(`${boxes} boxes for ${P.voices.length} voices`);
+        if (P.voices.some(v => !/^[12]\|/.test(v))) bad.push(`voices ${P.voices.join(', ')} not each of a piece`);
+        // muting the first piece's first voice leaves the second piece's voice of the same name sounding
+        const first = rows[0].querySelector('label'), name = first.textContent, same = [...rows[1].querySelectorAll('label')].find(l => l.textContent === name);
+        first.querySelector('input').click();
+        if (same && !same.querySelector('input').checked) bad.push(`Muting ${name} in the first piece muted it in the second`);
+        first.querySelector('input').click();
+        return bad; } },
+
     // ---- the sample, in each format and style
     { name: 'sample: partbook, printed', score: SAMPLE, expect: { warnings: 0, pages: [4, 12] } },
     { name: 'sample: partbook, manuscript', score: SAMPLE, style: 'manuscript', expect: { warnings: 0, pages: [4, 12] },
