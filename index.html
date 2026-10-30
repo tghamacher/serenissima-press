@@ -7,20 +7,19 @@
 <meta name="description" content="Turn MusicXML into Renaissance-style partbooks and choirbooks in mensural notation, set in the EMS Serenissima font.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IM+Fell+French+Canon&display=block" rel="stylesheet">
-<link rel="stylesheet" href="css/site.css?v=1.6.0">
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+French+Canon&family=Inter:wght@400;500;600&display=block" rel="stylesheet">
+<link rel="stylesheet" href="css/site.css?v=1.7.0">
 <script>/* the editor's theme, before anything is drawn: light, dark, or the system's */ try { const t = localStorage.getItem("sp-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) { }</script>
 </head>
 <body>
 <header class="sp-top">
-  <h1>Serenissima Press</h1><span class="ver" id="version" data-version="1.6.0">version 1.6.0</span>
-  <p>Turn MusicXML scores into Renaissance partbooks and choirbooks, in mensural notation with the words set underneath.</p>
-  <nav><a href="cheatsheet.html">Font cheat sheet</a><a id="feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform" target="_blank" rel="noopener">Feedback</a><a href="https://github.com/tghamacher/serenissima-press" target="_blank" rel="noopener">GitHub</a><a href="#about">About</a><select id="theme" class="sp-theme" aria-label="Colour theme"><option value="system">System theme</option><option value="light">Light</option><option value="dark">Dark</option></select></nav>
+  <a class="sp-brand" href="./"><span class="sp-mark" aria-hidden="true">❧</span><h1>Serenissima Press</h1></a>
+  <nav><a href="cheatsheet.html">Font cheat sheet</a><a id="feedback" href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform" target="_blank" rel="noopener">Feedback</a><a href="https://github.com/tghamacher/serenissima-press" target="_blank" rel="noopener">GitHub</a><a href="#about">About</a><button type="button" class="sp-icon" id="theme" aria-label="Colour theme"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path/></svg></button></nav>
 </header>
 
 <main class="sp-main">
   <aside class="sp-controls" aria-label="Settings">
-    <details class="sp-group" data-group="music" open><summary>1 · Music</summary>
+    <details class="sp-group" data-group="music" open><summary><b>1</b>Music</summary>
     <label class="sp-drop" id="drop" tabindex="0">
       <strong id="dropTitle">Choose MusicXML files</strong>
       <small>Click to browse, or drag files here. Accepts .musicxml, .xml and .mxl scores (several at once) and saved projects.</small>
@@ -32,7 +31,7 @@
     </details>
 
     <div id="settings" hidden>
-      <details class="sp-group" data-group="book" open><summary>2 · Book</summary>
+      <details class="sp-group" data-group="book" open><summary><b>2</b>Book</summary>
       <div class="sp-seg" role="group" aria-label="Format">
         <button type="button" data-format="partbook" aria-pressed="true">Partbook</button>
         <button type="button" data-format="choirbook" aria-pressed="false">Choirbook</button>
@@ -137,7 +136,7 @@
 
       </details>
 
-      <details class="sp-group" data-group="voices"><summary>3 · <span id="pieceHeading">Voices and sections</span></summary>
+      <details class="sp-group" data-group="voices"><summary><b>3</b><span id="pieceHeading">Voices and sections</span></summary>
       <label class="sp-field" id="pieceSelRow" hidden><span>Settings for</span><select id="pieceSel"></select></label>
       <div id="pieceNames" hidden>
         <label class="sp-field"><span>Title of this piece</span><input type="text" id="pieceTitle"></label>
@@ -176,7 +175,7 @@
 
       </details>
 
-      <details class="sp-group" data-group="notation"><summary>4 · Notation</summary>
+      <details class="sp-group" data-group="notation"><summary><b>4</b>Notation</summary>
       <label class="sp-field"><span>Automatic clefs</span>
         <select id="clefs"><option value="period">Period: choose clefs that keep notes on the staff</option><option value="modern">Modern: treble, treble an octave lower, bass</option></select>
       </label>
@@ -190,7 +189,7 @@
 
       </details>
 
-      <details class="sp-group" data-group="initials"><summary>5 · Initials</summary>
+      <details class="sp-group" data-group="initials"><summary><b>5</b>Initials</summary>
       <div class="sp-row">
         <label class="sp-field"><span id="initialFor">Each voice</span>
           <select id="initial">
@@ -256,24 +255,31 @@
       </details>
 
       <div class="sp-printbar">
-        <button class="sp-btn primary" id="print" type="button">Print / save as PDF</button>
-        <p class="sp-hint" style="margin-top:6px">In the print dialog, choose “Save as PDF” and set Margins to “None”.</p>
-        <button class="sp-btn wide" id="saveProject" type="button">Save project</button>
-        <p class="sp-hint" style="margin-top:6px">Saves your scores and all your settings in one file. Open it here the same way you open a score, on any computer, or send it to someone. Your browser also remembers the last book you had open, in case you reload the page.</p>
+        <button class="sp-btn primary" id="print" type="button"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg>Print / PDF</button>
+        <button class="sp-btn" id="saveProject" type="button" title="Saves your scores and all your settings in one file. Open it here the same way you open a score, on any computer, or send it to someone. Your browser also remembers the last book you had open, in case you reload the page."><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h11l3 3v15H5zM8 3v5h7V3M8 21v-7h8v7"/></svg>Save project</button>
+        <p class="sp-hint">In the print dialog, choose “Save as PDF” and set Margins to “None”.</p>
       </div>
     </div>
   </aside>
 
   <section class="sp-preview" aria-label="Preview">
     <div class="sp-player" id="player" hidden>
-      <button type="button" class="sp-btn" id="playBtn">▶ Play</button>
-      <button type="button" class="sp-btn" id="stopBtn" title="Stop, and go back to the start" aria-label="Stop">■</button>
-      <label class="sp-tempo">Tactus <input type="number" id="tempo" min="20" max="160" step="2" value="66"> semibreves a minute</label>
+      <button type="button" class="sp-btn sp-play" id="playBtn" title="Play or pause (space bar)">▶ Play</button>
+      <button type="button" class="sp-icon" id="stopBtn" title="Stop, and go back to the start" aria-label="Stop"><svg viewBox="0 0 24 24" width="14" height="14"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></svg></button>
+      <span class="sp-div"></span>
+      <label class="sp-tempo" title="Tactus, in semibreves a minute"><input type="number" id="tempo" min="20" max="160" step="2" value="66"> tactus</label>
+      <span class="sp-div"></span>
       <span class="sp-voices" id="playVoices" role="group" aria-label="Voices to play"></span>
-      <span class="sp-hint">Click a note to play from there. The space bar plays and pauses.</span>
+      <kbd class="sp-kbd" title="The space bar plays and pauses. Click a note to play from there.">Space</kbd>
     </div>
     <div class="sp-status" id="status" aria-live="polite"></div>
-    <div class="sp-empty" id="empty">Open a MusicXML file and it will be typeset here. It works best with one voice per part and the lyrics included.</div>
+    <div class="sp-empty" id="empty">
+      <div class="sp-hero-page" aria-hidden="true"><span>O</span><i></i><i></i><i></i><i></i><i></i></div>
+      <h2>Renaissance partbooks and choirbooks,<br>from your MusicXML</h2>
+      <p>Mensural notation with the words set underneath, in the style of the Venetian and Roman presses. It works best with one voice per part and the lyrics included. Everything runs in your browser: your score never leaves your computer.</p>
+      <div class="sp-hero-actions"><button type="button" class="sp-btn primary" id="heroOpen">Choose MusicXML files</button><button type="button" class="sp-btn ghost" id="heroSample">Try the sample</button></div>
+      <small>.musicxml · .xml · .mxl · saved projects, or drop them on the box at the left</small>
+    </div>
     <div class="sp-scale" id="scale"><div id="book"></div></div>
   </section>
 </main>
@@ -282,14 +288,14 @@
   <p><strong>Serenissima Press</strong> converts MusicXML into mensural notation right in your browser. Your files are never uploaded. Treat the result as a first draft and check ties, perfections, ficta and text underlay against your source.</p>
   <p>Music font: <a href="https://www.earlymusicsources.com/">EMS Serenissima</a> by Elam Rotem, Early Music Sources, licensed under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Text fonts: EB Garamond and IM Fell French Canon (SIL Open Font License), via Google Fonts. Initials: EB Garamond Initials by Georg Duffner, after Conrad Berner’s 1592 specimen (SIL Open Font License); Yinit by Yannis Haralambous (public domain); Gotische Initialen, Rothenburg Decorative, Typographer Caps, Goudy Initialen and Zallman Caps by Dieter Steffmann (LaTeX Project Public License, from the CTAN initials package). Cadels traced from Marco Antonio Rossi’s <i>Giardino de scrittori</i> (1598) and Paul Franck’s <i>Kunstrichtige Schreibart</i> (1601), both public domain.</p>
   <p>If you share a book, please credit the editor of the MusicXML edition you started from.</p>
-  <p>Version 1.6.0 · <a href="https://github.com/tghamacher/serenissima-press">Source code and release notes on GitHub</a> · <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform">Send feedback</a> (no account needed) or <a href="https://github.com/tghamacher/serenissima-press/issues/new/choose">open an issue on GitHub</a>.</p>
+  <p>Version <span id="version" data-version="1.7.0">1.7.0</span> · <a href="https://github.com/tghamacher/serenissima-press">Source code and release notes on GitHub</a> · <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOzA7OsIG92L_Q-5JG_uj7DHMB-S9Wzs99goDaJxpbmdZs0g/viewform">Send feedback</a> (no account needed) or <a href="https://github.com/tghamacher/serenissima-press/issues/new/choose">open an issue on GitHub</a>.</p>
 </footer>
 
-<script src="js/zip.js?v=1.6.0"></script>
-<script src="js/convert.js?v=1.6.0"></script>
-<script src="js/gabc.js?v=1.6.0"></script>
-<script src="js/layout.js?v=1.6.0"></script>
-<script src="js/play.js?v=1.6.0"></script>
-<script src="js/app.js?v=1.6.0"></script>
+<script src="js/zip.js?v=1.7.0"></script>
+<script src="js/convert.js?v=1.7.0"></script>
+<script src="js/gabc.js?v=1.7.0"></script>
+<script src="js/layout.js?v=1.7.0"></script>
+<script src="js/play.js?v=1.7.0"></script>
+<script src="js/app.js?v=1.7.0"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # Serenissima Press
 
-**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 1.6.0 · [Release notes](#release-notes) · [Feedback](#feedback)
+**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 1.7.0 · [Release notes](#release-notes) · [Feedback](#feedback)
 
 Turn a MusicXML score of Renaissance polyphony into **partbooks** (one voice per book) or a **choirbook** (voices spread across facing pages), in mensural notation with text underlay, set in the [EMS Serenissima](https://www.earlymusicsources.com/) font.
 
@@ -72,6 +72,10 @@ If you have a GitHub account you can also [open an issue](https://github.com/tgh
 ## Release notes
 
 Versions are numbered *major*.*feature*.*fix*: a release with new features raises the middle number, a release of fixes only raises the last. Before 1.0.0 the tool was in beta, numbered 0.*feature*.*fix*.
+
+### 1.7.0 (2026-10-30)
+
+- **A new look for the editor.** A slimmer header, with one button to switch between the system's theme, light and dark. The settings have switches instead of checkboxes and larger fields, and the longer explanations fold to their first line (click one to read it all). Print and Save project stay at the foot of the settings, and the playback bar floats over the book, with a chip for each voice to silence or bring back. Before a score is open, the preview says what the tool does and offers the sample. The pages themselves, and what prints, are unchanged.
 
 ### 1.6.0 (2026-10-28)
 
