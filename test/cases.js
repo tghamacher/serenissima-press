@@ -13,6 +13,10 @@
     const c = d.getElementById('colophon'); c.checked = true; c.dispatchEvent(new Event('change'));
     const t = d.getElementById('colophonText'); t.value = text; t.dispatchEvent(new Event('input'));
   };
+  const surfaced = (d, kind, aged) => {
+    const s = d.getElementById('surface'); s.value = kind; s.dispatchEvent(new Event('change'));
+    const a = d.getElementById('agedInk'); a.checked = aged; a.dispatchEvent(new Event('change'));
+  };
   const pageSize = (d, page, orient) => { for (const [id, v] of [['page', page], ['orient', orient]]) { const s = d.getElementById(id); s.value = v; s.dispatchEvent(new Event('change')); } };
   // every "Residuum" clear of the staves, clefs and words around it (some must be there to check)
   const residuumClear = d => {
@@ -215,6 +219,38 @@
         if (d.getElementById('title').value !== 'A test book') bad.push('Title lost');
         if (d.getElementById('transpose').value !== '-2') bad.push('Transposition lost');
         if (!pj.pieces[0].xml || pj.pieces[0].parts[0].label !== 'SVPERIVS') bad.push('The project lacks the score or the voice\'s label');
+        return bad;
+      } },
+
+    // ---- the surface and aged ink: only the pages' look, the book the same
+    { name: 'surface: vellum and aged ink on a manuscript choirbook', score: SAMPLE, format: 'choirbook', style: 'manuscript', expect: { warnings: 0 },
+      setup: d => { surfaced(d, 'vellum', true); },
+      check: (d, { pages }) => {
+        const bad = [], book = d.getElementById('book');
+        if (pages.some(p => !/^url\("?data:image\/jpeg/.test(p.style.backgroundImage))) bad.push('A page without its vellum');
+        if (book.dataset.ink !== 'manuscript') bad.push(`Ink "${book.dataset.ink}", expected the manuscript's`);
+        if (d.getElementById('surfaceBox').hidden) bad.push('The surface options are hidden');
+        const faded = [...d.querySelectorAll('.sp-n')].filter(n => parseFloat(n.style.getPropertyValue('--fade')) > 0).length;
+        if (!faded) bad.push('Every note the same: the ink is not uneven');
+        return bad;
+      } },
+    { name: 'surface: the other style takes its match', score: SAMPLE, expect: { warnings: 0 },
+      setup: d => { surfaced(d, 'paper', true); d.querySelector('[data-style=manuscript]').click(); },
+      check: d => d.getElementById('surface').value === 'vellum' && d.getElementById('agedInk').checked ? [] : [`Manuscript style has "${d.getElementById('surface').value}", aged ink ${d.getElementById('agedInk').checked}`] },
+    { name: 'surface: clean leaves the pages alone', score: SAMPLE, expect: { warnings: 0 },
+      setup: d => { surfaced(d, 'paper', true); surfaced(d, 'clean', true); },
+      check: (d, { pages }) => {
+        const book = d.getElementById('book');
+        return pages.some(p => p.style.backgroundImage) || book.dataset.ink || book.dataset.surface ? ['The pages kept a surface or aged ink'] : [];
+      } },
+    { name: 'surface: saved with the project', score: SAMPLE, roundTrip: true,
+      setup: d => { surfaced(d, 'paper', true); const p = d.getElementById('printSurface'); p.checked = false; p.dispatchEvent(new Event('change')); },
+      check: d => {
+        const bad = [];
+        if (d.getElementById('surface').value !== 'paper') bad.push('Surface lost');
+        if (!d.getElementById('agedInk').checked) bad.push('Aged ink lost');
+        if (d.getElementById('printSurface').checked) bad.push('"Print the surface" lost');
+        if (d.getElementById('book').dataset.printSurface !== 'off') bad.push('The book would print its surface');
         return bad;
       } },
 
