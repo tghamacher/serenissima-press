@@ -344,6 +344,8 @@
       const ties = kids(node, 'tie').map(t => t.getAttribute('type'));
       if (tie && ties.includes('stop') && tie.dia === dia) {
         tie.ql += ql; tie.end += ql; if (fermata) tie.fermata = true;
+        // the word on a tied note sounds on the held note: where the first note had none, this one's is kept
+        if (!tie.syl) tie.syl = lyricOf(node) || (head && lyricOf(head));
         if (!ties.includes('start')) tie = null;
         return;
       }

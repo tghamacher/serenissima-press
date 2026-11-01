@@ -100,6 +100,16 @@
         const r = C.convert(C.parseScore(xml), { reduction: 2, repeats: 'out', ledgers: true, clefs: 'period', parts: [{ index: 0 }] });
         const got = JSON.stringify(r.parts[0].tokens.filter(t => t.pb).map(t => t.pb)), want = '[[0,4,67],[6,2,70]]';
         return got === want ? [] : [`notes ${got}, expected ${want}`]; } },
+    { name: 'lyrics: a word on a tied-on note is kept', unit: () => {
+        // the first note of the tie has no word, the note it is tied to has "men.": it is sung on the held note
+        const xml = `<?xml version="1.0"?><score-partwise><part-list><score-part id="P1"><part-name>Altus</part-name></score-part></part-list><part id="P1">` +
+          `<measure number="1"><attributes><divisions>1</divisions><key><fifths>0</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes>` +
+          `<note><pitch><step>G</step><octave>4</octave></pitch><duration>2</duration><tie type="start"/><type>half</type></note>` +
+          `<note><pitch><step>G</step><octave>4</octave></pitch><duration>2</duration><tie type="stop"/><type>half</type><lyric number="1"><syllabic>single</syllabic><text>men.</text></lyric></note></measure></part></score-partwise>`;
+        const r = window.SPConvert.convert(window.SPConvert.parseScore(xml), { reduction: 4, repeats: 'out', ledgers: true, clefs: 'period', parts: [{ index: 0 }] });
+        const words = r.parts[0].tokens.filter(t => t.s).map(t => t.s).join(' ');
+        return words === 'men.' ? [] : [`words "${words}", expected "men." on the held note`];
+      } },
     { name: 'playback: the book\'s notes, for the player', score: SAMPLE, check: d => {
         const P = d.defaultView.SPPlay, bad = [], els = d.querySelectorAll('#book .sp-n');
         if (d.getElementById('player').hidden) bad.push('No player');
