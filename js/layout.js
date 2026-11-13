@@ -177,7 +177,7 @@
   }
 
   function fill(w, F) {
-    const s = el('span'); if (w <= 0.05) return s;
+    const s = el('span', 'sp-fill'); if (w <= 0.05) return s;
     const iW = wE('i', F), pW = wE('p', F), n = Math.floor(w / iW), m = Math.max(0, Math.ceil((w - n * iW) / pW - 1e-6));
     s.textContent = 'i'.repeat(n) + 'p'.repeat(m);
     s.style.marginRight = (w - n * iW - m * pW) + 'px';
@@ -313,6 +313,7 @@
       return p;
     }
     book.innerHTML = '';
+    if (o.style === 'manuscript') book.dataset.ruling = 'solid'; else delete book.dataset.ruling;
     const pending = [];
 
     // after: the first note past these lines (on the next opening), for the custos at the end of the last
@@ -334,13 +335,9 @@
       }
       const lift = Math.min(0.22 * F, Math.max(0, (low + 0.01 - TEXT_TOP) * F));
       const sys = el('div', 'sp-sys'); sys.style.cssText = `width:${width}px;height:${F * SYS + above + below}px;margin-left:${indent}px`;
-      // a manuscript is ruled with a rastrum, its lines across the line of music to the far end of the page (the
-      // printed books left the space blank): beneath the notes, from where the music begins, so that an initial or
-      // "Residuum" in the indent stays clear of the lines
-      if (o.style === 'manuscript') {
-        const rast = el('div', 'sp-staff sp-ems sp-rastrum'); rast.style.cssText = `top:${above}px;left:0;width:${width}px;font-size:${F}px`;
-        rast.append(fill(width, F)); sys.append(rast);
-      }
+      // a manuscript is ruled with a rastrum: five solid lines beneath the notes, from where the music begins to the
+      // far end of the line, so that an initial or "Residuum" in the indent stays clear of them
+      if (o.style === 'manuscript') sys.append(rules(width, F, above + staffLines(F).top));
       const staff = el('div', 'sp-staff sp-ems'); staff.style.fontSize = F + 'px'; staff.style.top = above + 'px';
       staff.append(el('span', null, p.clef), fill(pre.gap, F));
       if (p.sig) staff.append(el('span', null, p.sig), fill(pre.gap, F));
@@ -399,20 +396,29 @@
       d.style.height = r.h + 'px'; d.style.fontSize = Math.max(11, 0.3 * F) + 'px'; d.style.lineHeight = r.h + 'px';
       return d;
     }
+    // the staff lines within a staff: top line and height, in px
+    const staffLines = F => geom ? { top: geom.lines.top * F, h: geom.lines.h * F } : { top: 0.2 * F, h: 0.56 * F };
+    // a manuscript's staff: five solid lines, as ruled with a rastrum, across W px from top (the staff's top line)
+    // (the font's own staff is dashed, so in a manuscript its staff lines are left blank and these drawn instead)
+    function rules(W, F, top) {
+      const L = staffLines(F), t = Math.max(0.7, 0.025 * F), box = el('div', 'sp-rules');
+      box.style.cssText = `top:${top}px;width:${W}px;height:${L.h}px`;
+      for (let k = 0; k < 5; k++) { const ln = el('i'); ln.style.top = (k * L.h / 4 - t / 2) + 'px'; ln.style.height = t + 'px'; box.append(ln); }
+      return box;
+    }
     // a staff ruled but left empty, as in a manuscript whose pages were ruled before the music was copied
     function ruled(W, F) {
       const sys = el('div', 'sp-sys sp-ruled'), st = el('div', 'sp-staff sp-ems');
       sys.style.cssText = `width:${W}px;height:${F * SYS}px`; st.style.fontSize = F + 'px';
-      st.append(fill(W, F)); sys.append(st);
+      if (o.style === 'manuscript') sys.append(rules(W, F, staffLines(F).top));
+      else { st.append(fill(W, F)); sys.append(st); }
       return sys;
     }
-    // the staff lines within a staff: top line and height, in px
-    const staffLines = F => geom ? { top: geom.lines.top * F, h: geom.lines.h * F } : { top: 0.2 * F, h: 0.56 * F };
     // a "tacet" on a ruled page: the words in the middle of the staff, its lines running up to them on each side
     function ruledTacet(text, W, F) {
       const sys = el('div', 'sp-sys sp-tacetrule'), L = staffLines(F);
       sys.style.cssText = `width:${W}px;height:${F * SYS}px`;
-      const side = () => { const s = el('div', 'sp-tside'), st = el('div', 'sp-staff sp-ems'); st.style.fontSize = F + 'px'; st.append(fill(W, F)); s.append(st); return s; };
+      const side = () => { const s = el('div', 'sp-tside'); if (o.style === 'manuscript') { s.append(rules(W, F, L.top)); return s; } const st = el('div', 'sp-staff sp-ems'); st.style.fontSize = F + 'px'; st.append(fill(W, F)); s.append(st); return s; };
       const t = el('div', 'sp-tacet', text);
       t.style.cssText = `margin-top:${L.top}px;height:${L.h}px;line-height:${L.h}px;font-size:${Math.max(11, 0.7 * L.h)}px;padding:0 ${0.25 * F}px`;
       sys.append(side(), t, side());
