@@ -334,6 +334,13 @@
       }
       const lift = Math.min(0.22 * F, Math.max(0, (low + 0.01 - TEXT_TOP) * F));
       const sys = el('div', 'sp-sys'); sys.style.cssText = `width:${width}px;height:${F * SYS + above + below}px;margin-left:${indent}px`;
+      // a manuscript is ruled with a rastrum, its lines across the line of music to the far end of the page (the
+      // printed books left the space blank): beneath the notes, from where the music begins, so that an initial or
+      // "Residuum" in the indent stays clear of the lines
+      if (o.style === 'manuscript') {
+        const rast = el('div', 'sp-staff sp-ems sp-rastrum'); rast.style.cssText = `top:${above}px;left:0;width:${width}px;font-size:${F}px`;
+        rast.append(fill(width, F)); sys.append(rast);
+      }
       const staff = el('div', 'sp-staff sp-ems'); staff.style.fontSize = F + 'px'; staff.style.top = above + 'px';
       staff.append(el('span', null, p.clef), fill(pre.gap, F));
       if (p.sig) staff.append(el('span', null, p.sig), fill(pre.gap, F));

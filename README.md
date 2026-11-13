@@ -1,6 +1,6 @@
 # Serenissima Press
 
-**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 1.8.4 · [Release notes](#release-notes) · [Feedback](#feedback)
+**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 1.8.5 · [Release notes](#release-notes) · [Feedback](#feedback)
 
 Turn a MusicXML score of Renaissance polyphony into **partbooks** (one voice per book) or a **choirbook** (voices spread across facing pages), in mensural notation with text underlay, set in the [EMS Serenissima](https://www.earlymusicsources.com/) font.
 
@@ -73,6 +73,10 @@ If you have a GitHub account you can also [open an issue](https://github.com/tgh
 ## Release notes
 
 Versions are numbered *major*.*feature*.*fix*: a release with new features raises the middle number, a release of fixes only raises the last. Before 1.0.0 the tool was in beta, numbered 0.*feature*.*fix*.
+
+### 1.8.5 (2026-11-13)
+
+- **Staves ruled across the page in manuscripts.** In the manuscript style, every line of music is drawn on a full rastrum, the staff lines running to the far end of the page, with the notes set on them, as in a ruled manuscript. The printed books still leave the space between the notes blank, as they did.
 
 ### 1.8.4 (2026-11-01)
 
