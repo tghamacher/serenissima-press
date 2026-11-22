@@ -65,6 +65,8 @@
     }
     if (gothic) toks.forEach(t => { if (t.s) t.s = gothicText(t.s, !(t.y === 'begin' || t.y === 'middle')); });
     toks.forEach(t => { if (t.s) t.sd = t.s + (t.y === 'begin' || t.y === 'middle' ? '-' : ''); });
+    // the other verses, each on its own line under the notes (not capitals, as the initials' words are)
+    toks.forEach(t => (t.more || []).forEach(m => { if (gothic) m.s = gothicText(m.s, !(m.y === 'begin' || m.y === 'middle')); m.sd = m.s + (m.y === 'begin' || m.y === 'middle' ? '-' : ''); }));
     if (!p.initialLetter) p.initialLetter = fallback || p.label.charAt(0);
   }
 
@@ -85,6 +87,7 @@
     wide: { close: false, gap: 0.1, syl: 0.8, trim: false }
   };
   let sp = SPACINGS.printed;
+  const VERSE_LEAD = 1.12;   // a further verse's line, in its text size: its lines' spacing
   const TRIM = 0.03;
   const trimmable = tk => (tk.t === 'n' || tk.t === 'r') && !tk.a && !tk.d && tk.lp === undefined && !/^[1qr68]|[zsk,]$/.test(tk.g);
   function boxes(p, F) {
@@ -95,7 +98,7 @@
       const aW = wE(tk.a, F), gW = wE(tk.g, F), dW = wE(tk.d, F), glyph = aW + gW + dW - 2 * trim, center = aW + gW / 2 - trim;
       let L = 0, R = gap, own = 0, tail = 0;
       if (tk.sd) {
-        const half = (wT(tk.sd, T) + tg) / 2;
+        const half = (Math.max(wT(tk.sd, T), ...(tk.more || []).map(m => wT(m.sd, T))) + tg) / 2;
         own = Math.max(0, half - center);
         if (sp.close) { L = Math.max(0, prev - (x + center - half)); prev = x + L + center + half; tail = Math.max(0, half - (glyph - center) - R); }
         else { L = own; R = Math.max(gap, half - (glyph - center)); }
@@ -334,7 +337,9 @@
         const k = ink(s, '"EMS Serenissima"'); low = Math.max(low, geom.lines.base + (k.h - k.y) / 100);
       }
       const lift = Math.min(0.22 * F, Math.max(0, (low + 0.01 - TEXT_TOP) * F));
-      const sys = el('div', 'sp-sys'); sys.style.cssText = `width:${width}px;height:${F * SYS + above + below}px;margin-left:${indent}px`;
+      // a further verse is a line of text more beneath the notes: the system makes room for it
+      const verses = Math.max(0, ...line.map(b => (b.tk.more || []).length));
+      const sys = el('div', 'sp-sys'); sys.style.cssText = `width:${width}px;height:${F * SYS + above + below + verses * F * VERSE_LEAD * TEXT}px;margin-left:${indent}px`;
       // a manuscript is ruled with a rastrum: five solid lines beneath the notes, from where the music begins to the
       // far end of the line, so that an initial or "Residuum" in the indent stays clear of them
       if (o.style === 'manuscript') sys.append(rules(width, F, above + staffLines(F).top));
@@ -353,7 +358,7 @@
         if (b.tk.pb) { g.classList.add('sp-n'); g.dataset.pb = b.tk.pb.join(' '); g.dataset.v = b.tk.v || ''; }
         staff.append(g);
         staff.append(fill(b.R + per, F));
-        if (b.tk.sd) marks.push([g, b]);
+        if (b.tk.sd || b.tk.more) marks.push([g, b]);
       }
       if (nk) staff.append(nlp !== undefined && geom ? farNote({ lp: nlp, v: 'U' }, 0, cW, F) : el('span', null, 'U' + nk));
       // on a ruled page the staff of a short last line runs on, empty, to the margin
@@ -888,12 +893,13 @@
     // syllables are placed from the real positions of the notes
     for (const { sys, marks, F, drop } of pending) {
       const left = sys.getBoundingClientRect().left;
-      for (const [g, b] of marks) {
-        const s = el('span', 'sp-syl', b.tk.sd);
-        s.style.fontSize = F * TEXT + 'px'; s.style.top = F * TEXT_TOP + drop + 'px';
+      for (const [g, b] of marks) [b.tk.sd, ...(b.tk.more || []).map(m => m.sd)].forEach((txt, j) => {
+        if (!txt) return;
+        const s = el('span', 'sp-syl', txt);
+        s.style.fontSize = F * TEXT + 'px'; s.style.top = F * TEXT_TOP + drop + j * F * TEXT * VERSE_LEAD + 'px';
         s.style.left = (g.getBoundingClientRect().left - left + b.aW + b.gW / 2) + 'px';   // (a trimmed note's box is still its whole piece)
         sys.append(s);
-      }
+      });
     }
     meas.remove();
     return { pageSize: size, staffSize: staff, where, warnings };

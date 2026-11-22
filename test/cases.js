@@ -110,6 +110,27 @@
         const words = r.parts[0].tokens.filter(t => t.s).map(t => t.s).join(' ');
         return words === 'men.' ? [] : [`words "${words}", expected "men." on the held note`];
       } },
+    { name: 'verses: a second verse set under the same notes', unit: () => {
+        // two verses under a two-note phrase: each note keeps verse 1 and carries verse 2 beneath it
+        const lyr = (n, t, s) => `<lyric number="${n}"><syllabic>${s}</syllabic><text>${t}</text></lyric>`;
+        const xml = `<?xml version="1.0"?><score-partwise><part-list><score-part id="P1"><part-name>Cantus</part-name></score-part></part-list><part id="P1">` +
+          `<measure number="1"><attributes><divisions>1</divisions><key><fifths>0</fifths></key><time><beats>4</beats><beat-type>4</beat-type></time><clef><sign>G</sign><line>2</line></clef></attributes>` +
+          `<note><pitch><step>G</step><octave>4</octave></pitch><duration>2</duration><type>half</type>${lyr(1, 'Nu', 'single')}${lyr(2, 'Hu', 'single')}</note>` +
+          `<note><pitch><step>A</step><octave>4</octave></pitch><duration>2</duration><type>half</type>${lyr(1, 'pu', 'begin')}${lyr(2, 'ja', 'begin')}</note>` +
+          `<note><pitch><step>B</step><octave>4</octave></pitch><duration>2</duration><type>half</type>${lyr(1, 'te', 'end')}${lyr(2, 've', 'end')}</note></measure></part></score-partwise>`;
+        const C = window.SPConvert, r = C.convert(C.parseScore(xml), { reduction: 4, repeats: 'out', ledgers: true, clefs: 'period', verses: true, parts: [{ index: 0 }] });
+        const notes = r.parts[0].tokens.filter(t => t.s);
+        const got = notes.map(t => t.s + '/' + (t.more || []).map(m => m.s + ':' + m.y).join(',')).join(' ');
+        const want = 'Nu/Hu:single pu/ja:begin te/ve:end';
+        return got === want ? [] : [`syllables "${got}", expected "${want}"`];
+      } },
+    { name: 'verses: both set, the second beneath the first', score: 'test/scores/two-verses.musicxml', expect: { warnings: 0 }, check: d => {
+        const at = w => [...d.querySelectorAll('.sp-syl')].find(s => s.textContent === w);
+        // (the first word's first letter is its initial, so its verse is the "V" that follows)
+        const pu = at('pu-'), ja = at('ja-');
+        if (!at('Hu') || !pu || !ja) return [`Words set: ${[...d.querySelectorAll('.sp-syl')].map(s => s.textContent).join(' ')}`];
+        return parseFloat(ja.style.top) > parseFloat(pu.style.top) ? [] : ['The second verse is not beneath the first'];
+      } },
     { name: 'playback: the book\'s notes, for the player', score: SAMPLE, check: d => {
         const P = d.defaultView.SPPlay, bad = [], els = d.querySelectorAll('#book .sp-n');
         if (d.getElementById('player').hidden) bad.push('No player');

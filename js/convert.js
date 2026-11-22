@@ -308,11 +308,17 @@
     const slurs = new Map();   // open slurs: number -> voice that opened it
     const seen = new Set();   // measures already read (a repeat comes round again)
     // the verse for this pass through a repeat ("2", "verse2", "part1verse2"), else the first
+    const num = l => +((l.getAttribute('number') || '1').match(/(\d+)\D*$/) || [0, 1])[1];
+    const verseOf = lyr => { const t = lyr ? kids(lyr, 'text').map(e => e.textContent).join(' ').trim() : ''; return t ? { text: t, syllabic: text(kid(lyr, 'syllabic')) || 'single' } : null; };
     const lyricOf = node => {
-      const all = kids(node, 'lyric'), num = l => +((l.getAttribute('number') || '1').match(/(\d+)\D*$/) || [0, 1])[1];
-      const lyr = all.find(l => num(l) === pass) || all.find(l => num(l) === 1) || all[0];
-      const t = lyr ? kids(lyr, 'text').map(e => e.textContent).join(' ').trim() : '';
-      return t ? { text: t, syllabic: text(kid(lyr, 'syllabic')) || 'single' } : null;
+      const all = kids(node, 'lyric');
+      return verseOf(all.find(l => num(l) === pass) || all.find(l => num(l) === 1) || all[0]);
+    };
+    // the other verses under the note, in number order, all set under the same notes (a hymn's verses, one line each)
+    const moreOf = (node, chosen) => {
+      if (!chosen || !o.verses) return [];
+      const all = kids(node, 'lyric').filter(l => verseOf(l) && verseOf(l).text !== chosen.text).sort((a, b) => num(a) - num(b));
+      return all.map(verseOf).filter(Boolean);
     };
     function pushRest(ql, where, t0) {
       if (ql < 1e-6) return;
@@ -349,7 +355,8 @@
         if (!ties.includes('start')) tie = null;
         return;
       }
-      const ev = { kind: 'note', dia, midi: midi + 12, ql, acc: accKey, fermata, syl: lyricOf(node) || (head && lyricOf(head)), cont, where, perfect, t, t0: t, end: t + ql };
+      const syl = lyricOf(node) || (head && lyricOf(head));
+      const ev = { kind: 'note', dia, midi: midi + 12, ql, acc: accKey, fermata, syl, more: moreOf(node, syl), cont, where, perfect, t, t0: t, end: t + ql };
       events.push(ev);
       tie = ties.includes('start') ? ev : null;
     }
@@ -551,7 +558,7 @@
           const tk = { t: 'n', a: '', g: v + k, d: '', k };
           if (lp !== undefined) { tk.lp = lp; tk.v = v; }
           // (for playback: when it sounds and how long, in the edition's quarter notes from the start, and its pitch)
-          if (first) { if (e.acc) tk.a = e.acc + k; if (e.syl) { tk.s = e.syl.text; tk.y = e.syl.syllabic; } tk.pb = [e.t0, e.ql, e.midi]; }
+          if (first) { if (e.acc) tk.a = e.acc + k; if (e.syl) { tk.s = e.syl.text; tk.y = e.syl.syllabic; } if (e.more && e.more.length) tk.more = e.more.map(m => ({ s: m.text, y: m.syllabic })); tk.pb = [e.t0, e.ql, e.midi]; }
           out.push(tk); first = false;
         }
         if (e.fermata) out[out.length - 1].d += '*';

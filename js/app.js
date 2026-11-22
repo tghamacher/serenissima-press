@@ -282,7 +282,7 @@
       let res;
       try {
         res = C.convert(pc.doc, {
-          reduction: +pc.reduction, transpose: +pc.transpose, mensuration: pc.mens, repeats: $('repeats').value,
+          reduction: +pc.reduction, transpose: +pc.transpose, mensuration: pc.mens, repeats: $('repeats').value, verses: state.format === 'partbook',
           ficta: $('ficta').checked, barlines: $('barlines').checked, ij: false, brackets: $('brackets').checked,   // "ij" waits for more testing
           clefs: $('clefs').value, ledgers: $('ledgers').checked,
           parts: sel.map(p => ({ index: p.index, clef: p.clef, label: p.label }))

@@ -1,6 +1,6 @@
 # Serenissima Press
 
-**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 1.8.6 · [Release notes](#release-notes) · [Feedback](#feedback)
+**[Open Serenissima Press](https://tghamacher.github.io/serenissima-press/)** · version 1.9.0 · [Release notes](#release-notes) · [Feedback](#feedback)
 
 Turn a MusicXML score of Renaissance polyphony into **partbooks** (one voice per book) or a **choirbook** (voices spread across facing pages), in mensural notation with text underlay, set in the [EMS Serenissima](https://www.earlymusicsources.com/) font.
 
@@ -73,6 +73,10 @@ If you have a GitHub account you can also [open an issue](https://github.com/tgh
 ## Release notes
 
 Versions are numbered *major*.*feature*.*fix*: a release with new features raises the middle number, a release of fixes only raises the last. Before 1.0.0 the tool was in beta, numbered 0.*feature*.*fix*.
+
+### 1.9.0 (2026-11-22)
+
+- **Several verses under the same notes.** A score with more than one verse (MusicXML lyric numbers 1, 2 and so on), as in a hymn, now sets every verse, each on its own line beneath the notes, in a partbook. Before, only the verse of the first pass through a repeat was set, so a second verse was lost. Choirbooks still set one verse: their staves are a fixed height, and the lines would run into the next staff.
 
 ### 1.8.6 (2026-11-13)
 
