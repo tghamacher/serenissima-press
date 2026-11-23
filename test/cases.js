@@ -124,6 +124,7 @@
         const want = 'Nu/Hu:single pu/ja:begin te/ve:end';
         return got === want ? [] : [`syllables "${got}", expected "${want}"`];
       } },
+    { name: 'verses: a choirbook says it sets one', score: 'test/scores/two-verses.musicxml', format: 'choirbook', expect: { warn: /sets one verse/ }, check: d => d.querySelectorAll('.sp-syl').length ? [] : ['No words set'] },
     { name: 'verses: both set, the second beneath the first', score: 'test/scores/two-verses.musicxml', expect: { warnings: 0 }, check: d => {
         const at = w => [...d.querySelectorAll('.sp-syl')].find(s => s.textContent === w);
         // (the first word's first letter is its initial, so its verse is the "V" that follows)

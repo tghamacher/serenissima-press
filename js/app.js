@@ -282,13 +282,18 @@
       let res;
       try {
         res = C.convert(pc.doc, {
-          reduction: +pc.reduction, transpose: +pc.transpose, mensuration: pc.mens, repeats: $('repeats').value, verses: state.format === 'partbook',
+          reduction: +pc.reduction, transpose: +pc.transpose, mensuration: pc.mens, repeats: $('repeats').value, verses: true,
           ficta: $('ficta').checked, barlines: $('barlines').checked, ij: false, brackets: $('brackets').checked,   // "ij" waits for more testing
           clefs: $('clefs').value, ledgers: $('ledgers').checked,
           parts: sel.map(p => ({ index: p.index, clef: p.clef, label: p.label }))
         });
       } catch (e) { status(`${pc.title}: ${e.message}`); return; }
       const tag = m => many ? `${pc.title}: ${m}` : m;
+      // a choirbook's staves are a fixed height, so it sets the first verse only; say so, rather than drop them silently
+      if (state.format === 'choirbook' && res.parts.some(p => p.tokens.some(t => t.more))) {
+        warnings.push(tag('a choirbook sets one verse under the notes, so the further verses are left out. A partbook sets them all.'));
+        res.parts.forEach(p => p.tokens.forEach(t => delete t.more));
+      }
       warnings.push(...res.warnings.map(tag)); notes.push(...res.notes.map(tag));
       // the sections as found, with the user's names and where each starts (runs on unless chosen)
       pc.base = res.sections.slice();
